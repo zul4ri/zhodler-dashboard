@@ -1,0 +1,24 @@
+{
+  "name": "Zhodler 2026F Dashboard",
+  "short_name": "Zhodler",
+  "description": "Personal cryptocurrency portfolio tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b213c",
+  "theme_color": "#0ad5ec",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
