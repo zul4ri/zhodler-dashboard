@@ -1,0 +1,3490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhodler 2026 Portfolio Dashboard</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Personal cryptocurrency portfolio tracker">
+    <meta name="theme-color" content="#0ad5ec">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Zhodler">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-all.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-extra.min.css" rel="stylesheet"/>
+    <style>
+        /* Cyan theme (default) - Based on cyan/navy/yellow palette */
+        :root {
+            --bg-primary: #0b213c;
+            --bg-secondary: #122c34;
+            --bg-card: #143c6c;
+            --text-primary: #ffffff;
+            --text-secondary: #8eeffa;
+            --accent-green: #0ad5ec;
+            --accent-red: #ff6b6b;
+            --accent-blue: #3989a2;
+            --accent-yellow: #ffff00;
+            --accent-purple: #7dade7;
+            --border-color: #2775d2;
+        }
+        
+        /* Neon theme - Deep navy with magenta, cyan, neon green (vaporwave style) */
+        .theme-neon {
+            --bg-primary: #0a0a2e;
+            --bg-secondary: #12123a;
+            --bg-card: #1a1a4a;
+            --text-primary: #ffffff;
+            --text-secondary: #b8a9c9;
+            --accent-green: #39ff14;
+            --accent-red: #ff1493;
+            --accent-blue: #00f5ff;
+            --accent-yellow: #c8ff00;
+            --accent-purple: #bf00ff;
+            --border-color: #3d1a78;
+        }
+        
+        /* Cyber theme - Deep navy with magenta, neon green */
+        .theme-cyber {
+            --bg-primary: #0d1c26;
+            --bg-secondary: #122c34;
+            --bg-card: #0e222c;
+            --text-primary: #fdf96b;
+            --text-secondary: #b75dd6;
+            --accent-green: #409d87;
+            --accent-red: #ff6b6b;
+            --accent-blue: #3989a2;
+            --accent-yellow: #ffff00;
+            --accent-purple: #7dade7;
+            --border-color: #2e9d87;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: -0.01em;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 0.875rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 0.5px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-green);
+            letter-spacing: -0.02em;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.5rem 0.875rem;
+            border: none;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .btn:hover {
+            background: var(--accent-blue);
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            background: var(--accent-green);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .btn.locked {
+            background: var(--accent-green);
+            color: #000;
+        }
+        
+        .btn.locked:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        select {
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            border: none;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        select:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .last-updated {
+            font-size: 0.6875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .dashboard-container {
+            padding: 5px;
+        }
+
+        .grid-stack {
+            background: var(--bg-primary);
+        }
+        
+        /* Add consistent gaps via padding on grid items */
+        .grid-stack > .grid-stack-item {
+            padding: 5px !important;
+        }
+
+        .grid-stack-item-content {
+            background: var(--bg-card);
+            border-radius: 1px;
+            padding: clamp(0.75rem, 2vw, 1.25rem);
+            border: 0.5px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            transition: box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        .grid-stack-item-content:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+            padding-bottom: clamp(0.375rem, 1vw, 0.5rem);
+            border-bottom: 0.5px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .widget-title {
+            font-size: clamp(0.6875rem, 1.5vw, 0.75rem);
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .widget-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: auto;
+            min-height: 0;
+            height: 100%;
+        }
+
+        /* Privacy blur feature */
+        .privacy-mode .sensitive-data {
+            filter: blur(10px);
+            user-select: none;
+            transition: filter 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        .privacy-mode .sensitive-data:hover {
+            filter: blur(0);
+        }
+        
+        .privacy-toggle {
+            cursor: pointer;
+            padding: 0.375rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 8px;
+            background: var(--bg-card);
+            border: none;
+            color: var(--text-secondary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        .privacy-toggle:hover {
+            background: var(--accent-blue);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        
+        .privacy-toggle.active {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        /* KPI Styles - Apple-like with responsive scaling */
+        .kpi-value {
+            font-size: clamp(1.5rem, 4vw, 2.75rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.03em;
+        }
+        
+        /* Scale KPI based on widget height */
+        .gs-h-2 .kpi-value { font-size: clamp(1.25rem, 3vw, 2.25rem); }
+        .gs-h-3 .kpi-value { font-size: clamp(1.75rem, 4vw, 2.75rem); }
+        .gs-h-4 .kpi-value { font-size: clamp(2rem, 5vw, 3.25rem); }
+
+        .kpi-change {
+            font-size: clamp(0.6875rem, 1.5vw, 0.875rem);
+            font-weight: 500;
+            margin-top: 0.375rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .kpi-change.positive { color: var(--accent-green); }
+        .kpi-change.negative { color: var(--accent-red); }
+        .kpi-change.warning { color: var(--accent-yellow); }
+
+        .kpi-label {
+            font-size: clamp(0.625rem, 1.2vw, 0.6875rem);
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-top: clamp(0.375rem, 0.5vw, 0.5rem);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        /* Chart container - Responsive with full height */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            min-height: 100px;
+            height: 100%;
+        }
+        
+        .chart-container canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Goals Progress - Responsive */
+        .goal-item {
+            margin-bottom: clamp(0.35rem, 1vw, 0.75rem);
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: clamp(0.6875rem, 1.3vw, 0.8125rem);
+            margin-bottom: 0.375rem;
+        }
+
+        .goal-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .goal-percent {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: clamp(6px, 1vw, 8px);
+            background: var(--bg-secondary);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--chart-color-1, #0ad5ec), var(--chart-color-2, #3989a2));
+            border-radius: 100px;
+            transition: width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--chart-color-4, #ffff00), var(--chart-contrast, #ff6b6b));
+        }
+
+        /* Loan Health - Apple-like */
+        .loan-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: clamp(0.375rem, 0.8vw, 0.5rem) 0;
+            border-bottom: 0.5px solid var(--border-color);
+            font-size: clamp(0.6875rem, 1.3vw, 0.8125rem);
+            gap: 0.5rem;
+        }
+
+        .loan-metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 1;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            white-space: nowrap;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .metric-value.safe { color: var(--accent-green); }
+        .metric-value.warning { color: var(--accent-yellow); }
+        .metric-value.danger { color: var(--accent-red); }
+
+        /* Table styles - Responsive */
+        .data-table {
+            width: 100%;
+            font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: clamp(0.25rem, 0.8vw, 0.5rem);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .data-table td {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 1.75rem;
+            max-width: 480px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.2);
+            border: 0.5px solid var(--border-color);
+        }
+
+        .modal h2 {
+            margin-bottom: 1.25rem;
+            color: var(--accent-green);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            transition: box-shadow 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 3px var(--accent-blue);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive - Large Screens */
+        @media (min-width: 1400px) {
+            .kpi-value {
+                font-size: 2.5rem;
+            }
+            .widget-title {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Responsive - Tablets */
+        @media (max-width: 1024px) {
+            .kpi-value {
+                font-size: 1.75rem;
+            }
+            .loan-metric {
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Responsive - Mobile */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.75rem;
+            }
+            
+            .header h1 {
+                font-size: 1rem;
+            }
+            
+            .header-controls {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .header-controls .btn,
+            .header-controls select {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .last-updated {
+                display: none;
+            }
+            
+            .kpi-value {
+                font-size: 1.4rem;
+            }
+            
+            .kpi-change {
+                font-size: 0.7rem;
+            }
+            
+            .kpi-label {
+                font-size: 0.6rem;
+            }
+            
+            .widget-title {
+                font-size: 0.7rem;
+            }
+            
+            .loan-metric {
+                font-size: 0.7rem;
+                padding: 0.25rem 0;
+            }
+            
+            .goal-header {
+                font-size: 0.65rem;
+            }
+            
+            .progress-bar {
+                height: 4px;
+            }
+
+            .grid-stack {
+                --gs-column-count: 6;
+            }
+            
+            .grid-stack-item-content {
+                padding: 0.5rem;
+            }
+            
+            .widget-header {
+                margin-bottom: 0.25rem;
+                padding-bottom: 0.25rem;
+            }
+        }
+        
+        /* Responsive - Small Mobile */
+        @media (max-width: 480px) {
+            .header {
+                padding: 0.5rem;
+            }
+            
+            .header h1 {
+                font-size: 0.9rem;
+            }
+            
+            .kpi-value {
+                font-size: 1.2rem;
+            }
+            
+            .loan-metric {
+                flex-direction: column;
+                gap: 0.15rem;
+            }
+            
+            .metric-value {
+                text-align: left;
+            }
+        }
+
+        /* Drag handle */
+        .gs-item .drag-handle {
+            cursor: move;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>📊 Zhodler 2026 Portfolio</h1>
+        <div class="header-controls">
+            <span class="last-updated" id="lastUpdated">Last updated: --</span>
+            <button class="btn btn-primary" id="refreshBtn">🔄 Refresh Data</button>
+            <button class="privacy-toggle" id="privacyToggle" title="Toggle privacy mode">🔒 Privacy</button>
+            <select id="themeSelect">
+                <option value="default">🌊 Cyan</option>
+                <option value="neon">💜 Neon</option>
+                <option value="cyber">🤖 Cyber</option>
+            </select>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                <label for="accentColorPicker" style="font-size: 0.75rem; color: var(--text-secondary);">🎨</label>
+                <input type="color" id="accentColorPicker" value="#0ad5ec" title="Chart accent color" style="width: 32px; height: 28px; border: none; border-radius: 4px; cursor: pointer; background: transparent;">
+            </div>
+            <button class="btn" id="lockLayoutBtn" title="Lock/Unlock Layout">🔓 Unlocked</button>
+            <button class="btn" id="settingsBtn">⚙️ Settings</button>
+            <button class="btn" id="resetLayoutBtn">↩️ Reset Layout</button>
+        </div>
+    </header>
+    
+    <div id="statusBar" style="padding: 10px 20px; background: #2980b9; color: white; text-align: center;">
+        🔄 Loading... (Your Google Sheet must be published: File → Share → Publish to web)
+    </div>
+
+    <div class="dashboard-container">
+        <div class="grid-stack" id="dashboard"></div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>⚙️ Dashboard Settings</h2>
+            
+            <div class="form-group" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <label style="font-weight: 600; color: var(--accent-green);">📊 Google Sheets URL</label>
+                <input type="text" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk/edit">
+                <div style="margin-top: 0.75rem;">
+                    <button class="btn" id="testConnectionBtn" style="width: 100%;">🔍 Test Connection</button>
+                </div>
+                <div id="testResult" style="font-size: 0.8rem; margin-top: 0.5rem; padding: 0.5rem; border-radius: 4px; display: none;"></div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.75rem;">
+                    <strong>⚠️ Important Setup:</strong><br>
+                    1. Open your Google Sheet<br>
+                    2. Go to <strong>File → Share → Publish to web</strong><br>
+                    3. Select "Entire Document" and click <strong>Publish</strong><br>
+                    4. Paste your sheet URL above (the regular edit URL is fine)
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Auto-refresh interval</label>
+                <select id="refreshInterval">
+                    <option value="0">Manual only</option>
+                    <option value="60">Every 1 minute</option>
+                    <option value="300">Every 5 minutes</option>
+                    <option value="900">Every 15 minutes</option>
+                    <option value="1800">Every 30 minutes</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Chart Accent Color</label>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <input type="color" id="settingsAccentColor" value="#0ad5ec" style="width: 60px; height: 40px; border: none; border-radius: 8px; cursor: pointer;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                            All chart colors are generated as shades of this color
+                        </div>
+                        <div id="palettePreview" style="display: flex; gap: 2px; margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Currency Display</label>
+                <select id="currencyDisplay">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="BTC">BTC (₿)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Layout Management</label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn" id="exportLayoutBtn" style="flex: 1;">📤 Export Layout</button>
+                    <button class="btn" id="importLayoutBtn" style="flex: 1;">📥 Import Layout</button>
+                    <input type="file" id="importLayoutFile" accept=".json" style="display: none;">
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    Export your layout to use on other devices
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" id="closeSettingsBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveSettingsBtn">Save & Load Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // Global State
+        // ============================================
+        let grid = null;
+        let charts = {};
+        let portfolioData = null;
+        let accentColor = '#0ad5ec';
+        let colorPalette = [];
+
+        // ============================================
+        // Color Palette Generation
+        // ============================================
+        
+        // Convert hex to HSL
+        function hexToHsl(hex) {
+            hex = hex.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16) / 255;
+            const g = parseInt(hex.substr(2, 2), 16) / 255;
+            const b = parseInt(hex.substr(4, 2), 16) / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+        
+        // Convert HSL to hex
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+        
+        // Generate color palette from base color
+        function generatePalette(baseHex) {
+            const hsl = hexToHsl(baseHex);
+            const palette = [];
+            
+            // Generate 10 shades with varying lightness and saturation
+            const variations = [
+                { lOffset: 0, sOffset: 0 },      // Base color
+                { lOffset: 15, sOffset: -10 },   // Lighter
+                { lOffset: -15, sOffset: 10 },   // Darker
+                { lOffset: 25, sOffset: -20 },   // Much lighter
+                { lOffset: -25, sOffset: 5 },    // Much darker
+                { lOffset: 10, sOffset: 15 },    // More saturated, lighter
+                { lOffset: -10, sOffset: 20 },   // More saturated, darker
+                { lOffset: 30, sOffset: -30 },   // Very light (pastel)
+                { lOffset: -30, sOffset: 0 },    // Very dark
+                { lOffset: 5, sOffset: -5 },     // Slight variation
+            ];
+            
+            variations.forEach(v => {
+                const newL = Math.max(10, Math.min(90, hsl.l + v.lOffset));
+                const newS = Math.max(20, Math.min(100, hsl.s + v.sOffset));
+                palette.push(hslToHex(hsl.h, newS, newL));
+            });
+            
+            return palette;
+        }
+        
+        // Get complementary/contrasting color for negative values
+        function getContrastColor(baseHex) {
+            const hsl = hexToHsl(baseHex);
+            // Shift hue by 180 degrees for complement, or use red-ish for negative
+            const contrastHue = (hsl.h + 150) % 360;
+            return hslToHex(contrastHue, Math.min(90, hsl.s + 10), hsl.l);
+        }
+        
+        // Initialize palette from saved or default color
+        function initColorPalette() {
+            accentColor = localStorage.getItem('zhodler-accent-color') || '#0ad5ec';
+            document.getElementById('accentColorPicker').value = accentColor;
+            colorPalette = generatePalette(accentColor);
+            updateCSSAccentColors();
+        }
+        
+        // Update CSS custom properties for progress bars
+        function updateCSSAccentColors() {
+            const root = document.documentElement;
+            root.style.setProperty('--chart-color-1', colorPalette[0]);
+            root.style.setProperty('--chart-color-2', colorPalette[1]);
+            root.style.setProperty('--chart-color-3', colorPalette[2]);
+            root.style.setProperty('--chart-color-4', colorPalette[3]);
+            root.style.setProperty('--chart-color-5', colorPalette[4]);
+            root.style.setProperty('--chart-contrast', getContrastColor(accentColor));
+        }
+        
+        // Handle accent color change
+        function onAccentColorChange(newColor) {
+            accentColor = newColor;
+            colorPalette = generatePalette(accentColor);
+            localStorage.setItem('zhodler-accent-color', accentColor);
+            updateCSSAccentColors();
+            
+            // Re-render charts with new colors
+            if (portfolioData) {
+                updateCharts(portfolioData);
+            }
+        }
+
+        // Default widget layout - matches reference screenshot
+        const defaultLayout = [
+            // Row 1: 5 KPI widgets (h:2)
+            { id: 'total-value', x: 0, y: 0, w: 3, h: 2 },
+            { id: 'yearly-return', x: 3, y: 0, w: 2, h: 2 },
+            { id: 'perf-diff', x: 5, y: 0, w: 2, h: 3 },
+            { id: 'btc-holdings', x: 7, y: 0, w: 2, h: 2 },
+            { id: 'loan-health', x: 9, y: 0, w: 3, h: 2 },
+            
+            // Row 2: profit averages + new metrics (h:2)
+            { id: 'daily-avg-2026', x: 0, y: 2, w: 2, h: 2 },
+            { id: 'daily-avg-alltime', x: 2, y: 2, w: 2, h: 2 },
+            { id: 'monthly-avg-2026', x: 4, y: 3, w: 2, h: 2 },
+            { id: 'monthly-avg-alltime', x: 7, y: 2, w: 2, h: 2 },
+            { id: 'cagr', x: 9, y: 2, w: 3, h: 2 },
+            
+            // Row 3: financial health metrics (h:2)
+            { id: 'split-portfolio', x: 0, y: 4, w: 3, h: 2 },
+            { id: 'debt-to-asset', x: 3, y: 5, w: 2, h: 2 },
+            { id: 'net-worth-velocity', x: 5, y: 5, w: 2, h: 2 },
+            { id: 'inflation-adjusted', x: 7, y: 4, w: 3, h: 3 },
+            { id: 'peer-benchmark', x: 10, y: 4, w: 2, h: 2 },
+            
+            // Row 4: 4 chart widgets (h:4)
+            { id: 'asset-allocation', x: 0, y: 7, w: 3, h: 4 },
+            { id: 'goals-progress', x: 3, y: 7, w: 3, h: 4 },
+            { id: 'active-passive-global', x: 6, y: 7, w: 3, h: 4 },
+            { id: 'loan-details', x: 9, y: 7, w: 3, h: 4 },
+            
+            // Row 5: Advanced widgets (h:4)
+            { id: 'projections-chart', x: 0, y: 11, w: 4, h: 4 },
+            { id: 'monte-carlo', x: 4, y: 11, w: 4, h: 5 },
+            { id: 'risk-dashboard', x: 8, y: 11, w: 4, h: 4 },
+            
+            // Row 6: Timeline and performance widgets (h:4)
+            { id: 'time-to-fire', x: 0, y: 15, w: 4, h: 4 },
+            { id: 'milestone-timeline', x: 4, y: 15, w: 4, h: 4 },
+            { id: 'yearly-performance', x: 8, y: 15, w: 4, h: 4 }
+        ];
+
+        // ============================================
+        // Utility Functions
+        // ============================================
+        function formatCurrency(value, decimals = 2) {
+            if (value === null || value === undefined || isNaN(value)) return '--';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(value);
+        }
+
+        function formatPercent(value, decimals = 2) {
+            if (value === null || value === undefined || isNaN(value)) return '--';
+            return (value * (Math.abs(value) < 1 ? 100 : 1)).toFixed(decimals) + '%';
+        }
+
+        function formatNumber(value, decimals = 4) {
+            if (value === null || value === undefined || isNaN(value)) return '--';
+            return parseFloat(value).toFixed(decimals);
+        }
+
+        function getChangeClass(value) {
+            if (value > 0) return 'positive';
+            if (value < 0) return 'negative';
+            return '';
+        }
+
+        function parseNumeric(value) {
+            if (value === null || value === undefined || value === '') return null;
+            if (typeof value === 'number') return isNaN(value) ? null : value;
+            if (typeof value === 'string') {
+                // Handle special error values from Excel/Sheets
+                if (value.startsWith('#') || value === 'NaN' || value === 'N/A') return null;
+                // Remove currency symbols, commas, spaces, quotes
+                let cleaned = value.replace(/[$,€£\s"']/g, '').replace(/[()]/g, '-').trim();
+                if (cleaned === '' || cleaned === '-') return null;
+                // Handle percentages
+                if (cleaned.endsWith('%')) {
+                    cleaned = cleaned.slice(0, -1);
+                    const num = parseFloat(cleaned);
+                    return isNaN(num) ? null : num; // Return as-is, not divided by 100
+                }
+                const num = parseFloat(cleaned);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        }
+        
+        // Helper to safely get cell value from row
+        function getCell(row, index) {
+            if (!row || index >= row.length) return null;
+            const val = row[index];
+            if (val === '' || val === undefined) return null;
+            return val;
+        }
+
+        // ============================================
+        // Data Loading from Google Sheets
+        // ============================================
+        
+        // Sheet names to fetch
+        const SHEET_NAMES = [
+            'Performance',
+            'BTCCrypto', 
+            'Loans',
+            'AssetDistro',
+            'Split folio',
+            'Goals',
+            'Projections',
+            'TimePassed'
+        ];
+        
+        function extractSheetId(url) {
+            // Extract sheet ID from various Google Sheets URL formats
+            const patterns = [
+                /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,
+                /^([a-zA-Z0-9-_]+)$/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+        
+        async function fetchSheetAsCSV(sheetId, sheetName) {
+            // Use Google's visualization API to get CSV data
+            // Try with CORS proxies as fallback
+            const baseUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            
+            const corsProxies = [
+                '', // Direct first
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url='
+            ];
+            
+            console.log(`Fetching sheet: ${sheetName}`);
+            
+            for (let i = 0; i < corsProxies.length; i++) {
+                const proxy = corsProxies[i];
+                const url = proxy ? (proxy.includes('allorigins') ? proxy + encodeURIComponent(baseUrl) : proxy + baseUrl) : baseUrl;
+                
+                console.log(`  Trying ${proxy || 'direct'}...`);
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const csvText = await response.text();
+                    
+                    // Check if we got an error page instead of CSV
+                    if (csvText.includes('<!DOCTYPE html>') || csvText.includes('<html') || csvText.includes('unavailable')) {
+                        throw new Error('Got HTML instead of CSV');
+                    }
+                    
+                    console.log(`  ✓ Success via ${proxy || 'direct'}`);
+                    return parseCSV(csvText);
+                } catch (err) {
+                    console.warn(`  ✗ Failed via ${proxy || 'direct'}:`, err.message);
+                    if (i === corsProxies.length - 1) {
+                        throw new Error(`Could not load ${sheetName}: All methods failed`);
+                    }
+                }
+            }
+        }
+        
+        function parseCSV(csvText) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let insideQuotes = false;
+            
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+                
+                if (char === '"') {
+                    if (insideQuotes && nextChar === '"') {
+                        currentCell += '"';
+                        i++; // Skip next quote
+                    } else {
+                        insideQuotes = !insideQuotes;
+                    }
+                } else if (char === ',' && !insideQuotes) {
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !insideQuotes) {
+                    currentRow.push(currentCell.trim());
+                    if (currentRow.some(cell => cell !== '')) {
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentCell = '';
+                    if (char === '\r') i++; // Skip \n after \r
+                } else if (char !== '\r') {
+                    currentCell += char;
+                }
+            }
+            
+            // Don't forget the last cell/row
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                if (currentRow.some(cell => cell !== '')) {
+                    rows.push(currentRow);
+                }
+            }
+            
+            return rows;
+        }
+        
+        async function loadFromGoogleSheets(sheetUrl) {
+            const sheetId = extractSheetId(sheetUrl);
+            if (!sheetId) {
+                throw new Error('Invalid Google Sheets URL. Please check the URL and try again.');
+            }
+            
+            console.log('Sheet ID:', sheetId);
+            
+            const sheets = {};
+            const errors = [];
+            
+            for (let i = 0; i < SHEET_NAMES.length; i++) {
+                const sheetName = SHEET_NAMES[i];
+                showStatus(`Loading ${sheetName}... (${i + 1}/${SHEET_NAMES.length})`, 'info');
+                
+                try {
+                    sheets[sheetName] = await fetchSheetAsCSV(sheetId, sheetName);
+                    console.log(`Loaded ${sheetName}: ${sheets[sheetName].length} rows`);
+                } catch (err) {
+                    console.warn(`Could not load sheet ${sheetName}:`, err.message);
+                    errors.push(sheetName);
+                }
+            }
+            
+            if (Object.keys(sheets).length === 0) {
+                throw new Error(
+                    'Could not load any sheets. Please check:\n' +
+                    '1. The spreadsheet is published (File → Share → Publish to web)\n' +
+                    '2. You clicked "Publish" in the dialog\n' +
+                    '3. Check browser console (F12) for details'
+                );
+            }
+            
+            if (errors.length > 0) {
+                console.warn('Some sheets could not be loaded:', errors);
+            }
+            
+            return sheets;
+        }
+
+        function processData(sheets) {
+            const data = {
+                performance: {},
+                btcCrypto: {},
+                loans: {},
+                assetDistro: [],
+                goals: [],
+                projections: [],
+                timePassed: {},
+                pools: [],
+                fire: {}
+            };
+
+            console.log('Processing sheets:', Object.keys(sheets));
+
+            // Process Performance sheet
+            if (sheets['Performance'] && sheets['Performance'].length > 1) {
+                const perf = sheets['Performance'];
+                console.log('Processing Performance, rows:', perf.length);
+                console.log('Performance headers:', perf[0]);
+                
+                // Row 1 has the main KPI data (row 0 is headers)
+                if (perf[1] && perf[1].length > 0) {
+                    console.log('Performance row 1:', perf[1]);
+                    data.performance = {
+                        totalValue: parseNumeric(perf[1][0]),
+                        totalGain: parseNumeric(perf[1][1]),
+                        dailyAvg: parseNumeric(perf[1][2]),
+                        monthlyAvg: parseNumeric(perf[1][3]),
+                        allTimePercent: parseNumeric(perf[1][4]),
+                        yearlyGain2026: parseNumeric(perf[1][6]),
+                        dailyAvg2026: parseNumeric(perf[1][7]),
+                        monthlyAvg2026: parseNumeric(perf[1][8]),
+                        yearlyPercent2026: parseNumeric(perf[1][9]),
+                        target2026Percent: parseNumeric(perf[1][10]),
+                        target2026Value: parseNumeric(perf[1][11]),
+                        achievedTargetPercent: parseNumeric(perf[1][12]),
+                        compoundRate2026: parseNumeric(perf[1][13]),
+                        apr2026: parseNumeric(perf[1][14]),
+                        allTimeCompound: parseNumeric(perf[1][15]),
+                        allTimeApr: parseNumeric(perf[1][16]),
+                        threshold: parseNumeric(perf[1][17]),
+                        perfDiffBtcVsPortfolio: parseNumeric(perf[1][18]),
+                        projCompoundEoY: parseNumeric(perf[1][19]),
+                        hyperliquidValue: parseNumeric(perf[1][20]),
+                        allTimeEarned: parseNumeric(perf[1][21]),
+                        hyperliquidROI: parseNumeric(perf[1][23])
+                    };
+                    console.log('Parsed performance:', data.performance);
+                    console.log('Perf Diff BTC vs Portfolio:', data.performance.perfDiffBtcVsPortfolio);
+                }
+                
+                // Solo portfolio (row 5)
+                if (perf[5]) {
+                    data.performance.soloPortfolio = parseNumeric(perf[5][0]);
+                }
+                
+                // Yearly breakdown - search for rows with year values (2024, 2025, 2026, etc.)
+                data.performance.yearly = [];
+                for (let i = 0; i < perf.length; i++) {
+                    const row = perf[i];
+                    if (row && row[0]) {
+                        const yearVal = String(row[0]).trim();
+                        // Check if it's a year (4 digit number starting with 20)
+                        if (/^20\d{2}$/.test(yearVal)) {
+                            const yearData = {
+                                year: yearVal,
+                                percent: parseNumeric(row[1]),
+                                value: parseNumeric(row[2]),
+                                profit: parseNumeric(row[3]),
+                                invested: parseNumeric(row[4]),
+                                btc: parseNumeric(row[5])
+                            };
+                            console.log(`Found yearly data at row ${i}:`, yearData);
+                            data.performance.yearly.push(yearData);
+                        }
+                    }
+                }
+                console.log('Parsed yearly performance:', data.performance.yearly);
+            }
+
+            // Process BTCCrypto sheet
+            if (sheets['BTCCrypto'] && sheets['BTCCrypto'].length > 1) {
+                const btc = sheets['BTCCrypto'];
+                console.log('Processing BTCCrypto, rows:', btc.length);
+                
+                if (btc[1] && btc[1].length > 0) {
+                    data.btcCrypto = {
+                        btcPriceJan24: parseNumeric(btc[1][0]),
+                        btcIncreaseSinceJan24: parseNumeric(btc[1][1]),
+                        initialBtcValue2024: parseNumeric(btc[1][2]),
+                        fiatInvested: parseNumeric(btc[1][3]),
+                        totalInvestedGlobal: parseNumeric(btc[1][4]),
+                        totalInvestedSolo: parseNumeric(btc[1][5]),
+                        btcCollateral: parseNumeric(btc[1][6]),
+                        jupSolCollateral: parseNumeric(btc[1][7]),
+                        collateralValue: parseNumeric(btc[1][8]),
+                        totalBtcExposure: parseNumeric(btc[1][9]),
+                        btcPriceStart2026: parseNumeric(btc[1][10]),
+                        btcPriceToday: parseNumeric(btc[1][11]),
+                        btcIncrease2026: parseNumeric(btc[1][12]),
+                        btcInitial2026: parseNumeric(btc[1][13]),
+                        btcInitialValue2026: parseNumeric(btc[1][14]),
+                        cryptoInitial2026: parseNumeric(btc[1][15]),
+                        totalInitial2026: parseNumeric(btc[1][16]),
+                        added2026: parseNumeric(btc[1][17]),
+                        totalApplied2026: parseNumeric(btc[1][18])
+                    };
+                    console.log('Parsed btcCrypto:', data.btcCrypto);
+                }
+            }
+
+            // Process Loans sheet
+            if (sheets['Loans']) {
+                const loans = sheets['Loans'];
+                if (loans[1]) {
+                    data.loans = {
+                        borrowed: Math.abs(parseNumeric(loans[1][0]) || parseNumeric(loans[2][0])),
+                        btcPrice: parseNumeric(loans[1][1]),
+                        collateralValue: parseNumeric(loans[1][2]),
+                        maxBorrow: parseNumeric(loans[1][3]),
+                        maxSafeBorrow: parseNumeric(loans[1][4]),
+                        ratio: parseNumeric(loans[1][5]),
+                        ltv45DebtValue: parseNumeric(loans[1][6]),
+                        liquidationPrice: parseNumeric(loans[1][7]),
+                        dropToLiquidation: parseNumeric(loans[1][12])
+                    };
+                    
+                    // Time to 45% LTV
+                    if (loans[7]) {
+                        data.loans.amountBorrowed = parseNumeric(loans[7][1]);
+                        data.loans.borrowApr = parseNumeric(loans[7][2]);
+                        data.loans.amountProducing = parseNumeric(loans[7][3]);
+                        data.loans.yieldApr = parseNumeric(loans[7][4]);
+                        data.loans.timeToRepayDays = parseNumeric(loans[7][5]);
+                    }
+                    
+                    // Total debt info
+                    if (loans[16]) {
+                        data.loans.totalDebt = parseNumeric(loans[16][2]);
+                    }
+                    if (loans[17]) {
+                        data.loans.dailyPayment = parseNumeric(loans[17][2]);
+                    }
+                    if (loans[18]) {
+                        data.loans.daysToPayOff = parseNumeric(loans[18][2]);
+                    }
+                    
+                    // Debt for Active vs Passive chart
+                    // Note: CSV export skips empty rows, so A26 in Excel becomes row 15 in CSV
+                    // The debt value is the large negative number around -40405
+                    if (loans[15] && loans[15][0]) {
+                        data.loans.debtForChart = parseNumeric(loans[15][0]);
+                        console.log('Debt for chart (from row 15):', data.loans.debtForChart);
+                    } else {
+                        // Fallback: search for large negative value
+                        for (let i = 0; i < loans.length; i++) {
+                            const val = parseNumeric(loans[i] && loans[i][0]);
+                            if (val && val < -10000) {
+                                data.loans.debtForChart = val;
+                                console.log(`Debt found at row ${i}:`, val);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Process AssetDistro sheet
+            if (sheets['AssetDistro']) {
+                const assets = sheets['AssetDistro'];
+                console.log('Processing AssetDistro, rows:', assets.length);
+                
+                // Initialize chain and method data
+                data.chainDistro = [];
+                data.methodDistro = [];
+                
+                for (let i = 1; i < assets.length; i++) {
+                    const row = assets[i];
+                    
+                    // Asset data (columns 0-4) - mark as global portfolio
+                    if (row[0] && row[4] && !isNaN(parseNumeric(row[4]))) {
+                        const assetName = String(row[0]).trim();
+                        const value = parseNumeric(row[4]);
+                        if (value > 0) {
+                            data.assetDistro.push({
+                                asset: assetName,
+                                amount: parseNumeric(row[1]),
+                                price: parseNumeric(row[3]),
+                                value: value,
+                                source: 'global'
+                            });
+                        }
+                    }
+                    
+                    // Chain distribution - look for chain names
+                    const chainName = String(row[17] || '').trim();
+                    if (['Base', 'Solana', 'arbitrum', 'Ethereum'].includes(chainName)) {
+                        const chainValue = parseNumeric(row[18]);
+                        if (chainValue && chainValue > 0) {
+                            data.chainDistro.push({
+                                name: chainName,
+                                value: chainValue
+                            });
+                        }
+                    }
+                }
+                
+                // Active/Passive chart data - GLOBAL
+                // BTC collateral: BTCCrypto I2 (col 8)
+                // Debt: Loans A26 (row 15 in CSV due to empty row skipping)
+                // Pooled stable: AssetDistro H2 (col 7)
+                // Volatiles: AssetDistro N2 (col 13)
+                // Balance: AssetDistro P2 (col 15)
+                if (assets[1]) {
+                    data.activePassiveGlobal = {
+                        btcCollateral: null,  // Will be filled from BTCCrypto
+                        pooledStable: parseNumeric(assets[1][7]),    // AssetDistro H2 (col 7)
+                        volatiles: parseNumeric(assets[1][13]),       // AssetDistro N2 (col 13)
+                        balance: parseNumeric(assets[1][15])          // AssetDistro P2 (col 15)
+                    };
+                }
+                
+                // Risk distribution (column 7)
+                if (assets[1]) {
+                    data.riskDistro = {
+                        stables: parseNumeric(assets[1][7]),
+                        medVolatile: parseNumeric(assets[2] ? assets[2][7] : 0),
+                        highVolatile: parseNumeric(assets[3] ? assets[3][7] : 0)
+                    };
+                }
+                
+                // Method distribution (column 6-7 rows 6-9)
+                for (let i = 6; i <= 9; i++) {
+                    if (assets[i] && assets[i][6]) {
+                        const methodName = String(assets[i][6]).trim();
+                        const methodValue = parseNumeric(assets[i][7]);
+                        if (methodName && methodValue && methodValue > 0) {
+                            data.methodDistro.push({
+                                name: methodName,
+                                value: methodValue
+                            });
+                        }
+                    }
+                }
+                
+                console.log('AssetDistro processed:', data.assetDistro.length, 'assets');
+                console.log('Chain distribution:', data.chainDistro);
+                console.log('Method distribution:', data.methodDistro);
+            }
+            
+            // Process Split folio sheet and merge with AssetDistro
+            // Add HALF of the Split folio values (shared portfolio)
+            if (sheets['Split folio']) {
+                const splitFolio = sheets['Split folio'];
+                console.log('Processing Split folio, rows:', splitFolio.length);
+                
+                let splitPortfolioTotal = 0;
+                
+                for (let i = 1; i < splitFolio.length; i++) {
+                    const row = splitFolio[i];
+                    
+                    // Asset data (columns 0-4)
+                    const assetName = row[0] ? String(row[0]).trim() : '';
+                    const fullValue = parseNumeric(row[4]);
+                    const halfValue = fullValue / 2;  // Only count half of split folio
+                    
+                    // Skip if no name or no value
+                    if (!assetName || assetName === 'nan' || !fullValue || fullValue <= 0) continue;
+                    
+                    // Add to split portfolio total (full value)
+                    splitPortfolioTotal += fullValue;
+                    
+                    // Always add Split folio assets with (Split) suffix
+                    data.assetDistro.push({
+                        asset: assetName + ' (Split)',
+                        amount: parseNumeric(row[1]) / 2,
+                        price: parseNumeric(row[3]),
+                        value: halfValue,
+                        source: 'split'
+                    });
+                    console.log('Added Split folio asset:', assetName, 'half value:', halfValue);
+                }
+                
+                // Store split portfolio total value
+                data.splitPortfolio = {
+                    totalValue: splitPortfolioTotal,
+                    halfValue: splitPortfolioTotal / 2
+                };
+                console.log('Split portfolio total:', splitPortfolioTotal, 'Your half:', splitPortfolioTotal / 2);
+                
+                console.log('After Split folio merge:', data.assetDistro.length, 'total assets');
+            }
+
+            // Process Goals sheet
+            if (sheets['Goals']) {
+                const goals = sheets['Goals'];
+                console.log('Processing Goals sheet, rows:', goals.length);
+                console.log('Goals raw data:', goals);
+                
+                // FIRE calculations - capture both scenarios (rows 1 and 2)
+                data.fire = { scenarios: [] };
+                
+                // First scenario (row 1)
+                if (goals[1]) {
+                    data.fire.scenarios.push({
+                        label: 'Conservative',
+                        monthlyWage: parseNumeric(goals[1][0]),
+                        monthlyCompound: parseNumeric(goals[1][1]),
+                        totalMonthly: parseNumeric(goals[1][2]),
+                        criticalMassValue: parseNumeric(goals[1][3]),
+                        criticalMassPooled: parseNumeric(goals[1][4]),
+                        multiplier: parseNumeric(goals[1][5]),
+                        timeToFireDays: parseNumeric(goals[1][6]),
+                        timeToFireYears: parseNumeric(goals[1][7]),
+                        timeToFireMonths: parseNumeric(goals[1][8]),
+                        timeToFireExtraDays: parseNumeric(goals[1][9]),
+                        targetDailyIncome: parseNumeric(goals[1][10])
+                    });
+                }
+                
+                // Second scenario (row 2)
+                if (goals[2] && parseNumeric(goals[2][0])) {
+                    data.fire.scenarios.push({
+                        label: 'Aggressive',
+                        monthlyWage: parseNumeric(goals[2][0]),
+                        monthlyCompound: parseNumeric(goals[2][1]),
+                        totalMonthly: parseNumeric(goals[2][2]),
+                        criticalMassValue: parseNumeric(goals[2][3]),
+                        criticalMassPooled: parseNumeric(goals[2][4]),
+                        multiplier: parseNumeric(goals[2][5]),
+                        timeToFireDays: parseNumeric(goals[2][6]),
+                        timeToFireYears: parseNumeric(goals[2][7]),
+                        timeToFireMonths: parseNumeric(goals[2][8]),
+                        timeToFireExtraDays: parseNumeric(goals[2][9]),
+                        targetDailyIncome: parseNumeric(goals[2][10])
+                    });
+                }
+                
+                // Set primary fire data for backward compatibility
+                if (data.fire.scenarios.length > 0) {
+                    Object.assign(data.fire, data.fire.scenarios[0]);
+                }
+                
+                console.log('Parsed FIRE data:', data.fire);
+                
+                // Individual goals - search for rows that start with "goal"
+                for (let i = 0; i < goals.length; i++) {
+                    const row = goals[i];
+                    if (row && row[0] && typeof row[0] === 'string' && row[0].toLowerCase().startsWith('goal')) {
+                        const goal = {
+                            name: row[0],
+                            description: row[1] || '',
+                            target: parseNumeric(row[2]),
+                            current: parseNumeric(row[3]),
+                            percent: parseNumeric(row[4])
+                        };
+                        console.log(`Found goal at row ${i}:`, goal);
+                        data.goals.push(goal);
+                    }
+                }
+                console.log('Parsed goals:', data.goals);
+            }
+
+            // Process Projections sheet
+            if (sheets['Projections']) {
+                const proj = sheets['Projections'];
+                for (let i = 1; i < Math.min(proj.length, 30); i++) {
+                    const row = proj[i];
+                    if (row[0] !== undefined) {
+                        const totalAdded = parseNumeric(row[15]) || 0;  // Column P: total added (cumulative)
+                        data.projections.push({
+                            week: row[0],
+                            date: row[1],
+                            projBal: parseNumeric(row[4]) + totalAdded,           // Add total added to projection
+                            projBalAllTime: parseNumeric(row[8]) + totalAdded,    // Add total added to conservative projection
+                            projBalCurrent: parseNumeric(row[12]) + totalAdded,   // Add total added to current projection
+                            added: parseNumeric(row[14]) || 0,                     // Column O: added this period
+                            totalAdded: totalAdded                                 // Column P: cumulative added
+                        });
+                    }
+                }
+                console.log('Projections with added values:', data.projections.slice(0, 5));
+            }
+
+            // Process TimePassed sheet
+            if (sheets['TimePassed']) {
+                const time = sheets['TimePassed'];
+                if (time[1]) {
+                    data.timePassed = {
+                        startDate: time[1][0],
+                        today: time[1][1],
+                        daysPassed: parseNumeric(time[1][2]),
+                        yearStart: time[1][3],
+                        daysThisYear: parseNumeric(time[1][4]),
+                        yearPercent: parseNumeric(time[1][5]),
+                        retirementDate: time[1][9],
+                        preRetirementDate: time[1][10]
+                    };
+                }
+            }
+            
+            // Post-processing: Merge data for Active vs Passive chart
+            if (data.activePassiveGlobal) {
+                // Add BTC collateral from BTCCrypto sheet (col I = index 8)
+                if (data.btcCrypto && data.btcCrypto.collateralValue) {
+                    data.activePassiveGlobal.btcCollateral = data.btcCrypto.collateralValue;
+                }
+                
+                // Add debt from Loans sheet
+                if (data.loans && data.loans.debtForChart !== undefined) {
+                    data.activePassiveGlobal.debt = data.loans.debtForChart;
+                }
+                
+                console.log('Active/Passive Global data:', data.activePassiveGlobal);
+            }
+
+            return data;
+        }
+
+        // ============================================
+        // Widget Creation
+        // ============================================
+        function createWidgetHTML(id) {
+            const widgets = {
+                'total-value': `
+                    <div class="widget-header">
+                        <span class="widget-title">Total Portfolio Value</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-total-value">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-total-change">--</div>
+                        <div class="kpi-label">All-time gain</div>
+                    </div>
+                `,
+                'yearly-return': `
+                    <div class="widget-header">
+                        <span class="widget-title">2026 Performance</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-yearly-return">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-yearly-gain">--</div>
+                        <div class="kpi-label">Target: 75%</div>
+                    </div>
+                `,
+                'btc-holdings': `
+                    <div class="widget-header">
+                        <span class="widget-title">BTC Holdings</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-btc-amount">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-btc-value">--</div>
+                        <div class="kpi-label" id="kpi-btc-price">BTC Price: --</div>
+                    </div>
+                `,
+                'loan-health': `
+                    <div class="widget-header">
+                        <span class="widget-title">Loan Health</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-loan-ratio">--</div>
+                        <div class="kpi-change" id="kpi-loan-status">--</div>
+                        <div class="kpi-label sensitive-data" id="kpi-liq-distance">Distance to liquidation: --</div>
+                    </div>
+                `,
+                'perf-diff': `
+                    <div class="widget-header">
+                        <span class="widget-title">Portfolio vs Benchmarks</span>
+                    </div>
+                    <div class="widget-body">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div>
+                                <div class="kpi-value" id="kpi-perf-diff" style="font-size: 1.5rem;">--</div>
+                                <div class="kpi-change" id="kpi-perf-diff-status" style="font-size: 0.7rem;">vs BTC</div>
+                            </div>
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                                <div class="kpi-value" id="kpi-perf-sp500" style="font-size: 1.5rem;">--</div>
+                                <div class="kpi-change" id="kpi-perf-sp500-status" style="font-size: 0.7rem;">vs S&P 500</div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                'active-passive-global': `
+                    <div class="widget-header">
+                        <span class="widget-title">Active vs Passive - Global</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="chart-container sensitive-data">
+                            <canvas id="chart-active-passive"></canvas>
+                        </div>
+                    </div>
+                `,
+                'asset-allocation': `
+                    <div class="widget-header">
+                        <span class="widget-title">Asset Allocation</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="chart-container sensitive-data">
+                            <canvas id="chart-asset-allocation"></canvas>
+                        </div>
+                    </div>
+                `,
+                'goals-progress': `
+                    <div class="widget-header">
+                        <span class="widget-title">Goals Progress</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="goals-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'loan-details': `
+                    <div class="widget-header">
+                        <span class="widget-title">Loan Details</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="loan-details-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'projections-chart': `
+                    <div class="widget-header">
+                        <span class="widget-title">Portfolio Projections</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="chart-container">
+                            <canvas id="chart-projections"></canvas>
+                        </div>
+                    </div>
+                `,
+                'yearly-performance': `
+                    <div class="widget-header">
+                        <span class="widget-title">Yearly Performance</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="chart-container">
+                            <canvas id="chart-yearly"></canvas>
+                        </div>
+                    </div>
+                `,
+                'time-to-fire': `
+                    <div class="widget-header">
+                        <span class="widget-title">Time to FIRE</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="fire-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'daily-avg-2026': `
+                    <div class="widget-header">
+                        <span class="widget-title">Daily Avg (2026)</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-daily-avg-2026">--</div>
+                        <div class="kpi-change">per day</div>
+                        <div class="kpi-label">Average profit in 2026</div>
+                    </div>
+                `,
+                'daily-avg-alltime': `
+                    <div class="widget-header">
+                        <span class="widget-title">Daily Avg (All-time)</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-daily-avg-alltime">--</div>
+                        <div class="kpi-change">per day</div>
+                        <div class="kpi-label">Average profit all-time</div>
+                    </div>
+                `,
+                'monthly-avg-2026': `
+                    <div class="widget-header">
+                        <span class="widget-title">Monthly Avg (2026)</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-monthly-avg-2026">--</div>
+                        <div class="kpi-change">per month</div>
+                        <div class="kpi-label">Average profit in 2026</div>
+                    </div>
+                `,
+                'monthly-avg-alltime': `
+                    <div class="widget-header">
+                        <span class="widget-title">Monthly Avg (All-time)</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-monthly-avg-alltime">--</div>
+                        <div class="kpi-change">per month</div>
+                        <div class="kpi-label">Average profit all-time</div>
+                    </div>
+                `,
+                'split-portfolio': `
+                    <div class="widget-header">
+                        <span class="widget-title">Split Portfolio</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-split-total">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-split-half">--</div>
+                        <div class="kpi-label">Your half of shared portfolio</div>
+                    </div>
+                `,
+                'cagr': `
+                    <div class="widget-header">
+                        <span class="widget-title">CAGR</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value" id="kpi-cagr">--</div>
+                        <div class="kpi-change" id="kpi-cagr-years">--</div>
+                        <div class="kpi-label">Compound Annual Growth Rate</div>
+                    </div>
+                `,
+                'debt-to-asset': `
+                    <div class="widget-header">
+                        <span class="widget-title">Debt-to-Asset Ratio</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-debt-ratio">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-debt-details">--</div>
+                        <div class="kpi-label">Total debt / Total assets</div>
+                    </div>
+                `,
+                'net-worth-velocity': `
+                    <div class="widget-header">
+                        <span class="widget-title">Net Worth Velocity</span>
+                    </div>
+                    <div class="widget-body">
+                        <div class="kpi-value sensitive-data" id="kpi-nw-velocity">--</div>
+                        <div class="kpi-change sensitive-data" id="kpi-nw-monthly">--</div>
+                        <div class="kpi-label">Rate of wealth accumulation</div>
+                    </div>
+                `,
+                'monte-carlo': `
+                    <div class="widget-header">
+                        <span class="widget-title">Monte Carlo FIRE Simulation</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="monte-carlo-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'inflation-adjusted': `
+                    <div class="widget-header">
+                        <span class="widget-title">Inflation-Adjusted Returns</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="inflation-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'milestone-timeline': `
+                    <div class="widget-header">
+                        <span class="widget-title">Milestone Timeline</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="milestone-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'risk-dashboard': `
+                    <div class="widget-header">
+                        <span class="widget-title">Risk Dashboard</span>
+                    </div>
+                    <div class="widget-body" id="risk-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `,
+                'peer-benchmark': `
+                    <div class="widget-header">
+                        <span class="widget-title">Peer Benchmarking</span>
+                    </div>
+                    <div class="widget-body sensitive-data" id="peer-container">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                `
+            };
+            
+            return widgets[id] || '<div class="loading">Widget not found</div>';
+        }
+
+        // ============================================
+        // Dashboard Initialization
+        // ============================================
+        function initDashboard() {
+            const savedLayout = localStorage.getItem('zhodler-layout');
+            let layout = savedLayout ? JSON.parse(savedLayout) : defaultLayout;
+            
+            // Valid widget IDs
+            const validWidgetIds = [
+                'total-value', 'yearly-return', 'btc-holdings', 'loan-health',
+                'perf-diff', 'active-passive-global', 'asset-allocation', 
+                'goals-progress', 'loan-details', 'projections-chart',
+                'yearly-performance', 'time-to-fire',
+                'daily-avg-2026', 'daily-avg-alltime', 'monthly-avg-2026',
+                'monthly-avg-alltime', 'split-portfolio',
+                'cagr', 'debt-to-asset', 'net-worth-velocity',
+                'monte-carlo', 'inflation-adjusted',
+                'milestone-timeline', 'risk-dashboard', 'peer-benchmark'
+            ];
+            
+            // Clean up saved layout
+            if (savedLayout) {
+                // Remove any widgets that no longer exist
+                const invalidWidgets = layout.filter(item => !validWidgetIds.includes(item.id));
+                if (invalidWidgets.length > 0) {
+                    console.log('🗑️ Removing invalid widgets from saved layout:', invalidWidgets.map(w => w.id));
+                    layout = layout.filter(item => validWidgetIds.includes(item.id));
+                }
+                
+                // Add any missing widgets
+                const savedIds = layout.map(item => item.id);
+                const missingWidgets = defaultLayout.filter(item => !savedIds.includes(item.id));
+                
+                if (missingWidgets.length > 0) {
+                    console.log('🔧 Adding missing widgets to saved layout:', missingWidgets.map(w => w.id));
+                    const maxY = Math.max(...layout.map(item => item.y + item.h), 0);
+                    missingWidgets.forEach((widget, index) => {
+                        layout.push({
+                            ...widget,
+                            y: maxY + (index * 4)
+                        });
+                    });
+                }
+                
+                // Save the cleaned layout
+                if (invalidWidgets.length > 0 || missingWidgets.length > 0) {
+                    localStorage.setItem('zhodler-layout', JSON.stringify(layout));
+                }
+            }
+            
+            console.log('📊 Initializing dashboard with layout:', layout.map(l => l.id));
+
+            grid = GridStack.init({
+                column: 12,
+                cellHeight: 80,
+                margin: 0,
+                float: false,
+                resizable: { handles: 'e,se,s,sw,w' },
+                draggable: { handle: '.widget-header' }
+            });
+
+            layout.forEach(item => {
+                const widgetHtml = createWidgetHTML(item.id);
+                if (widgetHtml.includes('Widget not found')) {
+                    console.warn('⚠️ Widget not found:', item.id);
+                    return; // Skip invalid widgets
+                }
+                grid.addWidget({
+                    id: item.id,
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h,
+                    content: `<div class="grid-stack-item-content">${widgetHtml}</div>`
+                });
+            });
+
+            // Save layout on change
+            grid.on('change', saveLayout);
+            
+            // Log canvas elements for debugging
+            setTimeout(() => {
+                const canvases = document.querySelectorAll('canvas');
+                console.log('📈 Canvas elements found:', Array.from(canvases).map(c => c.id));
+            }, 100);
+        }
+
+        function saveLayout() {
+            const items = grid.getGridItems();
+            const layout = items.map(el => {
+                const node = el.gridstackNode;
+                return {
+                    id: node.id,
+                    x: node.x,
+                    y: node.y,
+                    w: node.w,
+                    h: node.h
+                };
+            });
+            localStorage.setItem('zhodler-layout', JSON.stringify(layout));
+        }
+
+        function resetLayout() {
+            console.log('🔄 Resetting layout to default...');
+            localStorage.removeItem('zhodler-layout');
+            grid.removeAll();
+            defaultLayout.forEach(item => {
+                grid.addWidget({
+                    id: item.id,
+                    x: item.x,
+                    y: item.y,
+                    w: item.w,
+                    h: item.h,
+                    content: `<div class="grid-stack-item-content">${createWidgetHTML(item.id)}</div>`
+                });
+            });
+            
+            // Re-render charts after a short delay
+            if (portfolioData) {
+                setTimeout(() => {
+                    updateDashboard(portfolioData);
+                    console.log('✅ Layout reset complete');
+                }, 100);
+            }
+            
+            // Re-apply lock state after reset
+            const isLocked = localStorage.getItem('zhodler-layout-locked') === 'true';
+            if (isLocked) {
+                setLayoutLocked(true);
+            }
+        }
+
+        function toggleLayoutLock() {
+            const isLocked = localStorage.getItem('zhodler-layout-locked') === 'true';
+            setLayoutLocked(!isLocked);
+        }
+        
+        function setLayoutLocked(locked) {
+            const btn = document.getElementById('lockLayoutBtn');
+            
+            if (locked) {
+                grid.enableMove(false);
+                grid.enableResize(false);
+                btn.textContent = '🔒 Locked';
+                btn.classList.add('locked');
+                localStorage.setItem('zhodler-layout-locked', 'true');
+                console.log('🔒 Layout locked');
+            } else {
+                grid.enableMove(true);
+                grid.enableResize(true);
+                btn.textContent = '🔓 Unlocked';
+                btn.classList.remove('locked');
+                localStorage.setItem('zhodler-layout-locked', 'false');
+                console.log('🔓 Layout unlocked');
+            }
+        }
+        
+        function initLayoutLock() {
+            const isLocked = localStorage.getItem('zhodler-layout-locked') === 'true';
+            if (isLocked) {
+                setLayoutLocked(true);
+            }
+        }
+
+        function exportLayout() {
+            const items = grid.getGridItems();
+            const layout = items.map(el => {
+                const node = el.gridstackNode;
+                return {
+                    id: node.id,
+                    x: node.x,
+                    y: node.y,
+                    w: node.w,
+                    h: node.h
+                };
+            });
+            
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                theme: localStorage.getItem('zhodler-theme') || 'default',
+                sheetsUrl: localStorage.getItem('zhodler-sheets-url') || '',
+                locked: localStorage.getItem('zhodler-layout-locked') === 'true',
+                layout: layout
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `zhodler-layout-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('📤 Layout exported');
+            alert('Layout exported successfully!');
+        }
+
+        function importLayout(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    if (!importData.layout || !Array.isArray(importData.layout)) {
+                        throw new Error('Invalid layout file');
+                    }
+                    
+                    // Save imported settings
+                    localStorage.setItem('zhodler-layout', JSON.stringify(importData.layout));
+                    
+                    if (importData.theme) {
+                        localStorage.setItem('zhodler-theme', importData.theme);
+                        document.getElementById('themeSelect').value = importData.theme;
+                        setTheme(importData.theme);
+                    }
+                    
+                    if (importData.sheetsUrl) {
+                        localStorage.setItem('zhodler-sheets-url', importData.sheetsUrl);
+                        document.getElementById('sheetsUrl').value = importData.sheetsUrl;
+                    }
+                    
+                    // Apply the layout
+                    grid.removeAll();
+                    importData.layout.forEach(item => {
+                        grid.addWidget({
+                            id: item.id,
+                            x: item.x,
+                            y: item.y,
+                            w: item.w,
+                            h: item.h,
+                            content: `<div class="grid-stack-item-content">${createWidgetHTML(item.id)}</div>`
+                        });
+                    });
+                    
+                    // Apply lock state
+                    if (importData.locked !== undefined) {
+                        setLayoutLocked(importData.locked);
+                    }
+                    
+                    // Re-render charts
+                    if (portfolioData) {
+                        setTimeout(() => updateDashboard(portfolioData), 100);
+                    }
+                    
+                    console.log('📥 Layout imported successfully');
+                    alert('Layout imported successfully!');
+                    
+                    // Close settings modal
+                    document.getElementById('settingsModal').classList.remove('active');
+                    
+                } catch (err) {
+                    console.error('Import error:', err);
+                    alert('Failed to import layout: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ============================================
+        // Dashboard Update
+        // ============================================
+        function updateDashboard(data) {
+            portfolioData = data;
+            
+            // Update KPIs
+            const totalValue = document.getElementById('kpi-total-value');
+            const totalChange = document.getElementById('kpi-total-change');
+            if (totalValue && data.performance.totalValue) {
+                totalValue.textContent = formatCurrency(data.performance.totalValue);
+                totalChange.textContent = formatCurrency(data.performance.totalGain) + ' (' + formatPercent(data.performance.allTimePercent) + ')';
+                totalChange.className = 'kpi-change ' + getChangeClass(data.performance.totalGain);
+            }
+
+            const yearlyReturn = document.getElementById('kpi-yearly-return');
+            const yearlyGain = document.getElementById('kpi-yearly-gain');
+            if (yearlyReturn && data.performance.yearlyPercent2026 !== undefined) {
+                yearlyReturn.textContent = formatPercent(data.performance.yearlyPercent2026);
+                yearlyGain.textContent = formatCurrency(data.performance.yearlyGain2026);
+                yearlyGain.className = 'kpi-change ' + getChangeClass(data.performance.yearlyGain2026);
+            }
+
+            const btcAmount = document.getElementById('kpi-btc-amount');
+            const btcValue = document.getElementById('kpi-btc-value');
+            const btcPrice = document.getElementById('kpi-btc-price');
+            if (btcAmount && data.btcCrypto.totalBtcExposure) {
+                btcAmount.textContent = formatNumber(data.btcCrypto.totalBtcExposure, 4) + ' BTC';
+                btcValue.textContent = formatCurrency(data.btcCrypto.collateralValue);
+                btcValue.className = 'kpi-change positive';
+                btcPrice.textContent = 'BTC Price: ' + formatCurrency(data.btcCrypto.btcPriceToday, 0);
+            }
+
+            const loanRatio = document.getElementById('kpi-loan-ratio');
+            const loanStatus = document.getElementById('kpi-loan-status');
+            const liqDistance = document.getElementById('kpi-liq-distance');
+            if (loanRatio && data.loans.ratio) {
+                const ratio = data.loans.ratio;
+                loanRatio.textContent = formatPercent(ratio / 100) + ' LTV';
+                
+                let status, statusClass;
+                if (ratio < 50) {
+                    status = '✅ Healthy';
+                    statusClass = 'positive';
+                } else if (ratio < 70) {
+                    status = '⚠️ Moderate';
+                    statusClass = 'warning';
+                } else {
+                    status = '🚨 High Risk';
+                    statusClass = 'negative';
+                }
+                loanStatus.textContent = status;
+                loanStatus.className = 'kpi-change ' + statusClass;
+                
+                if (data.loans.dropToLiquidation) {
+                    liqDistance.textContent = 'Distance to liquidation: ' + formatPercent(Math.abs(data.loans.dropToLiquidation));
+                }
+            }
+
+            // Update Performance Diff (Portfolio vs BTC)
+            const perfDiff = document.getElementById('kpi-perf-diff');
+            const perfDiffStatus = document.getElementById('kpi-perf-diff-status');
+            if (perfDiff && data.performance.perfDiffBtcVsPortfolio !== undefined) {
+                const diff = data.performance.perfDiffBtcVsPortfolio;
+                perfDiff.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(2) + '%';
+                
+                let status, statusClass;
+                if (diff > 0) {
+                    status = '📈 Outperforming BTC';
+                    statusClass = 'positive';
+                } else if (diff < 0) {
+                    status = '📉 Underperforming BTC';
+                    statusClass = 'negative';
+                } else {
+                    status = '➡️ Matching BTC';
+                    statusClass = '';
+                }
+                perfDiffStatus.textContent = status;
+                perfDiffStatus.className = 'kpi-change ' + statusClass;
+            }
+
+            // Update Performance vs S&P 500
+            const perfSp500 = document.getElementById('kpi-perf-sp500');
+            const perfSp500Status = document.getElementById('kpi-perf-sp500-status');
+            if (perfSp500 && data.performance.allTimePercent !== undefined && data.timePassed) {
+                // Calculate S&P 500 expected return (avg 10% annually)
+                const years = data.timePassed.daysPassed / 365;
+                const sp500ExpectedReturn = (Math.pow(1.10, years) - 1) * 100;
+                const diffSp500 = data.performance.allTimePercent - sp500ExpectedReturn;
+                
+                perfSp500.textContent = (diffSp500 >= 0 ? '+' : '') + diffSp500.toFixed(2) + '%';
+                
+                let statusSp, statusClassSp;
+                if (diffSp500 > 0) {
+                    statusSp = '📈 Outperforming S&P';
+                    statusClassSp = 'positive';
+                } else if (diffSp500 < 0) {
+                    statusSp = '📉 Underperforming S&P';
+                    statusClassSp = 'negative';
+                } else {
+                    statusSp = '➡️ Matching S&P';
+                    statusClassSp = '';
+                }
+                perfSp500Status.textContent = statusSp;
+                perfSp500Status.className = 'kpi-change ' + statusClassSp;
+            }
+
+            // Update Daily Average (2026)
+            const dailyAvg2026 = document.getElementById('kpi-daily-avg-2026');
+            if (dailyAvg2026 && data.performance.dailyAvg2026 !== undefined) {
+                dailyAvg2026.textContent = formatCurrency(data.performance.dailyAvg2026);
+                dailyAvg2026.className = 'kpi-value sensitive-data ' + getChangeClass(data.performance.dailyAvg2026);
+            }
+
+            // Update Daily Average (All-time)
+            const dailyAvgAlltime = document.getElementById('kpi-daily-avg-alltime');
+            if (dailyAvgAlltime && data.performance.dailyAvg !== undefined) {
+                dailyAvgAlltime.textContent = formatCurrency(data.performance.dailyAvg);
+                dailyAvgAlltime.className = 'kpi-value sensitive-data ' + getChangeClass(data.performance.dailyAvg);
+            }
+
+            // Update Monthly Average (2026)
+            const monthlyAvg2026 = document.getElementById('kpi-monthly-avg-2026');
+            if (monthlyAvg2026 && data.performance.monthlyAvg2026 !== undefined) {
+                monthlyAvg2026.textContent = formatCurrency(data.performance.monthlyAvg2026);
+                monthlyAvg2026.className = 'kpi-value sensitive-data ' + getChangeClass(data.performance.monthlyAvg2026);
+            }
+
+            // Update Monthly Average (All-time)
+            const monthlyAvgAlltime = document.getElementById('kpi-monthly-avg-alltime');
+            if (monthlyAvgAlltime && data.performance.monthlyAvg !== undefined) {
+                monthlyAvgAlltime.textContent = formatCurrency(data.performance.monthlyAvg);
+                monthlyAvgAlltime.className = 'kpi-value sensitive-data ' + getChangeClass(data.performance.monthlyAvg);
+            }
+
+            // Update Split Portfolio
+            const splitTotal = document.getElementById('kpi-split-total');
+            const splitHalf = document.getElementById('kpi-split-half');
+            if (splitTotal && data.splitPortfolio) {
+                splitTotal.textContent = formatCurrency(data.splitPortfolio.totalValue);
+                splitHalf.textContent = 'Your half: ' + formatCurrency(data.splitPortfolio.halfValue);
+                splitHalf.className = 'kpi-change positive';
+            }
+
+            // Update CAGR (Compound Annual Growth Rate)
+            const cagrEl = document.getElementById('kpi-cagr');
+            const cagrYears = document.getElementById('kpi-cagr-years');
+            if (cagrEl && data.performance.totalValue && data.performance.totalGain && data.timePassed) {
+                const startValue = data.performance.totalValue - data.performance.totalGain;
+                const endValue = data.performance.totalValue;
+                const years = data.timePassed.daysPassed / 365;
+                
+                if (startValue > 0 && years > 0) {
+                    const cagr = (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
+                    cagrEl.textContent = formatPercent(cagr);
+                    cagrEl.className = 'kpi-value ' + getChangeClass(cagr);
+                    cagrYears.textContent = `Over ${years.toFixed(1)} years`;
+                }
+            }
+
+            // Update Debt-to-Asset Ratio
+            const debtRatioEl = document.getElementById('kpi-debt-ratio');
+            const debtDetailsEl = document.getElementById('kpi-debt-details');
+            if (debtRatioEl && data.loans && data.performance.totalValue) {
+                const debt = Math.abs(data.loans.borrowed || 0);
+                const totalAssets = data.performance.totalValue;
+                const ratio = (debt / totalAssets) * 100;
+                
+                debtRatioEl.textContent = formatPercent(ratio);
+                debtDetailsEl.textContent = formatCurrency(debt) + ' / ' + formatCurrency(totalAssets);
+                
+                // Color based on risk level
+                let ratioClass = 'positive';
+                if (ratio > 70) ratioClass = 'negative';
+                else if (ratio > 50) ratioClass = 'warning';
+                debtRatioEl.className = 'kpi-value sensitive-data ' + ratioClass;
+            }
+
+            // Update Net Worth Velocity
+            const nwVelocityEl = document.getElementById('kpi-nw-velocity');
+            const nwMonthlyEl = document.getElementById('kpi-nw-monthly');
+            if (nwVelocityEl && data.performance) {
+                // Net worth = Total assets - Debt
+                const debt = Math.abs(data.loans?.borrowed || 0);
+                const netWorth = data.performance.totalValue - debt;
+                
+                // Velocity = rate of change (monthly average profit * 12 for yearly)
+                const monthlyVelocity = data.performance.monthlyAvg || 0;
+                const yearlyVelocity = monthlyVelocity * 12;
+                
+                nwVelocityEl.textContent = formatCurrency(yearlyVelocity) + '/yr';
+                nwVelocityEl.className = 'kpi-value sensitive-data ' + getChangeClass(yearlyVelocity);
+                nwMonthlyEl.textContent = formatCurrency(monthlyVelocity) + '/mo • Net: ' + formatCurrency(netWorth);
+                nwMonthlyEl.className = 'kpi-change sensitive-data';
+            }
+
+            // Update Goals
+            console.log('Goals data before update:', data.goals);
+            updateGoals(data.goals);
+            
+            // Update Loan Details
+            updateLoanDetails(data.loans);
+            
+            // Update FIRE section
+            updateFireSection(data.fire, data.timePassed);
+
+            // Update new advanced widgets
+            updateMonteCarloWidget(data);
+            updateInflationWidget(data);
+            updateMilestoneWidget(data);
+            updateRiskWidget(data);
+            updatePeerBenchmarkWidget(data);
+
+            // Update Charts - slight delay to ensure DOM is ready
+            setTimeout(() => updateCharts(data), 50);
+
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString();
+        }
+
+        // ============================================
+        // Monte Carlo Simulation Widget (Enhanced)
+        // ============================================
+        // Features:
+        // - Multiple FIRE checkpoints: $250k, $500k, $750k, $1M
+        // - Crypto-appropriate volatility: 10% monthly (8-12% range)
+        // - Multiple time horizons: 1, 2, 5, 10 years
+        // - Percentiles: 5th, 15th, 45th, 85th
+        // ============================================
+        function updateMonteCarloWidget(data) {
+            const container = document.getElementById('monte-carlo-container');
+            if (!container) return;
+            
+            if (!data.performance) {
+                container.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 1rem;">Insufficient data for simulation</div>';
+                return;
+            }
+            
+            // Monte Carlo parameters
+            const currentValue = data.performance.totalValue || 0;
+            const monthlyContribution = data.performance.monthlyAvg || 0; // All-time average
+            const simulations = 1000;
+            
+            // FIRE target checkpoints
+            const targets = [
+                { name: '$250K', value: 250000 },
+                { name: '$500K', value: 500000 },
+                { name: '$750K', value: 750000 },
+                { name: '$1M', value: 1000000 }
+            ];
+            
+            // Time horizons in years
+            const horizons = [1, 2, 5, 10];
+            
+            // Percentiles to calculate
+            const percentiles = [0.05, 0.15, 0.45, 0.85];
+            const percentileLabels = ['5th', '15th', '45th', '85th'];
+            const percentileColors = ['var(--accent-red)', 'var(--accent-yellow)', 'var(--accent-blue)', 'var(--accent-green)'];
+            
+            // Historical return assumptions
+            const meanReturn = (data.performance.allTimePercent || 10) / 100 / 12; // Monthly
+            const volatility = 0.10; // 10% monthly volatility for crypto (middle of 8-12% range)
+            
+            // Run simulations and track values at each horizon + milestone hits
+            const horizonResults = {}; // { years: [finalValues] }
+            const milestoneResults = {}; // { targetValue: [yearsToReach or null] }
+            
+            horizons.forEach(h => horizonResults[h] = []);
+            targets.forEach(t => milestoneResults[t.value] = []);
+            
+            for (let sim = 0; sim < simulations; sim++) {
+                let value = currentValue;
+                const milestonesHit = {}; // Track when each milestone is hit
+                targets.forEach(t => milestonesHit[t.value] = null);
+                
+                const maxMonths = Math.max(...horizons) * 12;
+                
+                for (let month = 1; month <= maxMonths; month++) {
+                    // Random return using Box-Muller transform (normal distribution)
+                    const u1 = Math.random();
+                    const u2 = Math.random();
+                    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                    const monthlyReturn = meanReturn + z * volatility;
+                    
+                    value = value * (1 + monthlyReturn) + monthlyContribution;
+                    
+                    // Check milestone hits
+                    targets.forEach(t => {
+                        if (value >= t.value && milestonesHit[t.value] === null) {
+                            milestonesHit[t.value] = month / 12;
+                        }
+                    });
+                    
+                    // Record values at each horizon
+                    const yearMark = month / 12;
+                    if (horizons.includes(yearMark)) {
+                        horizonResults[yearMark].push(value);
+                    }
+                }
+                
+                // Store milestone results
+                targets.forEach(t => {
+                    milestoneResults[t.value].push(milestonesHit[t.value]);
+                });
+            }
+            
+            // Calculate percentile values for each horizon
+            const getPercentile = (arr, p) => {
+                const sorted = [...arr].sort((a, b) => a - b);
+                return sorted[Math.floor(sorted.length * p)] || 0;
+            };
+            
+            // Calculate probability of hitting each target within 10 years
+            const targetProbabilities = targets.map(t => {
+                const hits = milestoneResults[t.value].filter(y => y !== null).length;
+                return Math.round((hits / simulations) * 100);
+            });
+            
+            // Calculate median time to each target (for those that hit it)
+            const medianTimeToTarget = targets.map(t => {
+                const hits = milestoneResults[t.value].filter(y => y !== null).sort((a, b) => a - b);
+                if (hits.length === 0) return null;
+                return hits[Math.floor(hits.length / 2)];
+            });
+            
+            // Build the widget HTML
+            let html = '';
+            
+            // Section 1: Percentile projections by horizon
+            html += `<div style="margin-bottom: 1rem;">
+                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-align: center;">
+                    Portfolio Value by Time Horizon
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; font-size: 0.65rem; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 0.3rem; text-align: left; color: var(--text-secondary);">Horizon</th>
+                                ${percentileLabels.map((label, i) => 
+                                    `<th style="padding: 0.3rem; text-align: right; color: ${percentileColors[i]};">${label}</th>`
+                                ).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${horizons.map(h => `
+                                <tr style="border-bottom: 1px solid var(--bg-secondary);">
+                                    <td style="padding: 0.3rem; color: var(--text-primary); font-weight: 600;">${h}Y</td>
+                                    ${percentiles.map((p, i) => {
+                                        const val = getPercentile(horizonResults[h], p);
+                                        return `<td style="padding: 0.3rem; text-align: right; color: ${percentileColors[i]};">${formatCurrency(val, 0)}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+            
+            // Section 2: FIRE milestone probabilities
+            html += `<div style="margin-bottom: 0.75rem;">
+                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-align: center;">
+                    Probability of Reaching Milestones (10Y)
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem;">
+                    ${targets.map((t, i) => {
+                        const prob = targetProbabilities[i];
+                        const medianYrs = medianTimeToTarget[i];
+                        const probColor = prob >= 75 ? 'var(--accent-green)' : prob >= 50 ? 'var(--accent-blue)' : prob >= 25 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+                        return `
+                            <div style="text-align: center; padding: 0.4rem; background: var(--bg-secondary); border-radius: 6px;">
+                                <div style="font-size: 0.6rem; color: var(--text-secondary);">${t.name}</div>
+                                <div style="font-size: 0.85rem; font-weight: 700; color: ${probColor};">${prob}%</div>
+                                <div style="font-size: 0.55rem; color: var(--text-secondary);">${medianYrs ? medianYrs.toFixed(1) + 'y med' : '>10y'}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>`;
+            
+            // Section 3: Simulation parameters
+            html += `<div style="text-align: center; font-size: 0.6rem; color: var(--text-secondary); padding-top: 0.5rem; border-top: 1px solid var(--bg-secondary);">
+                ${simulations.toLocaleString()} sims • ${(volatility * 100).toFixed(0)}% vol • ${formatCurrency(monthlyContribution, 0)}/mo contrib
+            </div>`;
+            
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // Inflation-Adjusted Returns Widget
+        // ============================================
+        let currentInflationRate = parseFloat(localStorage.getItem('zhodler-inflation-rate')) || 0.03;
+        
+        function updateInflationWidget(data) {
+            const container = document.getElementById('inflation-container');
+            if (!container) return;
+            
+            if (!data.performance) {
+                container.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No data</div>';
+                return;
+            }
+            
+            const inflationRate = currentInflationRate;
+            const years = data.timePassed ? data.timePassed.daysPassed / 365 : 1;
+            
+            const nominalReturn = data.performance.allTimePercent || 0;
+            const inflationFactor = Math.pow(1 + inflationRate, years);
+            const realReturn = ((1 + nominalReturn / 100) / inflationFactor - 1) * 100;
+            
+            const nominalGain = data.performance.totalGain || 0;
+            const realGain = nominalGain / inflationFactor;
+            
+            const purchasingPowerLoss = nominalGain - realGain;
+            
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.4rem; background: var(--bg-secondary); border-radius: 6px;">
+                    <span style="font-size: 0.65rem; color: var(--text-secondary);">Inflation:</span>
+                    <input type="range" id="inflation-slider" min="0" max="15" step="0.5" value="${(inflationRate * 100).toFixed(1)}" 
+                        style="flex: 1; height: 4px; cursor: pointer; accent-color: var(--accent-green);">
+                    <span id="inflation-rate-display" style="font-size: 0.75rem; font-weight: 600; min-width: 40px; text-align: right;">${(inflationRate * 100).toFixed(1)}%</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-secondary);">Nominal Return</span>
+                        <span style="color: var(--accent-green); font-weight: 600;">${formatPercent(nominalReturn)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-secondary);">Real Return</span>
+                        <span style="color: ${realReturn > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}; font-weight: 600;">${formatPercent(realReturn)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-secondary);">Nominal Gain</span>
+                        <span style="font-weight: 600;">${formatCurrency(nominalGain)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0;">
+                        <span style="color: var(--text-secondary);">Real Gain</span>
+                        <span style="font-weight: 600;">${formatCurrency(realGain)}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.4rem; font-size: 0.6rem; color: var(--text-secondary); text-align: center;">
+                    Lost to inflation: ${formatCurrency(purchasingPowerLoss)} over ${years.toFixed(1)} years
+                </div>
+            `;
+            
+            // Add event listener for slider
+            const slider = document.getElementById('inflation-slider');
+            const display = document.getElementById('inflation-rate-display');
+            if (slider) {
+                slider.addEventListener('input', (e) => {
+                    const newRate = parseFloat(e.target.value) / 100;
+                    currentInflationRate = newRate;
+                    localStorage.setItem('zhodler-inflation-rate', newRate.toString());
+                    display.textContent = e.target.value + '%';
+                    
+                    // Recalculate and update values without full redraw
+                    const newInflationFactor = Math.pow(1 + newRate, years);
+                    const newRealReturn = ((1 + nominalReturn / 100) / newInflationFactor - 1) * 100;
+                    const newRealGain = nominalGain / newInflationFactor;
+                    const newPurchasingPowerLoss = nominalGain - newRealGain;
+                    
+                    // Update display values
+                    updateInflationWidget(data);
+                });
+            }
+        }
+
+        // ============================================
+        // Milestone Timeline Widget
+        // ============================================
+        function updateMilestoneWidget(data) {
+            const container = document.getElementById('milestone-container');
+            if (!container) return;
+            
+            const milestones = [
+                { name: '$50K', target: 50000, icon: '🎯' },
+                { name: '$75K', target: 75000, icon: '📈' },
+                { name: '$100K', target: 100000, icon: '💯' },
+                { name: '$150K', target: 150000, icon: '🚀' },
+                { name: '$250K', target: 250000, icon: '⭐' },
+                { name: '$500K', target: 500000, icon: '💎' },
+                { name: '$1M', target: 1000000, icon: '🏆' }
+            ];
+            
+            const currentValue = data.performance?.totalValue || 0;
+            const monthlyGrowth = data.performance?.monthlyAvg || 0;
+            
+            let html = '<div style="position: relative; padding: 0.5rem 0;">';
+            
+            // Progress line
+            const maxTarget = milestones[milestones.length - 1].target;
+            const progress = Math.min(100, (currentValue / maxTarget) * 100);
+            
+            html += `<div style="position: absolute; top: 50%; left: 0; right: 0; height: 4px; background: var(--bg-secondary); border-radius: 2px; transform: translateY(-50%);"></div>`;
+            html += `<div style="position: absolute; top: 50%; left: 0; width: ${progress}%; height: 4px; background: linear-gradient(90deg, var(--accent-green), var(--accent-blue)); border-radius: 2px; transform: translateY(-50%);"></div>`;
+            
+            // Milestone markers
+            html += '<div style="display: flex; justify-content: space-between; position: relative; z-index: 1;">';
+            
+            milestones.forEach(m => {
+                const achieved = currentValue >= m.target;
+                const position = (m.target / maxTarget) * 100;
+                const monthsToReach = achieved ? 0 : Math.ceil((m.target - currentValue) / monthlyGrowth);
+                const timeLabel = achieved ? '✓' : (monthsToReach > 0 ? `${monthsToReach}mo` : '--');
+                
+                html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; width: 40px;">
+                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${achieved ? 'var(--accent-green)' : 'var(--bg-secondary)'}; border: 2px solid ${achieved ? 'var(--accent-green)' : 'var(--border-color)'}; display: flex; align-items: center; justify-content: center; font-size: 10px;">
+                            ${achieved ? '✓' : m.icon}
+                        </div>
+                        <div style="font-size: 0.6rem; color: ${achieved ? 'var(--accent-green)' : 'var(--text-secondary)'}; margin-top: 4px; font-weight: ${achieved ? '600' : '400'};">${m.name}</div>
+                        <div style="font-size: 0.55rem; color: var(--text-secondary);">${timeLabel}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            
+            // Current position indicator
+            html += `<div style="text-align: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-secondary);">Current: ${formatCurrency(currentValue, 0)} (${progress.toFixed(1)}% to $1M)</div>`;
+            
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // Risk Dashboard Widget
+        // ============================================
+        function updateRiskWidget(data) {
+            const container = document.getElementById('risk-container');
+            if (!container) return;
+            
+            // Calculate concentration risk
+            let maxConcentration = 0;
+            let largestAsset = 'N/A';
+            const totalValue = data.performance?.totalValue || 1;
+            
+            if (data.assetDistro && data.assetDistro.length > 0) {
+                const sorted = [...data.assetDistro].sort((a, b) => b.value - a.value);
+                if (sorted[0]) {
+                    maxConcentration = (sorted[0].value / totalValue) * 100;
+                    largestAsset = sorted[0].asset;
+                }
+            }
+            
+            // Volatility estimate (based on daily returns variance)
+            const volatility = 25; // Estimated 25% annual volatility for crypto
+            
+            // Beta estimate (vs BTC)
+            const beta = 0.85; // Assuming portfolio is 85% correlated with BTC
+            
+            // Debt risk
+            const debtRatio = data.loans ? (Math.abs(data.loans.borrowed || 0) / totalValue) * 100 : 0;
+            
+            // Calculate risk score (0-100)
+            const concentrationScore = Math.min(100, maxConcentration);
+            const volatilityScore = Math.min(100, volatility * 2);
+            const debtScore = Math.min(100, debtRatio * 1.5);
+            const overallRisk = (concentrationScore * 0.3 + volatilityScore * 0.4 + debtScore * 0.3);
+            
+            const getRiskColor = (score) => {
+                if (score < 30) return 'var(--accent-green)';
+                if (score < 60) return 'var(--accent-yellow)';
+                return 'var(--accent-red)';
+            };
+            
+            const getRiskLabel = (score) => {
+                if (score < 30) return 'Low';
+                if (score < 60) return 'Moderate';
+                return 'High';
+            };
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.75rem;">
+                    <div style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="color: var(--text-secondary); font-size: 0.6rem;">Concentration</div>
+                        <div style="color: ${getRiskColor(concentrationScore)}; font-weight: 600;">${maxConcentration.toFixed(1)}%</div>
+                        <div style="font-size: 0.55rem; color: var(--text-secondary);">${largestAsset}</div>
+                    </div>
+                    <div style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="color: var(--text-secondary); font-size: 0.6rem;">Volatility</div>
+                        <div style="color: ${getRiskColor(volatilityScore)}; font-weight: 600;">${volatility}%</div>
+                        <div style="font-size: 0.55rem; color: var(--text-secondary);">Annual</div>
+                    </div>
+                    <div style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="color: var(--text-secondary); font-size: 0.6rem;">Beta (vs BTC)</div>
+                        <div style="font-weight: 600;">${beta.toFixed(2)}</div>
+                        <div style="font-size: 0.55rem; color: var(--text-secondary);">Correlation</div>
+                    </div>
+                    <div style="padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="color: var(--text-secondary); font-size: 0.6rem;">Leverage</div>
+                        <div style="color: ${getRiskColor(debtScore)}; font-weight: 600;">${debtRatio.toFixed(1)}%</div>
+                        <div style="font-size: 0.55rem; color: var(--text-secondary);">Debt ratio</div>
+                    </div>
+                </div>
+                <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px; text-align: center;">
+                    <div style="font-size: 0.6rem; color: var(--text-secondary);">Overall Risk Score</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: ${getRiskColor(overallRisk)};">${overallRisk.toFixed(0)}/100</div>
+                    <div style="font-size: 0.65rem; color: ${getRiskColor(overallRisk)};">${getRiskLabel(overallRisk)} Risk</div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // Peer Benchmarking Widget
+        // ============================================
+        function updatePeerBenchmarkWidget(data) {
+            const container = document.getElementById('peer-container');
+            if (!container) return;
+            
+            // Peer benchmarks by age group (median net worth, US data approximation)
+            const peerData = {
+                '25-34': { median: 39000, top25: 150000 },
+                '35-44': { median: 135000, top25: 400000 },
+                '45-54': { median: 247000, top25: 750000 },
+                '55-64': { median: 364000, top25: 1200000 }
+            };
+            
+            // Assume user is 30-40 age bracket (could be configurable)
+            const userAge = '35-44';
+            const peer = peerData[userAge];
+            
+            const netWorth = (data.performance?.totalValue || 0) - Math.abs(data.loans?.borrowed || 0);
+            
+            const vsMedian = ((netWorth / peer.median) * 100).toFixed(0);
+            const vsTop25 = ((netWorth / peer.top25) * 100).toFixed(0);
+            
+            let percentile = 50;
+            if (netWorth >= peer.top25) percentile = 90;
+            else if (netWorth >= peer.median * 1.5) percentile = 75;
+            else if (netWorth >= peer.median) percentile = 60;
+            else if (netWorth >= peer.median * 0.5) percentile = 40;
+            else percentile = 25;
+            
+            const getPercentileColor = (p) => {
+                if (p >= 75) return 'var(--accent-green)';
+                if (p >= 50) return 'var(--accent-blue)';
+                if (p >= 25) return 'var(--accent-yellow)';
+                return 'var(--accent-red)';
+            };
+            
+            container.innerHTML = `
+                <div style="text-align: center; margin-bottom: 0.5rem;">
+                    <div style="font-size: 1.5rem; font-weight: 700; color: ${getPercentileColor(percentile)};">${percentile}th</div>
+                    <div style="font-size: 0.65rem; color: var(--text-secondary);">Percentile (${userAge} age group)</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.7rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-secondary);">vs Median</span>
+                        <span style="color: ${vsMedian >= 100 ? 'var(--accent-green)' : 'var(--accent-yellow)'}; font-weight: 600;">${vsMedian}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-secondary);">vs Top 25%</span>
+                        <span style="color: ${vsTop25 >= 100 ? 'var(--accent-green)' : 'var(--text-secondary)'}; font-weight: 600;">${vsTop25}%</span>
+                    </div>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.55rem; color: var(--text-secondary); text-align: center;">
+                    Median: ${formatCurrency(peer.median, 0)} • Top 25%: ${formatCurrency(peer.top25, 0)}
+                </div>
+            `;
+        }
+
+        function updateGoals(goals) {
+            const container = document.getElementById('goals-container');
+            if (!container) return;
+            
+            console.log('Updating goals widget with:', goals);
+            
+            if (!goals || !Array.isArray(goals) || goals.length === 0) {
+                container.innerHTML = `
+                    <div style="color: var(--text-secondary); text-align: center; padding: 1rem;">
+                        <div>No goals data found</div>
+                        <div style="font-size: 0.75rem; margin-top: 0.5rem;">Check console (F12) for details</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = goals.map(goal => {
+                // Handle the percent value - it might already be in 0-100 format or 0-1 format
+                let percent = goal.percent || 0;
+                // If percent is greater than 2, assume it's already in 0-100 format
+                if (percent > 0 && percent <= 2) {
+                    percent = percent * 100;
+                }
+                percent = Math.max(0, percent);
+                
+                // Debt goal is inverted (lower is better), show warning if over target
+                const isDebtGoal = goal.description && goal.description.toLowerCase().includes('debt');
+                const isWarning = isDebtGoal && percent > 100;
+                
+                // Calculate display width (cap at 100% for visual)
+                const displayWidth = Math.min(100, percent);
+                
+                return `
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <span class="goal-name">${goal.description || goal.name || 'Goal'}</span>
+                            <span class="goal-percent">${percent.toFixed(1)}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${isWarning ? 'warning' : ''}" style="width: ${displayWidth}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateLoanDetails(loans) {
+            const container = document.getElementById('loan-details-container');
+            if (!container) return;
+
+            const getRiskClass = (ratio) => {
+                if (ratio < 50) return 'safe';
+                if (ratio < 70) return 'warning';
+                return 'danger';
+            };
+
+            container.innerHTML = `
+                <div class="loan-metric">
+                    <span class="metric-label">Total Borrowed</span>
+                    <span class="metric-value">${formatCurrency(loans.borrowed)}</span>
+                </div>
+                <div class="loan-metric">
+                    <span class="metric-label">Collateral Value</span>
+                    <span class="metric-value">${formatCurrency(loans.collateralValue)}</span>
+                </div>
+                <div class="loan-metric">
+                    <span class="metric-label">Current LTV</span>
+                    <span class="metric-value ${getRiskClass(loans.ratio)}">${formatPercent(loans.ratio / 100)}</span>
+                </div>
+                <div class="loan-metric">
+                    <span class="metric-label">Max Safe Borrow</span>
+                    <span class="metric-value">${formatCurrency(loans.maxSafeBorrow)}</span>
+                </div>
+                <div class="loan-metric">
+                    <span class="metric-label">Liquidation Price</span>
+                    <span class="metric-value danger">${formatCurrency(loans.liquidationPrice, 0)}</span>
+                </div>
+                <div class="loan-metric">
+                    <span class="metric-label">Days to Pay Off</span>
+                    <span class="metric-value">${loans.daysToPayOff || '--'} days</span>
+                </div>
+            `;
+        }
+
+        function updateFireSection(fire, timePassed) {
+            const container = document.getElementById('fire-container');
+            if (!container) return;
+            
+            if (!fire || !fire.scenarios || fire.scenarios.length === 0) {
+                container.innerHTML = `
+                    <div style="color: var(--text-secondary); text-align: center; padding: 1rem;">
+                        No FIRE data found
+                    </div>
+                `;
+                return;
+            }
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '--';
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '--';
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            };
+            
+            const formatTime = (years, months, days) => {
+                let parts = [];
+                if (years && years > 0) parts.push(`${Math.floor(years)}y`);
+                if (months && months > 0) parts.push(`${Math.floor(months)}m`);
+                if (days && days > 0 && !years) parts.push(`${Math.floor(days)}d`);
+                return parts.length > 0 ? parts.join(' ') : '--';
+            };
+
+            // Build scenarios HTML
+            const scenariosHtml = fire.scenarios.map((scenario, index) => `
+                <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; ${index === 0 ? 'border-left: 3px solid var(--accent-green);' : 'border-left: 3px solid var(--accent-blue);'}">
+                    <div style="font-weight: 600; font-size: 0.8rem; color: ${index === 0 ? 'var(--accent-green)' : 'var(--accent-blue)'}; margin-bottom: 0.5rem;">
+                        ${scenario.label || 'Scenario ' + (index + 1)} — ${formatCurrency(scenario.totalMonthly)}/mo
+                    </div>
+                    <div class="loan-metric" style="border: none; padding: 0.25rem 0;">
+                        <span class="metric-label">Critical Mass</span>
+                        <span class="metric-value">${formatCurrency(scenario.criticalMassValue)}</span>
+                    </div>
+                    <div class="loan-metric" style="border: none; padding: 0.25rem 0;">
+                        <span class="metric-label">Time to FIRE</span>
+                        <span class="metric-value ${index === 0 ? 'safe' : ''}">${formatTime(scenario.timeToFireYears, scenario.timeToFireMonths, scenario.timeToFireExtraDays)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                ${scenariosHtml}
+                <div class="loan-metric">
+                    <span class="metric-label">Days Tracking</span>
+                    <span class="metric-value">${timePassed?.daysPassed || '--'} days</span>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // Chart Updates
+        // ============================================
+        function updateCharts(data) {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // Use generated color palette
+            const chartColors = colorPalette.length ? colorPalette : generatePalette(accentColor);
+            const contrastColor = getContrastColor(accentColor);
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a0a0a0';
+
+            // Asset Allocation Chart
+            const assetCtx = document.getElementById('chart-asset-allocation');
+            if (assetCtx && data.assetDistro.length) {
+                const filtered = data.assetDistro.filter(a => a.value > 100);
+                const isMobile = window.innerWidth < 768;
+                
+                charts.assets = new Chart(assetCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: filtered.map(a => a.asset),
+                        datasets: [{
+                            data: filtered.map(a => a.value),
+                            backgroundColor: chartColors.slice(0, 10),
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: isMobile ? 'bottom' : 'right',
+                                labels: { 
+                                    color: textColor, 
+                                    boxWidth: isMobile ? 8 : 12, 
+                                    padding: isMobile ? 4 : 8, 
+                                    font: { size: isMobile ? 9 : 11 }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percent = ((value / total) * 100).toFixed(1);
+                                        return `${context.label}: $${value.toLocaleString()} (${percent}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Projections Chart
+            const projCtx = document.getElementById('chart-projections');
+            if (projCtx && data.projections.length) {
+                charts.projections = new Chart(projCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.projections.map(p => 'W' + p.week),
+                        datasets: [
+                            {
+                                label: 'Optimistic (Current APR)',
+                                data: data.projections.map(p => p.projBal),
+                                borderColor: chartColors[0],
+                                backgroundColor: chartColors[0] + '20',
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Conservative (All-time APR)',
+                                data: data.projections.map(p => p.projBalAllTime),
+                                borderColor: chartColors[2],
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 5],
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ticks: { 
+                                    color: textColor, 
+                                    callback: v => '$' + (v/1000).toFixed(0) + 'k',
+                                    font: { size: window.innerWidth < 768 ? 9 : 11 }
+                                },
+                                grid: { color: textColor + '20' }
+                            },
+                            x: {
+                                ticks: { 
+                                    color: textColor,
+                                    font: { size: window.innerWidth < 768 ? 9 : 11 }
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                labels: { 
+                                    color: textColor,
+                                    boxWidth: window.innerWidth < 768 ? 8 : 12,
+                                    font: { size: window.innerWidth < 768 ? 9 : 11 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Yearly Performance Chart
+            const yearlyCtx = document.getElementById('chart-yearly');
+            console.log('Yearly performance data:', data.performance.yearly);
+            
+            if (yearlyCtx && data.performance.yearly && data.performance.yearly.length > 0) {
+                const yearly = data.performance.yearly.filter(y => y.year && y.year !== 'total');
+                console.log('Filtered yearly data for chart:', yearly);
+                const isMobile = window.innerWidth < 768;
+                
+                if (yearly.length > 0) {
+                    charts.yearly = new Chart(yearlyCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: yearly.map(y => y.year),
+                            datasets: [
+                                {
+                                    label: 'Invested',
+                                    data: yearly.map(y => y.invested),
+                                    backgroundColor: chartColors[4] + '80',
+                                    borderColor: chartColors[4],
+                                    borderWidth: 1,
+                                    yAxisID: 'y1',
+                                    order: 4
+                                },
+                                {
+                                    label: 'Portfolio',
+                                    data: yearly.map(y => y.value),
+                                    backgroundColor: chartColors[2] + '80',
+                                    borderColor: chartColors[2],
+                                    borderWidth: 1,
+                                    yAxisID: 'y1',
+                                    order: 3
+                                },
+                                {
+                                    label: 'Profit',
+                                    data: yearly.map(y => y.profit),
+                                    backgroundColor: chartColors[0] + '80',
+                                    borderColor: chartColors[0],
+                                    borderWidth: 1,
+                                    yAxisID: 'y1',
+                                    order: 2
+                                },
+                                {
+                                    label: 'Return %',
+                                    data: yearly.map(y => y.percent),
+                                    type: 'line',
+                                    borderColor: chartColors[3],
+                                    backgroundColor: chartColors[3],
+                                    pointBackgroundColor: chartColors[3],
+                                    pointRadius: isMobile ? 4 : 6,
+                                    pointHoverRadius: isMobile ? 6 : 8,
+                                    yAxisID: 'y',
+                                    tension: 0.3,
+                                    order: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            scales: {
+                                y: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Return %',
+                                        color: textColor
+                                    },
+                                    ticks: { 
+                                        color: chartColors[0], 
+                                        callback: v => v.toFixed(0) + '%'
+                                    },
+                                    grid: { display: false }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Value ($)',
+                                        color: textColor
+                                    },
+                                    ticks: { 
+                                        color: textColor, 
+                                        callback: v => '$' + (v/1000).toFixed(0) + 'k'
+                                    },
+                                    grid: { color: textColor + '20' }
+                                },
+                                x: {
+                                    ticks: { color: textColor },
+                                    grid: { display: false }
+                                }
+                            },
+                            plugins: {
+                                legend: { 
+                                    labels: { 
+                                        color: textColor,
+                                        boxWidth: isMobile ? 8 : 12,
+                                        padding: isMobile ? 4 : 10,
+                                        font: { size: isMobile ? 9 : 11 }
+                                    },
+                                    position: 'top'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.dataset.label || '';
+                                            const value = context.parsed.y;
+                                            if (label.includes('%')) {
+                                                return label + ': ' + value.toFixed(1) + '%';
+                                            }
+                                            return label + ': $' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('No valid yearly data after filtering');
+                }
+            } else {
+                console.warn('Yearly chart not rendered - missing data or canvas');
+            }
+            
+            // Active vs Passive - Global (Horizontal Bar Chart)
+            const activePassiveCtx = document.getElementById('chart-active-passive');
+            
+            if (activePassiveCtx && data.activePassiveGlobal) {
+                const ap = data.activePassiveGlobal;
+                console.log('Active/Passive chart data:', ap);
+                
+                const chartLabels = ['BTC collateral', 'volatiles', 'debt', 'balance', 'pooled stable'];
+                const chartDataValues = [
+                    ap.btcCollateral || 0,
+                    ap.volatiles || 0,
+                    ap.debt || 0,
+                    ap.balance || 0,
+                    ap.pooledStable || 0
+                ];
+                
+                // Use generated palette colors
+                const barColors = [
+                    chartColors[0],  // BTC collateral
+                    chartColors[1],  // volatiles
+                    contrastColor,   // debt (negative - use contrast)
+                    chartColors[3],  // balance
+                    chartColors[2]   // pooled stable
+                ];
+                
+                const isMobile = window.innerWidth < 768;
+                
+                charts.activePassive = new Chart(activePassiveCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartDataValues,
+                            backgroundColor: barColors,
+                            borderWidth: 0,
+                            barThickness: isMobile ? 12 : 18
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: { right: isMobile ? 50 : 70 }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: textColor + '15' },
+                                ticks: { 
+                                    color: textColor,
+                                    font: { size: isMobile ? 8 : 10 },
+                                    callback: function(value) {
+                                        if (Math.abs(value) >= 1000) {
+                                            return (value < 0 ? '-$' : '$') + (Math.abs(value)/1000).toFixed(0) + 'k';
+                                        }
+                                        return '$' + value.toFixed(0);
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { 
+                                    color: textColor,
+                                    font: { size: isMobile ? 8 : 10 }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.x;
+                                        return '$' + value.toLocaleString(undefined, {maximumFractionDigits: 2});
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [{
+                        id: 'dataLabels',
+                        afterDatasetsDraw: function(chart) {
+                            const ctx = chart.ctx;
+                            chart.data.datasets.forEach((dataset, i) => {
+                                const meta = chart.getDatasetMeta(i);
+                                meta.data.forEach((bar, index) => {
+                                    const value = dataset.data[index];
+                                    const formattedValue = value < 0 
+                                        ? '-$' + Math.abs(value).toLocaleString(undefined, {maximumFractionDigits: 0})
+                                        : '$' + value.toLocaleString(undefined, {maximumFractionDigits: 0});
+                                    
+                                    ctx.save();
+                                    ctx.fillStyle = textColor;
+                                    ctx.font = (isMobile ? '9px' : '11px') + ' Arial';
+                                    ctx.textAlign = value < 0 ? 'right' : 'left';
+                                    ctx.textBaseline = 'middle';
+                                    
+                                    const x = value < 0 ? bar.x - 5 : bar.x + 5;
+                                    ctx.fillText(formattedValue, x, bar.y);
+                                    ctx.restore();
+                                });
+                            });
+                        }
+                    }]
+                });
+            } else {
+                console.warn('Active/Passive chart not rendered. Canvas:', !!activePassiveCtx, 'Data:', !!data.activePassiveGlobal);
+                if (!activePassiveCtx) {
+                    console.warn('Canvas element "chart-active-passive" not found in DOM');
+                }
+                if (!data.activePassiveGlobal) {
+                    console.warn('activePassiveGlobal data is missing');
+                }
+            }
+        }
+
+        // ============================================
+        // Theme Management
+        // ============================================
+        function setTheme(theme) {
+            document.body.className = theme !== 'default' ? `theme-${theme}` : '';
+            localStorage.setItem('zhodler-theme', theme);
+            if (portfolioData) {
+                setTimeout(() => updateCharts(portfolioData), 100);
+            }
+        }
+
+        // ============================================
+        // Settings Management
+        // ============================================
+        function loadSettings() {
+            const theme = localStorage.getItem('zhodler-theme') || 'default';
+            document.getElementById('themeSelect').value = theme;
+            setTheme(theme);
+
+            // Default to user's sheet URL if not set
+            const defaultUrl = 'https://docs.google.com/spreadsheets/d/19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk/edit';
+            const sheetsUrl = localStorage.getItem('zhodler-sheets-url') || defaultUrl;
+            document.getElementById('sheetsUrl').value = sheetsUrl;
+            
+            // Save the default if not already set
+            if (!localStorage.getItem('zhodler-sheets-url')) {
+                localStorage.setItem('zhodler-sheets-url', defaultUrl);
+            }
+            
+            const refreshInterval = localStorage.getItem('zhodler-refresh-interval') || '0';
+            document.getElementById('refreshInterval').value = refreshInterval;
+            setupAutoRefresh(parseInt(refreshInterval));
+
+            // Load and sync accent color in settings modal
+            const savedAccent = localStorage.getItem('zhodler-accent-color') || '#0ad5ec';
+            document.getElementById('settingsAccentColor').value = savedAccent;
+            updatePalettePreview(savedAccent);
+        }
+
+        function updatePalettePreview(color) {
+            const palette = generatePalette(color);
+            const preview = document.getElementById('palettePreview');
+            if (preview) {
+                preview.innerHTML = palette.slice(0, 6).map(c => 
+                    `<div style="width: 20px; height: 20px; background: ${c}; border-radius: 3px;"></div>`
+                ).join('');
+            }
+        }
+
+        function saveSettings() {
+            const sheetsUrl = document.getElementById('sheetsUrl').value.trim();
+            localStorage.setItem('zhodler-sheets-url', sheetsUrl);
+            
+            const refreshInterval = document.getElementById('refreshInterval').value;
+            localStorage.setItem('zhodler-refresh-interval', refreshInterval);
+            setupAutoRefresh(parseInt(refreshInterval));
+
+            // Save and apply accent color
+            const newAccent = document.getElementById('settingsAccentColor').value;
+            onAccentColorChange(newAccent);
+            document.getElementById('accentColorPicker').value = newAccent;
+
+            document.getElementById('settingsModal').classList.remove('active');
+            
+            // Load data with new URL
+            if (sheetsUrl) {
+                loadData();
+            }
+        }
+
+        // ============================================
+        // Status Bar
+        // ============================================
+        function showStatus(message, type = 'info') {
+            const bar = document.getElementById('statusBar');
+            bar.style.display = 'block';
+            bar.style.opacity = '1';
+            bar.style.background = type === 'error' ? '#c0392b' : type === 'success' ? '#1a5f2a' : '#2980b9';
+            bar.textContent = message;
+            bar.style.transition = 'opacity 0.5s ease';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    bar.style.opacity = '0';
+                    setTimeout(() => {
+                        bar.style.display = 'none';
+                    }, 500);
+                }, 5000);
+            }
+        }
+        
+        // ============================================
+        // Auto-refresh
+        // ============================================
+        let autoRefreshTimer = null;
+        
+        function setupAutoRefresh(intervalSeconds) {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+            
+            if (intervalSeconds > 0) {
+                autoRefreshTimer = setInterval(() => {
+                    console.log('Auto-refreshing data...');
+                    loadData();
+                }, intervalSeconds * 1000);
+                console.log(`Auto-refresh set to ${intervalSeconds} seconds`);
+            }
+        }
+        
+        // ============================================
+        // Main Data Loading Function
+        // ============================================
+        async function loadData() {
+            const sheetsUrl = localStorage.getItem('zhodler-sheets-url');
+            if (!sheetsUrl) {
+                showStatus('⚙️ Click Settings to enter your Google Sheets URL', 'info');
+                return;
+            }
+            
+            try {
+                showStatus('🔄 Connecting to Google Sheets...', 'info');
+                console.log('Starting data load from:', sheetsUrl);
+                
+                const sheets = await loadFromGoogleSheets(sheetsUrl);
+                console.log('Loaded sheets:', Object.keys(sheets));
+                
+                const data = processData(sheets);
+                console.log('Processed data:', data);
+                
+                updateDashboard(data);
+                const loadedCount = Object.keys(sheets).length;
+                showStatus(`✅ Loaded ${loadedCount} sheets successfully! Last update: ${new Date().toLocaleTimeString()}`, 'success');
+            } catch (err) {
+                console.error('Error loading data:', err);
+                showStatus(`❌ ${err.message} — Press F12 for details`, 'error');
+            }
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Dashboard initializing...');
+            
+            initDashboard();
+            loadSettings();
+            initLayoutLock();
+            initColorPalette();
+            
+            // Initial data load
+            setTimeout(loadData, 500);
+
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+            // Theme select
+            document.getElementById('themeSelect').addEventListener('change', (e) => {
+                setTheme(e.target.value);
+            });
+
+            // Accent color picker
+            document.getElementById('accentColorPicker').addEventListener('input', (e) => {
+                onAccentColorChange(e.target.value);
+            });
+
+            // Reset layout
+            document.getElementById('resetLayoutBtn').addEventListener('click', resetLayout);
+
+            // Lock/Unlock layout
+            document.getElementById('lockLayoutBtn').addEventListener('click', toggleLayoutLock);
+
+            // Privacy toggle
+            document.getElementById('privacyToggle').addEventListener('click', () => {
+                document.body.classList.toggle('privacy-mode');
+                const toggle = document.getElementById('privacyToggle');
+                toggle.classList.toggle('active');
+                if (document.body.classList.contains('privacy-mode')) {
+                    toggle.textContent = '🔓 Show';
+                } else {
+                    toggle.textContent = '🔒 Privacy';
+                }
+            });
+
+            // Settings modal
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsModal').classList.add('active');
+                // Sync accent color picker in settings with current color
+                document.getElementById('settingsAccentColor').value = accentColor;
+                updatePalettePreview(accentColor);
+            });
+            
+            // Settings accent color picker - live preview
+            document.getElementById('settingsAccentColor').addEventListener('input', (e) => {
+                updatePalettePreview(e.target.value);
+            });
+            
+            // Test connection button
+            document.getElementById('testConnectionBtn').addEventListener('click', async () => {
+                const resultDiv = document.getElementById('testResult');
+                const urlInput = document.getElementById('sheetsUrl');
+                const url = urlInput.value.trim();
+                
+                if (!url) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = '#c0392b';
+                    resultDiv.textContent = '❌ Please enter a URL first';
+                    return;
+                }
+                
+                const sheetId = extractSheetId(url);
+                if (!sheetId) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = '#c0392b';
+                    resultDiv.textContent = '❌ Invalid Google Sheets URL';
+                    return;
+                }
+                
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#2980b9';
+                resultDiv.textContent = '🔄 Testing connection...';
+                
+                try {
+                    const testSheet = await fetchSheetAsCSV(sheetId, 'Performance');
+                    resultDiv.style.background = '#1a5f2a';
+                    resultDiv.textContent = `✅ Success! Found ${testSheet.length} rows in Performance sheet`;
+                } catch (err) {
+                    resultDiv.style.background = '#c0392b';
+                    resultDiv.innerHTML = `❌ Connection failed: ${err.message}<br><small>Make sure the sheet is published to the web</small>`;
+                }
+            });
+
+            document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsModal').classList.remove('active');
+            });
+
+            document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+            // Export layout button
+            document.getElementById('exportLayoutBtn').addEventListener('click', exportLayout);
+            
+            // Import layout button - trigger file picker
+            document.getElementById('importLayoutBtn').addEventListener('click', () => {
+                document.getElementById('importLayoutFile').click();
+            });
+            
+            // Handle file selection for import
+            document.getElementById('importLayoutFile').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    importLayout(e.target.files[0]);
+                    e.target.value = ''; // Reset for future imports
+                }
+            });
+
+            // Close modal on overlay click
+            document.getElementById('settingsModal').addEventListener('click', (e) => {
+                if (e.target.id === 'settingsModal') {
+                    document.getElementById('settingsModal').classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
