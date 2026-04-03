@@ -394,7 +394,7 @@
 
   /* ── STATE ───────────────────────────────────────────────────── */
   const S = {
-    sheetId:  localStorage.getItem('zhodler_sheetId')  || '',
+    sheetId:  (s => s && s.length >= 20 ? s : '')(localStorage.getItem('zhodler_sheetId')),
     currency: localStorage.getItem('zhodler_currency') || '£',
     theme:    localStorage.getItem('zhodler_theme')    || 'theme-dark',
     layout:   JSON.parse(localStorage.getItem('zhodler_layout') || 'null'),
@@ -606,11 +606,17 @@
     const inv  = S.data['Investments'];
     const snap = S.data['Snapshot'];
 
-    let defiVal = 0, bankVal = 0, invVal = 0;
+    let defiVal = 0, bankVal = 0, invVal = 0, snapNW = 0;
 
+    // Use first data row of Performance with a large positive value (avoids year/label rows)
     if (perf && perf.length > 1) {
       const viIdx = colIdx(perf, 'value') > -1 ? colIdx(perf, 'value') : colIdx(perf, 'total');
-      if (viIdx > -1) defiVal = num(perf[perf.length - 1]?.[viIdx]);
+      if (viIdx > -1) {
+        for (let i = 1; i < perf.length; i++) {
+          const v = num(perf[i]?.[viIdx]);
+          if (v > 1000) { defiVal = v; break; }
+        }
+      }
     }
     if (bank && bank.length > 1) {
       const bi = colIdx(bank, 'balance');
@@ -621,20 +627,32 @@
       if (ii > -1) invVal = inv.slice(1).reduce((s, r) => s + num(r[ii]), 0);
     }
 
-    const total = defiVal + bankVal + invVal;
+    // Prefer Snapshot Net Worth as the authoritative total
+    if (snap && snap.length > 1) {
+      const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : -1;
+      if (nwIdx > -1) {
+        for (let i = snap.length - 1; i >= 1; i--) {
+          const v = num(snap[i]?.[nwIdx]);
+          if (v > 0) { snapNW = v; break; }
+        }
+      }
+    }
+
+    const total = snapNW > 0 ? snapNW : (defiVal + bankVal + invVal);
 
     // Net Worth KPI
     let nwEl = document.getElementById('v-net-worth');
     if (nwEl) nwEl.textContent = total > 0 ? fmt(total) : '–';
 
-    // Sparkline from Snapshot
+    // Sparkline from Snapshot (only non-zero rows)
     if (snap && snap.length > 2) {
       const dIdx = colIdx(snap, 'date');
       const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : snap[0].length - 1;
-      const labels = snap.slice(-12).map(r => r[dIdx] || '');
-      const vals   = snap.slice(-12).map(r => num(r[nwIdx]));
+      const dataRows = snap.slice(1).filter(r => num(r[nwIdx]) > 0);
+      const labels = dataRows.slice(-12).map(r => r[dIdx] || '');
+      const vals   = dataRows.slice(-12).map(r => num(r[nwIdx]));
       const ctx = document.getElementById('c-net-worth');
-      if (ctx) {
+      if (ctx && vals.length > 0) {
         const grad = ctx.getContext('2d') ? areaGradient(ctx.getContext('2d'), '#7c6fef') : null;
         makeChart('c-net-worth', 'line', {
           labels,
@@ -644,22 +662,40 @@
       }
     }
 
-    // Sub-widgets
-    document.getElementById('v-defi-value').textContent = defiVal > 0 ? fmt(defiVal) : '–';
-    document.getElementById('v-bank-total').textContent = bankVal > 0 ? fmt(bankVal) : '–';
-    document.getElementById('v-invest-total').textContent = invVal > 0 ? fmt(invVal) : '–';
+    // Sub-widgets — use Snapshot breakdown columns if available
+    let snapDefi = 0, snapBank = 0, snapInv = 0;
+    if (snap && snap.length > 1) {
+      const dfI = colIdx(snap, 'defi'); const bkI = colIdx(snap, 'bank'); const ivI = colIdx(snap, 'invest');
+      for (let i = snap.length-1; i>=1; i--) { if (dfI>-1 && num(snap[i]?.[dfI])>0) { snapDefi=num(snap[i][dfI]); break; } }
+      for (let i = snap.length-1; i>=1; i--) { if (bkI>-1 && num(snap[i]?.[bkI])>0) { snapBank=num(snap[i][bkI]); break; } }
+      for (let i = snap.length-1; i>=1; i--) { if (ivI>-1 && num(snap[i]?.[ivI])>0) { snapInv=num(snap[i][ivI]); break; } }
+    }
+    document.getElementById('v-defi-value').textContent = (snapDefi||defiVal)>0 ? fmt(snapDefi||defiVal) : '–';
+    document.getElementById('v-bank-total').textContent = (snapBank||bankVal)>0 ? fmt(snapBank||bankVal) : '–';
+    document.getElementById('v-invest-total').textContent = (snapInv||invVal)>0 ? fmt(snapInv||invVal) : '–';
   }
-
   function renderPerformance() {
-    const rows = S.data['Performance'];
-    if (!rows || rows.length < 2) { return setEmpty('ch-performance', 'No performance data'); }
-    const dateI = colIdx(rows, 'date') > -1 ? colIdx(rows, 'date') : colIdx(rows, 'time');
-    const valI  = colIdx(rows, 'value') > -1 ? colIdx(rows, 'value') : colIdx(rows, 'total');
-    if (valI === -1) { return setEmpty('ch-performance', 'No "Value" column found'); }
+    // Use Snapshot for time-series chart if available; fall back to Performance tab
+    const snap = S.data['Snapshot'];
+    const perf = S.data['Performance'];
+    let labels = [], values = [];
 
-    const slice = rows.slice(1).slice(-90); // last 90 data points
-    const labels = slice.map(r => r[dateI] || '');
-    const values = slice.map(r => num(r[valI]));
+    if (snap && snap.length > 2) {
+      const dIdx  = colIdx(snap, 'date');
+      const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : snap[0].length - 1;
+      const dataRows = snap.slice(1).filter(r => num(r[nwIdx]) > 0);
+      labels = dataRows.slice(-90).map(r => r[dIdx] || '');
+      values = dataRows.slice(-90).map(r => num(r[nwIdx]));
+    } else if (perf && perf.length > 1) {
+      const dateI = colIdx(perf, 'date') > -1 ? colIdx(perf, 'date') : colIdx(perf, 'time');
+      const valI  = colIdx(perf, 'value') > -1 ? colIdx(perf, 'value') : colIdx(perf, 'total');
+      if (valI === -1) return setEmpty('ch-performance', 'No value column found');
+      const slice = perf.slice(1).filter(r => num(r[valI]) > 1000).slice(-90);
+      labels = slice.map(r => dateI > -1 ? (r[dateI] || '') : '');
+      values = slice.map(r => num(r[valI]));
+    }
+
+    if (values.length === 0) return setEmpty('ch-performance', 'No performance data yet — add rows to your Snapshot tab');
 
     const ctx = document.getElementById('c-performance')?.getContext('2d');
     const grad = ctx ? areaGradient(ctx, '#7c6fef') : null;
@@ -667,26 +703,24 @@
     makeChart('c-performance', 'line', {
       labels,
       datasets: [{
-        data: values, label: 'Portfolio Value',
+        data: values, label: 'Net Worth',
         borderColor: '#7c6fef', backgroundColor: grad,
-        borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 0,
+        borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: values.length < 10 ? 3 : 0,
         pointHoverRadius: 5, pointHoverBackgroundColor: '#7c6fef',
       }]
     }, {
       scales: {
-        x: { ticks: { callback: (v, i) => { const l = labels[i]; return l?.split?.('T')[0] || l; } } },
+        x: { ticks: { callback: (v, i) => { const l = labels[i]; return l?.split?.('T')[0] || l || ''; } } },
         y: { ticks: { callback: v => S.currency + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) } }
       }
     });
 
-    // Badge: change since start
     if (values.length > 1 && values[0]) {
       const change = ((values[values.length-1] - values[0]) / values[0]) * 100;
       const badge = document.getElementById('b-performance');
       if (badge) { badge.textContent = fmtPct(change); badge.className = 'widget-badge ' + (change >= 0 ? 'up' : 'down'); }
     }
   }
-
   function renderAssetDistro() {
     const rows = S.data['AssetDistro'];
     if (!rows || rows.length < 2) { return setEmpty('ch-asset-distro', 'No distribution data'); }
@@ -768,7 +802,7 @@
     </tr></thead><tbody>
       ${objs.map(r => `<tr>
         <td>${r.account || r['account name'] || '–'}</td>
-        <td>${r.bank || r.institution || '–'}</td>
+        <td>${r['bank / institution'] || r.bank || r.institution || '–'}</td>
         <td class="num private">${fmt(r.balance)}</td>
         <td><span class="tag tag-blue">${r.currency || 'GBP'}</span></td>
         <td style="color:var(--text3);font-size:11px">${r.updated || r['last updated'] || ''}</td>
@@ -794,9 +828,9 @@
         const t = (r.type || '').toLowerCase();
         const cls = t.includes('property') ? 'tag-purple' : t.includes('pension') ? 'tag-blue' : 'tag-green';
         return `<tr>
-          <td>${r.platform || r.account || '–'}</td>
+          <td>${r['platform / account'] || r.platform || r.account || '–'}</td>
           <td><span class="tag ${cls}">${r.type || '–'}</span></td>
-          <td class="num private">${fmt(r.value || r.balance)}</td>
+          <td class="num private">${fmt(r['current value'] || r.value || r.balance)}</td>
           <td><span class="tag tag-blue">${r.currency || 'GBP'}</span></td>
           <td style="color:var(--text3);font-size:11px">${r.updated || r['last updated'] || ''}</td>
         </tr>`;
@@ -966,8 +1000,14 @@
     const url = document.getElementById('input-sheet-url').value.trim();
     const cur = document.getElementById('input-currency').value.trim() || '£';
     if (url) {
-      S.sheetId = extractSheetId(url);
-      localStorage.setItem('zhodler_sheetId', S.sheetId);
+      const extracted = extractSheetId(url);
+      if (extracted && extracted.length >= 20) {
+        S.sheetId = extracted;
+        localStorage.setItem('zhodler_sheetId', S.sheetId);
+      } else {
+        toast('Invalid Sheet URL — paste the full Google Sheets URL', 'error');
+        return;
+      }
     }
     S.currency = cur;
     localStorage.setItem('zhodler_currency', cur);
