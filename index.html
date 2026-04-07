@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhodler Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack.min.css">
+    <!-- Chart.js loaded via script tag below -->
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg2: #161922;
+            --bg3: #1c1f2e;
+            --card: #1e2235;
+            --card2: #252840;
+            --border: rgba(255,255,255,0.07);
+            --text: #e8eaef;
+            --text2: #7b82a0;
+            --text3: #4a5070;
+            --accent: #7c6fef;
+            --accent2: #00d4ff;
+            --accent3: #b066ff;
+            --green: #00c896;
+            --red: #ff4d6d;
+            --yellow: #ffb84d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        body.privacy-mode .sensitive {
+            filter: blur(6px);
+            cursor: not-allowed;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .last-updated {
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pill {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background-color: var(--card);
+            color: var(--text2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .pill:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .pill.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background-color: var(--card);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background-color: var(--card2);
+            border-color: var(--accent);
+        }
+
+        .btn.icon-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .toggle {
+            width: 48px;
+            height: 28px;
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle.active {
+            background-color: var(--green);
+            border-color: var(--green);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: var(--bg2);
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s ease;
+        }
+
+        .toggle.active::after {
+            left: 22px;
+        }
+
+        /* Gridstack */
+        .grid-stack {
+            background-color: var(--bg2);
+            border-radius: 8px;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        .grid-stack-item-content {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-stack.locked .grid-stack-item {
+            cursor: default;
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .widget-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .widget-filters {
+            display: flex;
+            gap: 6px;
+        }
+
+        .widget-filter {
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            background-color: var(--card2);
+            color: var(--text2);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .widget-filter:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .widget-filter.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .kpi-card {
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .kpi-value.positive {
+            color: var(--green);
+        }
+
+        .kpi-value.negative {
+            color: var(--red);
+        }
+
+        .kpi-subtext {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: var(--bg3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text2);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        tr.current-year {
+            background-color: rgba(124, 111, 239, 0.1);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin-top: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: none;
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background-color: var(--bg2);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            padding: 10px 16px;
+            background-color: var(--accent);
+            border: none;
+            color: var(--bg);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent3);
+        }
+
+        .btn-secondary {
+            flex: 1;
+            padding: 10px 16px;
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg3);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            color: var(--text);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .toast.error {
+            border-color: var(--red);
+            background-color: rgba(255, 77, 109, 0.1);
+            color: var(--red);
+        }
+
+        .toast.success {
+            border-color: var(--green);
+            background-color: rgba(0, 200, 150, 0.1);
+            color: var(--green);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--card2) 25%, var(--bg3) 50%, var(--card2) 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoad 1.5s infinite;
+        }
+
+        @keyframes skeletonLoad {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            height: 80px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .grid-stack {
+                padding: 8px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+
+            .pill {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* Color coding for LTV */
+        .ltv-green {
+            color: var(--green);
+        }
+
+        .ltv-yellow {
+            color: var(--yellow);
+        }
+
+        .ltv-red {
+            color: var(--red);
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            color: var(--text2);
+        }
+
+        .spinner {
+            border: 3px solid var(--card2);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="title">Zhodler</div>
+                <div class="last-updated">Last updated: <span id="lastUpdated">--:--</span></div>
+            </div>
+            <div class="header-right">
+                <div class="filter-pills" id="mainFilters">
+                    <div class="pill active" data-filter="portfolio">Total Portfolio</div>
+                    <div class="pill" data-filter="crypto">Crypto</div>
+                    <div class="pill" data-filter="tradfi">TradFi</div>
+                </div>
+                <div class="toggle" id="lockToggle" title="Lock/Unlock Layout"></div>
+                <button class="btn icon-btn" id="refreshBtn" title="Refresh Data">
+                    <span>⟳</span>
+                </button>
+                <button class="btn icon-btn" id="settingsBtn" title="Settings">
+                    <span>⚙</span>
+                </button>
+                <button class="btn icon-btn" id="privacyToggle" title="Privacy Mode">
+                    <span>👁</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Gridstack -->
+        <div class="grid-stack" id="grid">
+            <!-- Widget: Global Metrics -->
+            <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="12" gs-h="2" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Global Metrics</div>
+                    </div>
+                    <div class="kpi-grid" id="globalMetrics"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Portfolio Summary -->
+            <div class="grid-stack-item" gs-x="0" gs-y="2" gs-w="8" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Portfolio Summary</div>
+                        <div class="widget-filters" id="portfolioFilters">
+                            <div class="widget-filter active" data-filter="portfolio">Portfolio</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div class="kpi-grid" id="portfolioSummary"></div>
+                </div>
+            </div>
+
+            <!-- Widget: BTC Overview -->
+            <div class="grid-stack-item" gs-x="8" gs-y="2" gs-w="4" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">BTC Overview</div>
+                    </div>
+                    <div class="kpi-grid" id="btcOverview"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Debt & Liabilities -->
+            <div class="grid-stack-item" gs-x="0" gs-y="5" gs-w="6" gs-h="2" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Debt & Liabilities</div>
+                        <div class="widget-filters" id="debtFilters">
+                            <div class="widget-filter active" data-filter="all">All</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div id="debtContent"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Projections -->
+            <div class="grid-stack-item" gs-x="6" gs-y="5" gs-w="6" gs-h="2" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Projections</div>
+                        <div class="widget-filters" id="projectionsFilters">
+                            <div class="widget-filter active" data-filter="portfolio">Portfolio</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                        </div>
+                    </div>
+                    <div class="kpi-grid" id="projectionsContent"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Assets Distribution -->
+            <div class="grid-stack-item" gs-x="0" gs-y="7" gs-w="7" gs-h="4" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Assets Distribution</div>
+                        <div class="widget-filters" id="assetsFilters">
+                            <div class="widget-filter active" data-filter="all">All</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="assetsChart"></canvas>
+                    </div>
+                    <div class="table-container">
+                        <table id="assetsTable"></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget: Yearly Performance -->
+            <div class="grid-stack-item" gs-x="7" gs-y="7" gs-w="5" gs-h="4" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Yearly Performance</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="yearlyChart"></canvas>
+                    </div>
+                    <div class="table-container">
+                        <table id="yearlyTable"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="close-btn" id="closeSettings">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Google Sheet URL or ID</label>
+                <input type="text" id="sheetInput" placeholder="https://docs.google.com/spreadsheets/d/... or just the ID">
+            </div>
+            <div class="form-group">
+                <label>Custom Layout (JSON)</label>
+                <textarea id="layoutInput" placeholder="Paste exported layout JSON here" rows="6"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" id="saveSettings">Save Settings</button>
+                <button class="btn-secondary" id="resetLayout">Reset Layout</button>
+            </div>
+            <div class="form-actions">
+                <button class="btn-secondary" id="exportLayout">Export Layout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <script>
+        // ============ GLOBAL STATE & CONFIG ============
+        const state = {
+            data: null,
+            currentFilter: 'portfolio',
+            locked: false,
+            privacyMode: false,
+            charts: {},
+            lastUpdateTime: null,
+        };
+
+        const DEFAULTS = {
+            sheet_id: '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk',
+            gviz_url: (id) => `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`
+        };
+
+        // ============ UTILITY FUNCTIONS ============
+        function fmt(value) {
+            const n = num(value);
+            const prefix = n < 0 ? '-$' : '$';
+            return prefix + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function fmtPct(value) {
+            const n = num(value);
+            if (n === 0 && value !== 0) return '0.00%';
+            // Values from gviz are raw decimals (0.1067 = 10.67%)
+            // Values > 1 or < -1 are already percentages (from pre-formatted cells)
+            const pct = (n > -1 && n < 1) ? n * 100 : n;
+            return pct.toFixed(2) + '%';
+        }
+
+        function fmtNumber(value) {
+            const n = num(value);
+            return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function getCell(row, col) {
+            if (!state.data?.table?.rows || !state.data.table.rows[row]) return null;
+            const cells = state.data.table.rows[row].c;
+            if (!cells || !cells[col]) return null;
+            return cells[col].v ?? '';
+        }
+
+        function num(val) {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const cleaned = val.replace(/[%,$\s]/g, '');
+                const n = parseFloat(cleaned);
+                return isNaN(n) ? 0 : n;
+            }
+            return 0;
+        }
+
+        function getNum(row, col) {
+            return num(getCell(row, col));
+        }
+
+        function getCellFormatted(row, col) {
+            if (!state.data?.table?.rows || !state.data.table.rows[row]) return '';
+            const cells = state.data.table.rows[row].c;
+            if (!cells || !cells[col]) return '';
+            return cells[col].f ?? cells[col].v ?? '';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('lastUpdated').textContent = `${hours}:${minutes}`;
+            state.lastUpdateTime = now;
+        }
+
+        // ============ SETTINGS & STORAGE ============
+        function loadSettings() {
+            return localStorage.getItem('zhodler-sheet-id') || DEFAULTS.sheet_id;
+        }
+
+        function saveSettings(sheetId) {
+            localStorage.setItem('zhodler-sheet-id', sheetId);
+        }
+
+        function extractSheetId(input) {
+            if (!input) return '';
+            if (input.startsWith('https://')) {
+                const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                return match ? match[1] : '';
+            }
+            return input;
+        }
+
+        function loadLayout() {
+            const saved = localStorage.getItem('zhodler-layout');
+            return saved ? JSON.parse(saved) : null;
+        }
+
+        function saveLayout() {
+            const grid = GridStack.getInstance('#grid');
+            const layout = grid.save(false);
+            localStorage.setItem('zhodler-layout', JSON.stringify(layout));
+        }
+
+        function resetLayout() {
+            localStorage.removeItem('zhodler-layout');
+            grid.load([
+                { x: 0, y: 0, w: 12, h: 2, content: '' },
+                { x: 0, y: 2, w: 8,  h: 3, content: '' },
+                { x: 8, y: 2, w: 4,  h: 3, content: '' },
+                { x: 0, y: 5, w: 6,  h: 2, content: '' },
+                { x: 6, y: 5, w: 6,  h: 2, content: '' },
+                { x: 0, y: 7, w: 7,  h: 4, content: '' },
+                { x: 7, y: 7, w: 5,  h: 4, content: '' }
+            ]);
+        }
+
+        // ============ DATA FETCHING ============
+        async function fetchData(sheetId) {
+            if (!sheetId) {
+                showToast('Please set Google Sheet ID in settings', 'error');
+                openSettings();
+                return false;
+            }
+
+            try {
+                const url = DEFAULTS.gviz_url(sheetId);
+                const response = await fetch(url);
+                let text = await response.text();
+
+                // Remove gviz callback wrapper
+                text = text.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+                const json = JSON.parse(text);
+
+                state.data = json;
+                updateLastUpdated();
+                renderAllWidgets();
+                return true;
+            } catch (error) {
+                console.error('Data fetch error:', error);
+                showToast('Failed to load data. Check Sheet ID and permissions.', 'error');
+                return false;
+            }
+        }
+
+        // ============ RENDERING ============
+        function renderKpiCard(label, value, subtext = '', isPositive = null) {
+            const div = document.createElement('div');
+            div.className = 'kpi-card';
+
+            let valueClass = '';
+            if (isPositive === true) valueClass = 'positive';
+            else if (isPositive === false) valueClass = 'negative';
+
+            div.innerHTML = `
+                <div class="kpi-label">${label}</div>
+                <div class="kpi-value ${valueClass} sensitive">${value}</div>
+                ${subtext ? `<div class="kpi-subtext">${subtext}</div>` : ''}
+            `;
+            return div;
+        }
+
+        function renderGlobalMetrics() {
+            const container = document.getElementById('globalMetrics');
+            container.innerHTML = '';
+
+            const days = getNum(0, 1);
+            const yearProgress = getNum(1, 1);
+
+            const dayCard = renderKpiCard('Days Tracking', Math.round(days).toLocaleString());
+            container.appendChild(dayCard);
+
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'kpi-card';
+            progressDiv.innerHTML = `
+                <div class="kpi-label">Year Progress</div>
+                <div class="kpi-value sensitive">${fmtPct(yearProgress)}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${yearProgress * 100}%"></div>
+                </div>
+            `;
+            container.appendChild(progressDiv);
+        }
+
+        function getPortfolioData(filter) {
+            // Row mappings (gviz 0-indexed):
+            // PORTFOLIO:  rows 3-14  (12 metrics, standard pattern)
+            // HOLDINGS:   rows 15-26 (12 metrics, standard pattern)
+            // CRYPTO:     rows 27-40 (14 rows: 3 extra DeFi/CeFi breakdown + 12 standard)
+            //   row 27: Total Crypto Value, 28: Total DeFi Value, 29: Total CeFi Value
+            //   rows 30-41: standard 12-metric pattern
+            // TRADFI:     rows 41-52 (12 metrics, standard pattern)
+            // Standard pattern (12 rows): TotalValue, TotalInvested, NWYearStart, CurrentNW,
+            // YTD$, YTD%, AvgDailyYTD, AvgMonthlyYTD, AllTime$, AllTime%, AvgDailyAT, AvgMonthlyAT
+            // Crypto has 3 extra rows (DeFi/CeFi split) between TotalValue and TotalInvested
+            // assetsRow = first row (Total Value), investedRow = Total Invested row
+            const filterConfig = {
+                'portfolio': { assetsRow: 3,  investedRow: 4 },   // rows 3-14
+                'holdings':  { assetsRow: 15, investedRow: 16 },  // rows 15-26
+                'crypto':    { assetsRow: 27, investedRow: 30 },  // rows 27,28,29(extra),30-40
+                'tradfi':    { assetsRow: 41, investedRow: 42 },  // rows 41-52
+            };
+
+            const cfg = filterConfig[filter];
+            if (!cfg) return null;
+
+            const r = cfg.investedRow; // Start of standard metric sequence
+            const result = {
+                totalAssets:          getNum(cfg.assetsRow, 1),
+                totalInvested:        getNum(r, 1),
+                netWorthYearStart:    getNum(r + 1, 1),
+                currentNetWorth:      getNum(r + 2, 1),
+                ytdGainDollar:        getNum(r + 3, 1),
+                ytdGainPct:           getNum(r + 4, 1),
+                avgDailyGainYTD:      getNum(r + 5, 1),
+                avgMonthlyGainYTD:    getNum(r + 6, 1),
+                allTimeGainDollar:    getNum(r + 7, 1),
+                allTimeGainPct:       getNum(r + 8, 1),
+                avgDailyGainAllTime:  getNum(r + 9, 1),
+                avgMonthlyGainAllTime:getNum(r + 10, 1),
+            };
+
+            // For crypto, also include DeFi/CeFi breakdown
+            if (filter === 'crypto') {
+                result.defiValue = getNum(28, 1);
+                result.cefiValue = getNum(29, 1);
+            }
+
+            return result;
+        }
+
+        function renderPortfolioSummary(filter) {
+            const container = document.getElementById('portfolioSummary');
+            container.innerHTML = '';
+
+            const data = getPortfolioData(filter);
+            if (!data) return;
+
+            const isPositive = (val) => val > 0 ? true : val < 0 ? false : null;
+
+            container.appendChild(renderKpiCard('Total Assets', fmt(data.totalAssets)));
+            container.appendChild(renderKpiCard('Total Invested', fmt(data.totalInvested)));
+            container.appendChild(renderKpiCard('Current Net Worth', fmt(data.currentNetWorth)));
+
+            // DeFi/CeFi breakdown for crypto filter
+            if (filter === 'crypto' && data.defiValue !== undefined) {
+                container.appendChild(renderKpiCard('DeFi Value', fmt(data.defiValue)));
+                container.appendChild(renderKpiCard('CeFi Value', fmt(data.cefiValue)));
+            }
+
+            container.appendChild(renderKpiCard('YTD Gain/Loss', fmt(data.ytdGainDollar), fmtPct(data.ytdGainPct), isPositive(data.ytdGainDollar)));
+            container.appendChild(renderKpiCard('All-Time Gain/Loss', fmt(data.allTimeGainDollar), fmtPct(data.allTimeGainPct), isPositive(data.allTimeGainDollar)));
+            container.appendChild(renderKpiCard('Avg Daily Gain (YTD)', fmt(data.avgDailyGainYTD), '', isPositive(data.avgDailyGainYTD)));
+            container.appendChild(renderKpiCard('Avg Monthly Gain (YTD)', fmt(data.avgMonthlyGainYTD), '', isPositive(data.avgMonthlyGainYTD)));
+            container.appendChild(renderKpiCard('Avg Daily Gain (All-Time)', fmt(data.avgDailyGainAllTime), '', isPositive(data.avgDailyGainAllTime)));
+        }
+
+        function renderBtcOverview() {
+            const container = document.getElementById('btcOverview');
+            container.innerHTML = '';
+
+            const holdings = getNum(54, 1);
+            const price = getNum(55, 1);
+            const pctSinceStart = getNum(56, 1);
+            const pctYtd = getNum(57, 1);
+
+            const value = holdings * price;
+
+            container.appendChild(renderKpiCard('BTC Holdings', holdings.toFixed(4) + ' ₿'));
+            container.appendChild(renderKpiCard('BTC Price', fmt(price)));
+            container.appendChild(renderKpiCard('Total BTC Value', fmt(value)));
+            container.appendChild(renderKpiCard('Change Since Start', fmtPct(pctSinceStart), '', pctSinceStart > 0));
+            container.appendChild(renderKpiCard('YTD Change', fmtPct(pctYtd), '', pctYtd > 0));
+        }
+
+        function renderDebtWidget(filter) {
+            const container = document.getElementById('debtContent');
+            container.innerHTML = '';
+
+            if (filter === 'all') {
+                // Row 59 = Total Portfolio/Holdings Debt (already includes crypto + tradfi)
+                const totalDebt = getNum(59, 1);
+                const cryptoDebt = getNum(60, 1);
+                const tradfiDebt = getNum(69, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total Debt', fmt(totalDebt)));
+                grid.appendChild(renderKpiCard('Crypto Debt', fmt(cryptoDebt)));
+                grid.appendChild(renderKpiCard('TradFi Debt', fmt(tradfiDebt)));
+                container.appendChild(grid);
+            } else if (filter === 'crypto') {
+                const cryptoDebt = getNum(60, 1);
+                const collateral = getNum(61, 1);
+                const defiDebt = getNum(62, 1);
+                const defiCollateral = getNum(63, 1);
+                const defiLtv = getNum(64, 1);
+                const compLiquidation = getNum(65, 1);
+                const cefiDebt = getNum(66, 1);
+                const cefiCollateral = getNum(67, 1);
+                const cefiLtv = getNum(68, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total Crypto Debt', fmt(cryptoDebt)));
+                grid.appendChild(renderKpiCard('Crypto Collateral', fmt(collateral)));
+                grid.appendChild(renderKpiCard('DeFi Debt', fmt(defiDebt)));
+                grid.appendChild(renderKpiCard('DeFi Collateral', fmt(defiCollateral)));
+
+                const defiLtvDiv = document.createElement('div');
+                defiLtvDiv.className = 'kpi-card';
+                const defiLtvClass = defiLtv < 0.5 ? 'ltv-green' : defiLtv < 0.75 ? 'ltv-yellow' : 'ltv-red';
+                defiLtvDiv.innerHTML = `
+                    <div class="kpi-label">Compound LTV</div>
+                    <div class="kpi-value ${defiLtvClass} sensitive">${fmtPct(defiLtv)}</div>
+                `;
+                grid.appendChild(defiLtvDiv);
+
+                grid.appendChild(renderKpiCard('Liquidation Price (Compound)', fmt(compLiquidation)));
+                grid.appendChild(renderKpiCard('CeFi Debt', fmt(cefiDebt)));
+                grid.appendChild(renderKpiCard('CeFi Collateral', fmt(cefiCollateral)));
+
+                const cefiLtvDiv = document.createElement('div');
+                cefiLtvDiv.className = 'kpi-card';
+                const cefiLtvClass = cefiLtv < 0.5 ? 'ltv-green' : cefiLtv < 0.75 ? 'ltv-yellow' : 'ltv-red';
+                cefiLtvDiv.innerHTML = `
+                    <div class="kpi-label">Bybit LTV</div>
+                    <div class="kpi-value ${cefiLtvClass} sensitive">${fmtPct(cefiLtv)}</div>
+                `;
+                grid.appendChild(cefiLtvDiv);
+
+                container.appendChild(grid);
+            } else if (filter === 'tradfi') {
+                const totalDebt = getNum(69, 1);
+                const bankDebt = getNum(70, 1);
+                const andreiaDebt = getNum(71, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total TradFi Debt', fmt(totalDebt)));
+                grid.appendChild(renderKpiCard('Bank Debt', fmt(bankDebt)));
+                grid.appendChild(renderKpiCard('Debt to Andreia', fmt(andreiaDebt)));
+                container.appendChild(grid);
+            }
+        }
+
+        function renderProjections(filter) {
+            const container = document.getElementById('projectionsContent');
+            container.innerHTML = '';
+
+            if (filter === 'portfolio') {
+                const eoy = getNum(73, 1);
+                const oneYear = getNum(74, 1);
+                const fiveYear = getNum(75, 1);
+
+                container.appendChild(renderKpiCard('End of Year', fmt(eoy)));
+                container.appendChild(renderKpiCard('1 Year Projection', fmt(oneYear)));
+                container.appendChild(renderKpiCard('5 Year Projection', fmt(fiveYear)));
+            } else if (filter === 'crypto') {
+                const eoy = getNum(76, 1);
+                const oneYear = getNum(77, 1);
+                const fiveYear = getNum(78, 1);
+
+                container.appendChild(renderKpiCard('End of Year', fmt(eoy)));
+                container.appendChild(renderKpiCard('1 Year Projection', fmt(oneYear)));
+                container.appendChild(renderKpiCard('5 Year Projection', fmt(fiveYear)));
+            }
+        }
+
+        function renderAssetsDistribution(filter) {
+            // Get assets (rows 81-92, which is gviz rows 81-92)
+            const assets = [];
+            for (let i = 81; i <= 92; i++) {
+                const name = getCell(i, 0);
+                const quantity = num(getCell(i, 1));
+                const value = num(getCell(i, 2));
+                const type = getCell(i, 3);
+                const platform = getCell(i, 4);
+                const active = getCell(i, 5);
+
+                if (!name) continue;
+
+                let typeFilter = '';
+                if (type === 'DeFi' || type === 'Collateral') typeFilter = 'crypto';
+                else if (type === 'TradFi' || type === 'Real Estate' || type === 'Motorbike') typeFilter = 'tradfi';
+
+                if (filter === 'all' || typeFilter === filter) {
+                    assets.push({ name, quantity, value, type, platform, active });
+                }
+            }
+
+            // Render chart
+            const chartData = {
+                labels: assets.map(a => a.name),
+                datasets: [{
+                    data: assets.map(a => a.value),
+                    backgroundColor: [
+                        '#7c6fef', '#00d4ff', '#b066ff', '#00c896',
+                        '#ffb84d', '#ff4d6d', '#7b82a0', '#1c1f2e',
+                        '#4a5070', '#161922', '#252840', '#1e2235'
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 0.07)',
+                    borderWidth: 1
+                }]
+            };
+
+            const ctx = document.getElementById('assetsChart').getContext('2d');
+            if (state.charts.assets) state.charts.assets.destroy();
+            state.charts.assets = new Chart(ctx, {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'rgba(232, 234, 239, 0.7)', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            // Render table
+            const table = document.getElementById('assetsTable');
+            table.innerHTML = '<thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody></tbody>';
+            const tbody = table.querySelector('tbody');
+
+            assets.forEach(a => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${a.name}</td>
+                    <td>${fmtNumber(a.quantity)}</td>
+                    <td class="sensitive">${fmt(a.value)}</td>
+                    <td>${a.type}</td>
+                    <td>${a.platform}</td>
+                    <td>${a.active}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderYearlyPerformance() {
+            // Get yearly data (rows 95-98, gviz indices)
+            const years = [];
+            for (let i = 95; i <= 98; i++) {
+                const year = getCell(i, 0);
+                const netWorth = num(getCell(i, 1));
+                const yoyPct = getCell(i, 2);  // May be string like "22.31%"
+                const totalAssets = num(getCell(i, 3));
+                const btcHoldings = num(getCell(i, 4));
+
+                if (year) {
+                    years.push({ year, netWorth, yoyPct, totalAssets, btcHoldings });
+                }
+            }
+
+            // Render chart
+            const chartData = {
+                labels: years.map(y => y.year),
+                datasets: [{
+                    label: 'Net Worth',
+                    data: years.map(y => y.netWorth),
+                    backgroundColor: '#7c6fef',
+                    borderColor: '#7c6fef',
+                    borderWidth: 1
+                }]
+            };
+
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            if (state.charts.yearly) state.charts.yearly.destroy();
+            state.charts.yearly = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: 'rgba(232, 234, 239, 0.7)', font: { size: 11 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: 'rgba(232, 234, 239, 0.5)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        x: {
+                            ticks: { color: 'rgba(232, 234, 239, 0.5)' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Render table
+            const table = document.getElementById('yearlyTable');
+            table.innerHTML = '<thead><tr><th>Year</th><th>Net Worth</th><th>YoY %</th><th>Assets</th><th>BTC (₿)</th></tr></thead><tbody></tbody>';
+            const tbody = table.querySelector('tbody');
+
+            const currentYear = new Date().getFullYear();
+            years.forEach(y => {
+                const row = document.createElement('tr');
+                if (y.year === currentYear) row.className = 'current-year';
+                row.innerHTML = `
+                    <td>${y.year}</td>
+                    <td class="sensitive">${fmt(y.netWorth)}</td>
+                    <td>${fmtPct(y.yoyPct)}</td>
+                    <td class="sensitive">${fmt(y.totalAssets)}</td>
+                    <td>${fmtNumber(y.btcHoldings)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderAllWidgets() {
+            if (!state.data) return;
+
+            renderGlobalMetrics();
+            renderPortfolioSummary(state.currentFilter);
+            renderBtcOverview();
+            renderDebtWidget('all');
+            renderProjections('portfolio');
+            renderAssetsDistribution('all');
+            renderYearlyPerformance();
+        }
+
+        // ============ EVENT LISTENERS ============
+        function setupEventListeners() {
+            // Main filters
+            document.querySelectorAll('#mainFilters .pill').forEach(pill => {
+                pill.addEventListener('click', (e) => {
+                    document.querySelectorAll('#mainFilters .pill').forEach(p => p.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.currentFilter = e.target.dataset.filter;
+                    renderPortfolioSummary(state.currentFilter);
+                    renderDebtWidget('all');
+                });
+            });
+
+            // Portfolio filters
+            document.querySelectorAll('#portfolioFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#portfolioFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderPortfolioSummary(e.target.dataset.filter);
+                });
+            });
+
+            // Debt filters
+            document.querySelectorAll('#debtFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#debtFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderDebtWidget(e.target.dataset.filter);
+                });
+            });
+
+            // Projections filters
+            document.querySelectorAll('#projectionsFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#projectionsFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderProjections(e.target.dataset.filter);
+                });
+            });
+
+            // Assets filters
+            document.querySelectorAll('#assetsFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#assetsFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderAssetsDistribution(e.target.dataset.filter);
+                });
+            });
+
+            // Lock toggle
+            document.getElementById('lockToggle').addEventListener('click', () => {
+                const toggle = document.getElementById('lockToggle');
+                toggle.classList.toggle('active');
+                const grid = GridStack.getInstance('#grid');
+                if (toggle.classList.contains('active')) {
+                    grid.disable();
+                    state.locked = true;
+                } else {
+                    grid.enable();
+                    state.locked = false;
+                }
+            });
+
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                const sheetId = loadSettings();
+                fetchData(sheetId);
+            });
+
+            // Settings button
+            document.getElementById('settingsBtn').addEventListener('click', openSettings);
+
+            // Privacy toggle
+            document.getElementById('privacyToggle').addEventListener('click', () => {
+                document.body.classList.toggle('privacy-mode');
+                state.privacyMode = !state.privacyMode;
+            });
+
+            // Settings modal
+            document.getElementById('closeSettings').addEventListener('click', closeSettings);
+            document.getElementById('settingsModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('settingsModal')) closeSettings();
+            });
+
+            document.getElementById('saveSettings').addEventListener('click', () => {
+                const input = document.getElementById('sheetInput').value.trim();
+                const sheetId = extractSheetId(input);
+                if (sheetId) {
+                    saveSettings(sheetId);
+                    closeSettings();
+                    fetchData(sheetId);
+                } else {
+                    showToast('Invalid Sheet URL or ID', 'error');
+                }
+            });
+
+            document.getElementById('resetLayout').addEventListener('click', () => {
+                resetLayout();
+                showToast('Layout reset to default', 'success');
+            });
+
+            document.getElementById('exportLayout').addEventListener('click', () => {
+                const grid = GridStack.getInstance('#grid');
+                const layout = grid.save(false);
+                const json = JSON.stringify(layout, null, 2);
+                navigator.clipboard.writeText(json).then(() => {
+                    showToast('Layout copied to clipboard', 'success');
+                });
+            });
+
+            document.getElementById('sheetInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('saveSettings').click();
+                }
+            });
+        }
+
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            const sheetId = loadSettings();
+            document.getElementById('sheetInput').value = sheetId;
+            modal.classList.add('show');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        // ============ GRIDSTACK SETUP ============
+        let grid;
+
+        function initGridstack() {
+            grid = GridStack.init({
+                column: 12,
+                float: true,
+                animate: true,
+                margin: 16,
+                removeTimeout: 100,
+                cellHeight: 100
+            }, '#grid');
+
+            grid.on('change', () => {
+                saveLayout();
+            });
+
+            // Load saved layout or use defaults
+            // Version stamp: clear old layouts from before v2 (fixed cellHeight)
+            const layoutVersion = localStorage.getItem('zhodler-layout-version');
+            if (layoutVersion !== '2') {
+                localStorage.removeItem('zhodler-layout');
+                localStorage.setItem('zhodler-layout-version', '2');
+            }
+            const saved = loadLayout();
+            if (saved) {
+                grid.load(saved);
+            }
+        }
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            initGridstack();
+            setupEventListeners();
+
+            const sheetId = loadSettings();
+            if (sheetId) {
+                fetchData(sheetId);
+            } else {
+                showToast('Please set Google Sheet ID in settings', 'error');
+                openSettings();
+            }
+        });
+    </script>
+</body>
+</html>
