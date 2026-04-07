@@ -871,6 +871,7 @@
 
         function resetLayout() {
             localStorage.removeItem('zhodler-layout');
+            const grid = GridStack.getInstance('#grid');
             grid.load([
                 { x: 0, y: 0, w: 12, h: 2, content: '' },
                 { x: 0, y: 2, w: 8,  h: 3, content: '' },
@@ -896,8 +897,7 @@
                 let text = await response.text();
 
                 // Remove gviz callback wrapper
-                text = text.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-                const json = JSON.parse(text);
+                const json = JSON.parse(text.substring(47, text.length - 2));
 
                 state.data = json;
                 updateLastUpdated();
