@@ -1,1089 +1,1462 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <meta name="theme-color" content="#0f1117">
-  <title>Zhodler Dashboard</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack.min.css">
-  <style>
-    /* ── THEMES ─────────────────────────────────────────────────── */
-    :root {
-      --bg:       #0f1117; --bg2:    #161922; --bg3:    #1c1f2e;
-      --card:     #1e2235; --card2:  #252840; --border: rgba(255,255,255,0.07);
-      --text:     #e8eaef; --text2:  #7b82a0; --text3:  #4a5070;
-      --accent:   #7c6fef; --accent2:#00d4ff; --accent3:#b066ff;
-      --green:    #00c896; --red:    #ff4d6d; --yellow: #ffb84d; --orange:#ff8c4b;
-      --radius:   12px;    --radius2:8px;     --radius3:6px;
-      --shadow:   0 4px 24px rgba(0,0,0,0.35);
-      --shadow2:  0 2px 8px rgba(0,0,0,0.2);
-    }
-    .theme-light {
-      --bg:#f0f2f8; --bg2:#e8eaf0; --bg3:#dde0ea; --card:#ffffff; --card2:#f5f6fb;
-      --border:rgba(0,0,0,0.08); --text:#1a1d2e; --text2:#555a78; --text3:#9ba0ba;
-    }
-    .theme-ocean {
-      --bg:#061622; --bg2:#0a2030; --bg3:#0e2a3e; --card:#102d44; --card2:#153550;
-      --accent:#00c4ff; --accent2:#00ffc8;
-    }
-    .theme-sunset {
-      --bg:#1a0e0a; --bg2:#231510; --bg3:#2d1b14; --card:#35201a; --card2:#3e261e;
-      --accent:#ff6b35; --accent2:#ffd166;
-    }
-    .theme-navy-gold {
-      --bg:#080e1f; --bg2:#0d1628; --bg3:#111d32; --card:#16233c; --card2:#1b2a47;
-      --accent:#d4a017; --accent2:#f5cc5c;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhodler Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack.min.css">
+    <!-- Chart.js loaded via script tag below -->
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg2: #161922;
+            --bg3: #1c1f2e;
+            --card: #1e2235;
+            --card2: #252840;
+            --border: rgba(255,255,255,0.07);
+            --text: #e8eaef;
+            --text2: #7b82a0;
+            --text3: #4a5070;
+            --accent: #7c6fef;
+            --accent2: #00d4ff;
+            --accent3: #b066ff;
+            --green: #00c896;
+            --red: #ff4d6d;
+            --yellow: #ffb84d;
+        }
 
-    /* ── RESET & BASE ───────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg); color: var(--text);
-      min-height: 100vh; overflow-x: hidden;
-      transition: background 0.3s, color 0.3s;
-    }
-    a { color: var(--accent); text-decoration: none; }
-    button { cursor: pointer; font-family: inherit; border: none; outline: none; }
-    input, select { font-family: inherit; outline: none; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg2); }
-    ::-webkit-scrollbar-thumb { background: var(--card2); border-radius: 3px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    /* ── HEADER ─────────────────────────────────────────────────── */
-    #header {
-      position: sticky; top: 0; z-index: 100;
-      background: var(--bg2); border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-      display: flex; align-items: center; gap: 12px;
-      padding: 0 20px; height: 56px;
-    }
-    #header .logo {
-      font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; white-space: nowrap;
-    }
-    #header .spacer { flex: 1; }
-    #last-updated {
-      font-size: 11px; color: var(--text3); white-space: nowrap;
-      display: flex; align-items: center; gap: 5px;
-    }
-    #last-updated .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--green); display: inline-block;
-    }
-    #last-updated .dot.loading { animation: pulse 1.2s ease infinite; }
-    #last-updated .dot.error { background: var(--red); }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
 
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: 5px; padding: 6px 12px; border-radius: var(--radius3);
-      font-size: 12px; font-weight: 500; transition: all 0.15s;
-      background: var(--card2); color: var(--text2); border: 1px solid var(--border);
-    }
-    .btn:hover { background: var(--card); color: var(--text); border-color: var(--accent); }
-    .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn-icon {
-      width: 32px; height: 32px; padding: 0;
-      background: var(--card2); color: var(--text2); border: 1px solid var(--border);
-      border-radius: var(--radius3); display: inline-flex; align-items: center; justify-content: center;
-      font-size: 14px; transition: all 0.15s;
-    }
-    .btn-icon:hover { background: var(--card); color: var(--text); }
+        body.privacy-mode .sensitive {
+            filter: blur(6px);
+            cursor: not-allowed;
+        }
 
-    #theme-select {
-      background: var(--card2); color: var(--text2); border: 1px solid var(--border);
-      border-radius: var(--radius3); padding: 5px 8px; font-size: 12px;
-      cursor: pointer; transition: all 0.15s;
-    }
-    #theme-select:hover { border-color: var(--accent); color: var(--text); }
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-    /* ── PRIVACY MODE ───────────────────────────────────────────── */
-    body.privacy .private { filter: blur(6px); user-select: none; pointer-events: none; }
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
 
-    /* ── MAIN GRID AREA ─────────────────────────────────────────── */
-    #grid-wrapper {
-      padding: 16px;
-      max-width: 1600px;
-      margin: 0 auto;
-    }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
 
-    /* ── GRIDSTACK OVERRIDES ────────────────────────────────────── */
-    .grid-stack { background: transparent !important; }
-    .grid-stack-item-content {
-      background: var(--card) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: var(--radius) !important;
-      overflow: hidden !important;
-      box-shadow: var(--shadow2) !important;
-      transition: border-color 0.2s, box-shadow 0.2s !important;
-    }
-    .grid-stack-item-content:hover {
-      border-color: rgba(124,111,239,0.25) !important;
-      box-shadow: var(--shadow) !important;
-    }
-    .grid-stack-item.ui-resizable-resizing .grid-stack-item-content,
-    .grid-stack-item.ui-draggable-dragging .grid-stack-item-content {
-      opacity: 0.85; box-shadow: 0 12px 40px rgba(0,0,0,0.5) !important;
-    }
-    .ui-resizable-handle { z-index: 50; }
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
 
-    /* ── WIDGET LAYOUT ──────────────────────────────────────────── */
-    .widget { display: flex; flex-direction: column; height: 100%; padding: 16px; overflow: hidden; }
-    .widget-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 12px; cursor: grab; flex-shrink: 0;
-    }
-    .widget-header:active { cursor: grabbing; }
-    .widget-title {
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.8px; color: var(--text2);
-    }
-    .widget-badge {
-      font-size: 10px; font-weight: 600; padding: 2px 8px;
-      border-radius: 20px; background: var(--bg3); color: var(--text2);
-    }
-    .widget-badge.up { background: rgba(0,200,150,0.15); color: var(--green); }
-    .widget-badge.down { background: rgba(255,77,109,0.15); color: var(--red); }
-    .widget-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+        .last-updated {
+            font-size: 12px;
+            color: var(--text2);
+        }
 
-    /* ── KPI WIDGET ─────────────────────────────────────────────── */
-    .kpi-value {
-      font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
-      margin: 4px 0; line-height: 1.1;
-      background: linear-gradient(135deg, var(--text) 60%, var(--text2));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .kpi-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
-    .kpi-change { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; }
-    .kpi-change.up { color: var(--green); }
-    .kpi-change.down { color: var(--red); }
-    .kpi-sparkline { margin-top: 10px; flex: 1; min-height: 0; max-height: 60px; }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
 
-    /* ── TABLE WIDGET ───────────────────────────────────────────── */
-    .data-table-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .data-table thead th {
-      font-size: 10px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.6px; color: var(--text3); padding: 0 8px 8px;
-      border-bottom: 1px solid var(--border); text-align: left;
-      position: sticky; top: 0; background: var(--card); z-index: 2;
-    }
-    .data-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-    .data-table tbody tr:hover { background: var(--card2); }
-    .data-table tbody tr:last-child { border-bottom: none; }
-    .data-table tbody td { padding: 7px 8px; color: var(--text); vertical-align: middle; }
-    .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .data-table .tag {
-      display: inline-flex; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 500;
-    }
-    .tag-green { background: rgba(0,200,150,0.15); color: var(--green); }
-    .tag-red   { background: rgba(255,77,109,0.15); color: var(--red); }
-    .tag-blue  { background: rgba(0,212,255,0.15);  color: var(--accent2); }
-    .tag-purple{ background: rgba(124,111,239,0.15);color: var(--accent); }
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+        }
 
-    /* ── CHART WIDGET ───────────────────────────────────────────── */
-    .chart-wrap { flex: 1; min-height: 0; position: relative; }
-    .chart-wrap canvas { max-height: 100% !important; }
+        .pill {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background-color: var(--card);
+            color: var(--text2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
 
-    /* ── GOALS WIDGET ───────────────────────────────────────────── */
-    .goal-item { margin-bottom: 14px; }
-    .goal-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
-    .goal-name { color: var(--text); font-weight: 500; }
-    .goal-pct  { color: var(--text2); }
-    .goal-bar  { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
-    .goal-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
-    .goal-fill.done { background: var(--green); }
-    .goal-targets { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 4px; }
+        .pill:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
 
-    /* ── SUMMARY PILLS ──────────────────────────────────────────── */
-    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-    .summary-pill {
-      background: var(--bg3); border-radius: var(--radius2); padding: 10px 12px;
-      display: flex; flex-direction: column; gap: 3px;
-    }
-    .summary-pill-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
-    .summary-pill-value { font-size: 14px; font-weight: 600; color: var(--text); }
+        .pill.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
 
-    /* ── EMPTY / ERROR STATES ───────────────────────────────────── */
-    .empty-state {
-      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 8px; color: var(--text3); font-size: 12px; text-align: center; padding: 20px;
-    }
-    .empty-state .icon { font-size: 28px; opacity: 0.5; }
-    .loading-skeleton {
-      background: linear-gradient(90deg, var(--bg3) 25%, var(--card2) 50%, var(--bg3) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 4px;
-    }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background-color: var(--card);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    /* ── SETTINGS MODAL ─────────────────────────────────────────── */
-    #modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px); z-index: 200;
-      display: none; align-items: center; justify-content: center;
-    }
-    #modal-overlay.open { display: flex; }
-    #settings-modal {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 24px; width: 480px; max-width: calc(100vw - 32px);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-      animation: slideUp 0.2s ease;
-    }
-    .modal-title {
-      font-size: 16px; font-weight: 600; margin-bottom: 20px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .form-group { margin-bottom: 16px; }
-    .form-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 6px; display: block; }
-    .form-input {
-      width: 100%; background: var(--bg3); border: 1px solid var(--border);
-      border-radius: var(--radius2); padding: 9px 12px; color: var(--text);
-      font-size: 13px; transition: border-color 0.15s;
-    }
-    .form-input:focus { border-color: var(--accent); }
-    .form-hint { font-size: 11px; color: var(--text3); margin-top: 5px; line-height: 1.4; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .btn-primary {
-      background: var(--accent); color: #fff; padding: 8px 20px;
-      border-radius: var(--radius3); font-size: 13px; font-weight: 500;
-      transition: opacity 0.15s;
-    }
-    .btn-primary:hover { opacity: 0.85; }
+        .btn:hover {
+            background-color: var(--card2);
+            border-color: var(--accent);
+        }
 
-    /* ── TOAST NOTIFICATIONS ─────────────────────────────────────── */
-    #toast {
-      position: fixed; bottom: 20px; right: 20px; z-index: 300;
-      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
-    }
-    .toast-item {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--radius2); padding: 10px 16px;
-      font-size: 13px; color: var(--text);
-      box-shadow: var(--shadow); animation: slideRight 0.2s ease;
-      pointer-events: all;
-    }
-    .toast-item.success { border-left: 3px solid var(--green); }
-    .toast-item.error   { border-left: 3px solid var(--red); }
+        .btn.icon-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            justify-content: center;
+            align-items: center;
+        }
 
-    /* ── ANIMATIONS ─────────────────────────────────────────────── */
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
-    @keyframes slideRight { from{transform:translateX(16px);opacity:0} to{transform:translateX(0);opacity:1} }
-    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .toggle {
+            width: 48px;
+            height: 28px;
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
-    /* ── RESPONSIVE ─────────────────────────────────────────────── */
-    @media (max-width: 768px) {
-      #header { padding: 0 12px; gap: 8px; }
-      #header .logo { font-size: 15px; }
-      #grid-wrapper { padding: 8px; }
-      .kpi-value { font-size: 22px; }
-      .widget { padding: 12px; }
-      .widget-title { font-size: 10px; }
-      /* GridStack handles 1-col on mobile via JS */
-    }
-    @media (max-width: 480px) {
-      #last-updated { display: none; }
-      .btn { padding: 5px 8px; font-size: 11px; }
-    }
+        .toggle.active {
+            background-color: var(--green);
+            border-color: var(--green);
+        }
 
-    /* ── LOCK STATE ─────────────────────────────────────────────── */
-    body.locked .grid-stack-item { cursor: default !important; }
-    body.locked .grid-stack-item .widget-header { cursor: default !important; }
-    body.locked .ui-resizable-handle { display: none !important; }
-  </style>
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: var(--bg2);
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.2s ease;
+        }
+
+        .toggle.active::after {
+            left: 22px;
+        }
+
+        /* Gridstack */
+        .grid-stack {
+            background-color: var(--bg2);
+            border-radius: 8px;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        .grid-stack-item-content {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-stack.locked .grid-stack-item {
+            cursor: default;
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .widget-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .widget-filters {
+            display: flex;
+            gap: 6px;
+        }
+
+        .widget-filter {
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            background-color: var(--card2);
+            color: var(--text2);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .widget-filter:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .widget-filter.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .kpi-card {
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .kpi-value.positive {
+            color: var(--green);
+        }
+
+        .kpi-value.negative {
+            color: var(--red);
+        }
+
+        .kpi-subtext {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: var(--bg3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text2);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        tr.current-year {
+            background-color: rgba(124, 111, 239, 0.1);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin-top: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: none;
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background-color: var(--bg2);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            padding: 10px 16px;
+            background-color: var(--accent);
+            border: none;
+            color: var(--bg);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent3);
+        }
+
+        .btn-secondary {
+            flex: 1;
+            padding: 10px 16px;
+            background-color: var(--card2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg3);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            color: var(--text);
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .toast.error {
+            border-color: var(--red);
+            background-color: rgba(255, 77, 109, 0.1);
+            color: var(--red);
+        }
+
+        .toast.success {
+            border-color: var(--green);
+            background-color: rgba(0, 200, 150, 0.1);
+            color: var(--green);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--card2) 25%, var(--bg3) 50%, var(--card2) 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoad 1.5s infinite;
+        }
+
+        @keyframes skeletonLoad {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-card {
+            height: 80px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .grid-stack {
+                padding: 8px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+
+            .pill {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* Color coding for LTV */
+        .ltv-green {
+            color: var(--green);
+        }
+
+        .ltv-yellow {
+            color: var(--yellow);
+        }
+
+        .ltv-red {
+            color: var(--red);
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            color: var(--text2);
+        }
+
+        .spinner {
+            border: 3px solid var(--card2);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="theme-dark">
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="title">Zhodler</div>
+                <div class="last-updated">Last updated: <span id="lastUpdated">--:--</span></div>
+            </div>
+            <div class="header-right">
+                <div class="filter-pills" id="mainFilters">
+                    <div class="pill active" data-filter="portfolio">Total Portfolio</div>
+                    <div class="pill" data-filter="crypto">Crypto</div>
+                    <div class="pill" data-filter="tradfi">TradFi</div>
+                </div>
+                <div class="toggle" id="lockToggle" title="Lock/Unlock Layout"></div>
+                <button class="btn icon-btn" id="refreshBtn" title="Refresh Data">
+                    <span>â³</span>
+                </button>
+                <button class="btn icon-btn" id="settingsBtn" title="Settings">
+                    <span>â</span>
+                </button>
+                <button class="btn icon-btn" id="privacyToggle" title="Privacy Mode">
+                    <span>ð</span>
+                </button>
+            </div>
+        </div>
 
-  <!-- HEADER -->
-  <header id="header">
-    <div class="logo">⬡ Zhodler</div>
-    <div id="last-updated">
-      <span class="dot loading" id="status-dot"></span>
-      <span id="update-time">Loading…</span>
+        <!-- Gridstack -->
+        <div class="grid-stack" id="grid">
+            <!-- Widget: Global Metrics -->
+            <div class="grid-stack-item" gs-x="0" gs-y="0" gs-w="12" gs-h="1" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Global Metrics</div>
+                    </div>
+                    <div class="kpi-grid" id="globalMetrics"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Portfolio Summary -->
+            <div class="grid-stack-item" gs-x="0" gs-y="1" gs-w="8" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Portfolio Summary</div>
+                        <div class="widget-filters" id="portfolioFilters">
+                            <div class="widget-filter active" data-filter="portfolio">Portfolio</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div class="kpi-grid" id="portfolioSummary"></div>
+                </div>
+            </div>
+
+            <!-- Widget: BTC Overview -->
+            <div class="grid-stack-item" gs-x="8" gs-y="1" gs-w="4" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">BTC Overview</div>
+                    </div>
+                    <div class="kpi-grid" id="btcOverview"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Debt & Liabilities -->
+            <div class="grid-stack-item" gs-x="0" gs-y="4" gs-w="6" gs-h="2" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Debt & Liabilities</div>
+                        <div class="widget-filters" id="debtFilters">
+                            <div class="widget-filter active" data-filter="all">All</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div id="debtContent"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Projections -->
+            <div class="grid-stack-item" gs-x="6" gs-y="4" gs-w="6" gs-h="2" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Projections</div>
+                        <div class="widget-filters" id="projectionsFilters">
+                            <div class="widget-filter active" data-filter="portfolio">Portfolio</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                        </div>
+                    </div>
+                    <div class="kpi-grid" id="projectionsContent"></div>
+                </div>
+            </div>
+
+            <!-- Widget: Assets Distribution -->
+            <div class="grid-stack-item" gs-x="0" gs-y="6" gs-w="7" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Assets Distribution</div>
+                        <div class="widget-filters" id="assetsFilters">
+                            <div class="widget-filter active" data-filter="all">All</div>
+                            <div class="widget-filter" data-filter="crypto">Crypto</div>
+                            <div class="widget-filter" data-filter="tradfi">TradFi</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="assetsChart"></canvas>
+                    </div>
+                    <div class="table-container">
+                        <table id="assetsTable"></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget: Yearly Performance -->
+            <div class="grid-stack-item" gs-x="7" gs-y="6" gs-w="5" gs-h="3" gs-auto-position="false">
+                <div class="grid-stack-item-content">
+                    <div class="widget-header">
+                        <div class="widget-title">Yearly Performance</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="yearlyChart"></canvas>
+                    </div>
+                    <div class="table-container">
+                        <table id="yearlyTable"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="spacer"></div>
-    <select id="theme-select" title="Change theme">
-      <option value="theme-dark">Dark</option>
-      <option value="theme-light">Light</option>
-      <option value="theme-ocean">Ocean</option>
-      <option value="theme-sunset">Sunset</option>
-      <option value="theme-navy-gold">Navy Gold</option>
-    </select>
-    <button class="btn-icon" id="btn-privacy" title="Toggle privacy mode">🔒</button>
-    <button class="btn-icon" id="btn-lock"    title="Lock/unlock layout">🔓</button>
-    <button class="btn-icon" id="btn-refresh" title="Refresh data">🔄</button>
-    <button class="btn"      id="btn-settings">⚙ Settings</button>
-  </header>
 
-  <!-- MAIN GRID -->
-  <div id="grid-wrapper">
-    <div class="grid-stack" id="main-grid"></div>
-  </div>
-
-  <!-- SETTINGS MODAL -->
-  <div id="modal-overlay">
-    <div id="settings-modal">
-      <div class="modal-title">
-        ⚙ Settings
-        <button class="btn-icon" id="btn-close-modal" style="font-size:16px;">✕</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Google Sheets URL</label>
-        <input class="form-input" type="url" id="input-sheet-url"
-          placeholder="https://docs.google.com/spreadsheets/d/…/edit">
-        <div class="form-hint">Paste your spreadsheet's share URL. The sheet must be published to the web (File → Share → Publish to web).</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Currency Symbol</label>
-        <input class="form-input" type="text" id="input-currency" placeholder="£" style="max-width:80px;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Layout</label>
-        <div style="display:flex;gap:8px;">
-          <button class="btn" id="btn-export-layout">Export Layout</button>
-          <label class="btn" style="cursor:pointer;">
-            Import Layout <input type="file" id="input-import-layout" accept=".json" style="display:none;">
-          </label>
-          <button class="btn" id="btn-reset-layout">Reset</button>
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="close-btn" id="closeSettings">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Google Sheet URL or ID</label>
+                <input type="text" id="sheetInput" placeholder="https://docs.google.com/spreadsheets/d/... or just the ID">
+            </div>
+            <div class="form-group">
+                <label>Custom Layout (JSON)</label>
+                <textarea id="layoutInput" placeholder="Paste exported layout JSON here" rows="6"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" id="saveSettings">Save Settings</button>
+                <button class="btn-secondary" id="resetLayout">Reset Layout</button>
+            </div>
+            <div class="form-actions">
+                <button class="btn-secondary" id="exportLayout">Export Layout</button>
+            </div>
         </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn" id="btn-cancel-settings">Cancel</button>
-        <button class="btn-primary" id="btn-save-settings">Save & Refresh</button>
-      </div>
     </div>
-  </div>
 
-  <!-- TOAST CONTAINER -->
-  <div id="toast"></div>
+    <!-- Toast Notifications -->
+    <div id="toastContainer"></div>
 
-  <!-- SCRIPTS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack-all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script>
-  /* ════════════════════════════════════════════════════════════════
-     ZHODLER DASHBOARD  •  v2.0
-     Architecture: data fetching → parsing → widget rendering → grid
-  ════════════════════════════════════════════════════════════════ */
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/12.3.3/gridstack.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-  /* ── CONFIG ──────────────────────────────────────────────────── */
-  const SHEETS = ['Performance','BTCCrypto','Loans','AssetDistro','Split folio','Goals','Projections','TimePassed','Bank','Investments','Snapshot'];
-  const DEFAULT_LAYOUT = [
-    { id:'net-worth',    x:0,  y:0, w:3,  h:2 },
-    { id:'defi-value',   x:3,  y:0, w:3,  h:2 },
-    { id:'bank-total',   x:6,  y:0, w:3,  h:2 },
-    { id:'invest-total', x:9,  y:0, w:3,  h:2 },
-    { id:'performance',  x:0,  y:2, w:8,  h:4 },
-    { id:'asset-distro', x:8,  y:2, w:4,  h:4 },
-    { id:'btc-crypto',   x:0,  y:6, w:6,  h:4 },
-    { id:'loans',        x:6,  y:6, w:6,  h:4 },
-    { id:'bank-accts',   x:0,  y:10,w:6,  h:4 },
-    { id:'investments',  x:6,  y:10,w:6,  h:4 },
-    { id:'goals',        x:0,  y:14,w:6,  h:5 },
-    { id:'snapshot',     x:6,  y:14,w:6,  h:5 },
-  ];
+    <script>
+        // ============ GLOBAL STATE & CONFIG ============
+        const state = {
+            data: null,
+            currentFilter: 'portfolio',
+            locked: false,
+            privacyMode: false,
+            charts: {},
+            lastUpdateTime: null,
+        };
 
-  /* ── STATE ───────────────────────────────────────────────────── */
-  const S = {
-    sheetId:  (s => s && s.length >= 20 ? s : '')(localStorage.getItem('zhodler_sheetId')),
-    currency: localStorage.getItem('zhodler_currency') || '£',
-    theme:    localStorage.getItem('zhodler_theme')    || 'theme-dark',
-    layout:   JSON.parse(localStorage.getItem('zhodler_layout') || 'null'),
-    data:     {},
-    charts:   {},
-    grid:     null,
-    locked:   false,
-    privacy:  false,
-    loading:  false,
-  };
+        const DEFAULTS = {
+            sheet_id: '',
+            gviz_url: (id) => `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`
+        };
 
-  /* ── HELPERS ─────────────────────────────────────────────────── */
-  function extractSheetId(url) {
-    const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-    return m ? m[1] : url.trim();
-  }
-
-  function fmt(val, decimals = 0) {
-    const n = parseFloat(String(val).replace(/[^0-9.\-]/g,''));
-    if (isNaN(n)) return '–';
-    return S.currency + n.toLocaleString('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  }
-
-  function fmtPct(val) {
-    const n = parseFloat(String(val).replace(/[^0-9.\-]/g,''));
-    if (isNaN(n)) return '–';
-    return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
-  }
-
-  function parseCSV(text) {
-    if (!text || text.trim().startsWith('<!')) return [];
-    const rows = []; let field = '', row = [], inQ = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === '"') {
-        if (inQ && text[i+1] === '"') { field += '"'; i++; }
-        else inQ = !inQ;
-      } else if (c === ',' && !inQ) { row.push(field.trim()); field = ''; }
-      else if ((c === '\n' || c === '\r') && !inQ) {
-        if (c === '\r' && text[i+1] === '\n') i++;
-        row.push(field.trim()); if (row.some(c=>c)) rows.push(row);
-        row = []; field = '';
-      } else field += c;
-    }
-    if (field || row.length) { row.push(field.trim()); if (row.some(c=>c)) rows.push(row); }
-    return rows;
-  }
-
-  async function fetchSheet(name) {
-    if (!S.sheetId) return null;
-    try {
-      const url = `https://docs.google.com/spreadsheets/d/${S.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
-      const r = await fetch(url, { cache: 'no-store' });
-      if (!r.ok) return null;
-      return parseCSV(await r.text());
-    } catch { return null; }
-  }
-
-  function rowsToObjects(rows) {
-    if (!rows || rows.length < 2) return [];
-    const headers = rows[0].map(h => h.toLowerCase().trim());
-    return rows.slice(1).map(r => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = r[i] || ''; });
-      return obj;
-    });
-  }
-
-  function num(v) { return parseFloat(String(v).replace(/[^0-9.\-]/g,'')) || 0; }
-  function colIdx(rows, name) { if (!rows?.[0]) return -1; return rows[0].findIndex(c => c.toLowerCase().includes(name.toLowerCase())); }
-
-  function toast(msg, type = 'success') {
-    const el = document.createElement('div');
-    el.className = `toast-item ${type}`;
-    el.textContent = msg;
-    document.getElementById('toast').appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-  }
-
-  /* ── DATA LOADING ────────────────────────────────────────────── */
-  async function loadAllData() {
-    if (!S.sheetId) { setStatus('error', 'No sheet configured'); return; }
-    setStatus('loading', 'Refreshing…');
-    S.loading = true;
-    const results = await Promise.allSettled(SHEETS.map(name => fetchSheet(name)));
-    SHEETS.forEach((name, i) => {
-      S.data[name] = results[i].status === 'fulfilled' ? results[i].value : null;
-    });
-    S.loading = false;
-    renderAll();
-    setStatus('ok', 'Updated ' + new Date().toLocaleTimeString());
-  }
-
-  function setStatus(state, msg) {
-    const dot = document.getElementById('status-dot');
-    const time = document.getElementById('update-time');
-    dot.className = 'dot ' + (state === 'loading' ? 'loading' : state === 'error' ? 'error' : '');
-    time.textContent = msg;
-  }
-
-  /* ── WIDGET HTML BUILDERS ────────────────────────────────────── */
-
-  // KPI card
-  function kpiWidget(id, title, badge = '') {
-    return `<div class="widget" id="w-${id}">
-      <div class="widget-header">
-        <div class="widget-title">${title}</div>
-        <div class="widget-badge" id="b-${id}">${badge}</div>
-      </div>
-      <div class="widget-body">
-        <div class="kpi-value private" id="v-${id}">–</div>
-        <div class="kpi-sub" id="s-${id}"></div>
-        <div class="kpi-sparkline chart-wrap"><canvas id="c-${id}"></canvas></div>
-      </div>
-    </div>`;
-  }
-
-  // Table card
-  function tableWidget(id, title) {
-    return `<div class="widget" id="w-${id}">
-      <div class="widget-header">
-        <div class="widget-title">${title}</div>
-        <div class="widget-badge" id="b-${id}"></div>
-      </div>
-      <div class="widget-body">
-        <div class="data-table-wrap" id="t-${id}"><div class="empty-state"><div class="icon">⏳</div>Loading…</div></div>
-      </div>
-    </div>`;
-  }
-
-  // Chart card
-  function chartWidget(id, title, badge = '') {
-    return `<div class="widget" id="w-${id}">
-      <div class="widget-header">
-        <div class="widget-title">${title}</div>
-        <div class="widget-badge" id="b-${id}">${badge}</div>
-      </div>
-      <div class="widget-body">
-        <div class="chart-wrap" id="ch-${id}"><canvas id="c-${id}"></canvas></div>
-      </div>
-    </div>`;
-  }
-
-  // Goals card
-  function goalsWidget(id, title) {
-    return `<div class="widget" id="w-${id}">
-      <div class="widget-header">
-        <div class="widget-title">${title}</div>
-        <div class="widget-badge" id="b-${id}"></div>
-      </div>
-      <div class="widget-body" id="g-${id}" style="overflow-y:auto;overflow-x:hidden;"></div>
-    </div>`;
-  }
-
-  /* ── CHART HELPERS ───────────────────────────────────────────── */
-  const CHART_DEFAULTS = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: {
-      backgroundColor: 'rgba(20,22,35,0.95)', titleColor: '#e8eaef',
-      bodyColor: '#7b82a0', borderColor: 'rgba(255,255,255,0.08)',
-      borderWidth: 1, padding: 10, cornerRadius: 8,
-    }},
-    scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5070', font: { size: 10 }, maxTicksLimit: 8 } },
-      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5070', font: { size: 10 } } },
-    }
-  };
-
-  function accentGradient(ctx, color1 = '#7c6fef', color2 = '#00d4ff') {
-    const g = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
-    g.addColorStop(0, color1); g.addColorStop(1, color2); return g;
-  }
-
-  function areaGradient(ctx, color, alpha1 = 0.3, alpha2 = 0) {
-    const g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-    g.addColorStop(0, color + Math.round(alpha1 * 255).toString(16).padStart(2,'0'));
-    g.addColorStop(1, color + Math.round(alpha2 * 255).toString(16).padStart(2,'0'));
-    return g;
-  }
-
-  function makeChart(canvasId, type, data, options = {}) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
-    if (S.charts[canvasId]) { S.charts[canvasId].destroy(); }
-    const chart = new Chart(canvas, {
-      type,
-      data,
-      options: deepMerge(structuredClone(CHART_DEFAULTS), options)
-    });
-    S.charts[canvasId] = chart;
-    return chart;
-  }
-
-  function deepMerge(target, source) {
-    for (const k in source) {
-      if (source[k] && typeof source[k] === 'object' && !Array.isArray(source[k])) {
-        target[k] = target[k] || {};
-        deepMerge(target[k], source[k]);
-      } else { target[k] = source[k]; }
-    }
-    return target;
-  }
-
-  /* ── RENDERERS ───────────────────────────────────────────────── */
-
-  function renderNetWorth() {
-    const perf = S.data['Performance'];
-    const bank = S.data['Bank'];
-    const inv  = S.data['Investments'];
-    const snap = S.data['Snapshot'];
-
-    let defiVal = 0, bankVal = 0, invVal = 0, snapNW = 0;
-
-    // Use first data row of Performance with a large positive value (avoids year/label rows)
-    if (perf && perf.length > 1) {
-      const viIdx = colIdx(perf, 'value') > -1 ? colIdx(perf, 'value') : colIdx(perf, 'total');
-      if (viIdx > -1) {
-        for (let i = 1; i < perf.length; i++) {
-          const v = num(perf[i]?.[viIdx]);
-          if (v > 1000) { defiVal = v; break; }
+        // ============ UTILITY FUNCTIONS ============
+        function fmt(value) {
+            const n = num(value);
+            const prefix = n < 0 ? '-$' : '$';
+            return prefix + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
-      }
-    }
-    if (bank && bank.length > 1) {
-      const bi = colIdx(bank, 'balance');
-      if (bi > -1) bankVal = bank.slice(1).reduce((s, r) => s + num(r[bi]), 0);
-    }
-    if (inv && inv.length > 1) {
-      const ii = colIdx(inv, 'value') > -1 ? colIdx(inv, 'value') : colIdx(inv, 'balance');
-      if (ii > -1) invVal = inv.slice(1).reduce((s, r) => s + num(r[ii]), 0);
-    }
 
-    // Prefer Snapshot Net Worth as the authoritative total
-    if (snap && snap.length > 1) {
-      const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : -1;
-      if (nwIdx > -1) {
-        for (let i = snap.length - 1; i >= 1; i--) {
-          const v = num(snap[i]?.[nwIdx]);
-          if (v > 0) { snapNW = v; break; }
+        function fmtPct(value) {
+            const n = num(value);
+            if (n === 0 && value !== 0) return '0.00%';
+            // Values from gviz are raw decimals (0.1067 = 10.67%)
+            // Values > 1 or < -1 are already percentages (from pre-formatted cells)
+            const pct = (n > -1 && n < 1) ? n * 100 : n;
+            return pct.toFixed(2) + '%';
         }
-      }
-    }
 
-    const total = snapNW > 0 ? snapNW : (defiVal + bankVal + invVal);
-
-    // Net Worth KPI
-    let nwEl = document.getElementById('v-net-worth');
-    if (nwEl) nwEl.textContent = total > 0 ? fmt(total) : '–';
-
-    // Sparkline from Snapshot (only non-zero rows)
-    if (snap && snap.length > 2) {
-      const dIdx = colIdx(snap, 'date');
-      const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : snap[0].length - 1;
-      const dataRows = snap.slice(1).filter(r => num(r[nwIdx]) > 0);
-      const labels = dataRows.slice(-12).map(r => r[dIdx] || '');
-      const vals   = dataRows.slice(-12).map(r => num(r[nwIdx]));
-      const ctx = document.getElementById('c-net-worth');
-      if (ctx && vals.length > 0) {
-        const grad = ctx.getContext('2d') ? areaGradient(ctx.getContext('2d'), '#7c6fef') : null;
-        makeChart('c-net-worth', 'line', {
-          labels,
-          datasets: [{ data: vals, borderColor: '#7c6fef', backgroundColor: grad,
-            borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }]
-        }, { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } });
-      }
-    }
-
-    // Sub-widgets — use Snapshot breakdown columns if available
-    let snapDefi = 0, snapBank = 0, snapInv = 0;
-    if (snap && snap.length > 1) {
-      const dfI = colIdx(snap, 'defi'); const bkI = colIdx(snap, 'bank'); const ivI = colIdx(snap, 'invest');
-      for (let i = snap.length-1; i>=1; i--) { if (dfI>-1 && num(snap[i]?.[dfI])>0) { snapDefi=num(snap[i][dfI]); break; } }
-      for (let i = snap.length-1; i>=1; i--) { if (bkI>-1 && num(snap[i]?.[bkI])>0) { snapBank=num(snap[i][bkI]); break; } }
-      for (let i = snap.length-1; i>=1; i--) { if (ivI>-1 && num(snap[i]?.[ivI])>0) { snapInv=num(snap[i][ivI]); break; } }
-    }
-    document.getElementById('v-defi-value').textContent = (snapDefi||defiVal)>0 ? fmt(snapDefi||defiVal) : '–';
-    document.getElementById('v-bank-total').textContent = (snapBank||bankVal)>0 ? fmt(snapBank||bankVal) : '–';
-    document.getElementById('v-invest-total').textContent = (snapInv||invVal)>0 ? fmt(snapInv||invVal) : '–';
-  }
-  function renderPerformance() {
-    // Use Snapshot for time-series chart if available; fall back to Performance tab
-    const snap = S.data['Snapshot'];
-    const perf = S.data['Performance'];
-    let labels = [], values = [];
-
-    if (snap && snap.length > 2) {
-      const dIdx  = colIdx(snap, 'date');
-      const nwIdx = colIdx(snap, 'net worth') > -1 ? colIdx(snap, 'net worth') : snap[0].length - 1;
-      const dataRows = snap.slice(1).filter(r => num(r[nwIdx]) > 0);
-      labels = dataRows.slice(-90).map(r => r[dIdx] || '');
-      values = dataRows.slice(-90).map(r => num(r[nwIdx]));
-    } else if (perf && perf.length > 1) {
-      const dateI = colIdx(perf, 'date') > -1 ? colIdx(perf, 'date') : colIdx(perf, 'time');
-      const valI  = colIdx(perf, 'value') > -1 ? colIdx(perf, 'value') : colIdx(perf, 'total');
-      if (valI === -1) return setEmpty('ch-performance', 'No value column found');
-      const slice = perf.slice(1).filter(r => num(r[valI]) > 1000).slice(-90);
-      labels = slice.map(r => dateI > -1 ? (r[dateI] || '') : '');
-      values = slice.map(r => num(r[valI]));
-    }
-
-    if (values.length === 0) return setEmpty('ch-performance', 'No performance data yet — add rows to your Snapshot tab');
-
-    const ctx = document.getElementById('c-performance')?.getContext('2d');
-    const grad = ctx ? areaGradient(ctx, '#7c6fef') : null;
-
-    makeChart('c-performance', 'line', {
-      labels,
-      datasets: [{
-        data: values, label: 'Net Worth',
-        borderColor: '#7c6fef', backgroundColor: grad,
-        borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: values.length < 10 ? 3 : 0,
-        pointHoverRadius: 5, pointHoverBackgroundColor: '#7c6fef',
-      }]
-    }, {
-      scales: {
-        x: { ticks: { callback: (v, i) => { const l = labels[i]; return l?.split?.('T')[0] || l || ''; } } },
-        y: { ticks: { callback: v => S.currency + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) } }
-      }
-    });
-
-    if (values.length > 1 && values[0]) {
-      const change = ((values[values.length-1] - values[0]) / values[0]) * 100;
-      const badge = document.getElementById('b-performance');
-      if (badge) { badge.textContent = fmtPct(change); badge.className = 'widget-badge ' + (change >= 0 ? 'up' : 'down'); }
-    }
-  }
-  function renderAssetDistro() {
-    const rows = S.data['AssetDistro'];
-    if (!rows || rows.length < 2) { return setEmpty('ch-asset-distro', 'No distribution data'); }
-    const nameI = colIdx(rows, 'asset') > -1 ? colIdx(rows, 'asset') : 0;
-    const valI  = colIdx(rows, 'value') > -1 ? colIdx(rows, 'value') : colIdx(rows, '%') > -1 ? colIdx(rows, '%') : 1;
-
-    const data = rows.slice(1).map(r => ({ label: r[nameI], value: num(r[valI]) }))
-      .filter(d => d.value > 0).slice(0, 10);
-
-    const COLORS = ['#7c6fef','#00d4ff','#00c896','#ff4d6d','#ffb84d','#b066ff','#ff8c4b','#00e5c0','#f06292','#42a5f5'];
-
-    makeChart('c-asset-distro', 'doughnut', {
-      labels: data.map(d => d.label),
-      datasets: [{ data: data.map(d => d.value), backgroundColor: COLORS, borderWidth: 2, borderColor: 'var(--card)' }]
-    }, {
-      cutout: '62%',
-      plugins: {
-        legend: { display: true, position: 'right', labels: { color: '#7b82a0', font: { size: 10 }, boxWidth: 10, padding: 8 } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toLocaleString()}` } }
-      },
-      scales: { x: { display: false }, y: { display: false } }
-    });
-  }
-
-  function renderBTCCrypto() {
-    const rows = S.data['BTCCrypto'];
-    if (!rows || rows.length < 2) { return setEmpty('t-btc-crypto', 'No crypto data'); }
-    const objs = rowsToObjects(rows);
-    const html = `<table class="data-table"><thead><tr>
-      ${rows[0].map(h => `<th>${h}</th>`).join('')}
-    </tr></thead><tbody>
-      ${objs.slice(0, 20).map(r => `<tr>${rows[0].map((h, i) => {
-        const v = r[h.toLowerCase().trim()];
-        const isNum = !isNaN(parseFloat(v)) && v !== '';
-        return `<td class="${isNum ? 'num' : ''}">${isNum ? fmt(v) : (v || '–')}</td>`;
-      }).join('')}</tr>`).join('')}
-    </tbody></table>`;
-    document.getElementById('t-btc-crypto').innerHTML = html;
-    document.getElementById('b-btc-crypto').textContent = `${objs.length} assets`;
-  }
-
-  function renderLoans() {
-    const rows = S.data['Loans'];
-    if (!rows || rows.length < 2) { return setEmpty('t-loans', 'No loan data'); }
-    const objs = rowsToObjects(rows);
-    const html = `<table class="data-table"><thead><tr>
-      ${rows[0].map(h => `<th>${h}</th>`).join('')}
-    </tr></thead><tbody>
-      ${objs.slice(0, 15).map(r => `<tr>${rows[0].map((h, i) => {
-        const v = r[h.toLowerCase().trim()];
-        const hlo = h.toLowerCase();
-        let cell = v || '–';
-        if (hlo.includes('ltv') || hlo.includes('%')) {
-          const pct = parseFloat(v);
-          if (!isNaN(pct)) { const cls = pct > 70 ? 'tag-red' : pct > 50 ? 'tag-purple' : 'tag-green';
-            cell = `<span class="tag ${cls}">${pct.toFixed(1)}%</span>`; }
-        } else if (!isNaN(parseFloat(v)) && v !== '') {
-          cell = fmt(v);
+        function fmtNumber(value) {
+            const n = num(value);
+            return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
-        return `<td>${cell}</td>`;
-      }).join('')}</tr>`).join('')}
-    </tbody></table>`;
-    document.getElementById('t-loans').innerHTML = html;
-    document.getElementById('b-loans').textContent = `${objs.length} positions`;
-  }
 
-  function renderBankAccounts() {
-    const rows = S.data['Bank'];
-    if (!rows || rows.length < 2) {
-      return setEmpty('t-bank-accts', 'Connect Google Sheets and add a "Bank" tab with columns: Account, Bank, Balance, Currency');
-    }
-    const objs = rowsToObjects(rows);
-    const balI = colIdx(rows, 'balance');
-    const total = balI > -1 ? rows.slice(1).reduce((s,r) => s + num(r[balI]), 0) : 0;
-    document.getElementById('b-bank-accts').textContent = total > 0 ? fmt(total) : `${objs.length} accounts`;
+        function getCell(row, col) {
+            if (!state.data?.table?.rows || !state.data.table.rows[row]) return null;
+            const cells = state.data.table.rows[row].c;
+            if (!cells || !cells[col]) return null;
+            return cells[col].v ?? '';
+        }
 
-    const html = `<table class="data-table"><thead><tr>
-      <th>Account</th><th>Bank</th><th class="num">Balance</th><th>Currency</th><th>Updated</th>
-    </tr></thead><tbody>
-      ${objs.map(r => `<tr>
-        <td>${r.account || r['account name'] || '–'}</td>
-        <td>${r['bank / institution'] || r.bank || r.institution || '–'}</td>
-        <td class="num private">${fmt(r.balance)}</td>
-        <td><span class="tag tag-blue">${r.currency || 'GBP'}</span></td>
-        <td style="color:var(--text3);font-size:11px">${r.updated || r['last updated'] || ''}</td>
-      </tr>`).join('')}
-    </tbody></table>`;
-    document.getElementById('t-bank-accts').innerHTML = html;
-  }
+        function num(val) {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const cleaned = val.replace(/[%,$\s]/g, '');
+                const n = parseFloat(cleaned);
+                return isNaN(n) ? 0 : n;
+            }
+            return 0;
+        }
 
-  function renderInvestments() {
-    const rows = S.data['Investments'];
-    if (!rows || rows.length < 2) {
-      return setEmpty('t-investments', 'Connect Google Sheets and add an "Investments" tab with columns: Platform, Type, Value, Currency');
-    }
-    const objs = rowsToObjects(rows);
-    const valI = colIdx(rows, 'value') > -1 ? colIdx(rows, 'value') : colIdx(rows, 'balance');
-    const total = valI > -1 ? rows.slice(1).reduce((s,r) => s + num(r[valI]), 0) : 0;
-    document.getElementById('b-investments').textContent = total > 0 ? fmt(total) : `${objs.length} holdings`;
+        function getNum(row, col) {
+            return num(getCell(row, col));
+        }
 
-    const html = `<table class="data-table"><thead><tr>
-      <th>Platform</th><th>Type</th><th class="num">Value</th><th>Currency</th><th>Updated</th>
-    </tr></thead><tbody>
-      ${objs.map(r => {
-        const t = (r.type || '').toLowerCase();
-        const cls = t.includes('property') ? 'tag-purple' : t.includes('pension') ? 'tag-blue' : 'tag-green';
-        return `<tr>
-          <td>${r['platform / account'] || r.platform || r.account || '–'}</td>
-          <td><span class="tag ${cls}">${r.type || '–'}</span></td>
-          <td class="num private">${fmt(r['current value'] || r.value || r.balance)}</td>
-          <td><span class="tag tag-blue">${r.currency || 'GBP'}</span></td>
-          <td style="color:var(--text3);font-size:11px">${r.updated || r['last updated'] || ''}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>`;
-    document.getElementById('t-investments').innerHTML = html;
-  }
+        function getCellFormatted(row, col) {
+            if (!state.data?.table?.rows || !state.data.table.rows[row]) return '';
+            const cells = state.data.table.rows[row].c;
+            if (!cells || !cells[col]) return '';
+            return cells[col].f ?? cells[col].v ?? '';
+        }
 
-  function renderGoals() {
-    const rows = S.data['Goals'];
-    const container = document.getElementById('g-goals');
-    if (!rows || rows.length < 2 || !container) { setEmpty('g-goals', 'No goals data'); return; }
-    const objs = rowsToObjects(rows);
-    container.innerHTML = objs.slice(0, 10).map(r => {
-      const name    = r.goal || r.name || r['goal name'] || 'Goal';
-      const target  = num(r.target || r['target value'] || r['target amount']);
-      const current = num(r.current || r['current value'] || r['current amount'] || r.value);
-      const pct     = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-      const done    = pct >= 100;
-      return `<div class="goal-item">
-        <div class="goal-label">
-          <span class="goal-name">${name}</span>
-          <span class="goal-pct">${pct.toFixed(0)}%</span>
-        </div>
-        <div class="goal-bar"><div class="goal-fill ${done ? 'done' : ''}" style="width:${pct}%"></div></div>
-        <div class="goal-targets">
-          <span>${fmt(current)}</span>
-          <span>Target: ${fmt(target)}</span>
-        </div>
-      </div>`;
-    }).join('');
-    document.getElementById('b-goals').textContent = `${objs.length} goals`;
-  }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
 
-  function renderSnapshot() {
-    const rows = S.data['Snapshot'];
-    if (!rows || rows.length < 2) {
-      return setEmpty('ch-snapshot', 'Add a "Snapshot" tab to track monthly net worth over time');
-    }
-    const dIdx  = colIdx(rows, 'date');
-    const nwIdx = colIdx(rows, 'net worth') > -1 ? colIdx(rows, 'net worth') : rows[0].length - 1;
-    const dfIdx = colIdx(rows, 'defi');
-    const bkIdx = colIdx(rows, 'bank');
-    const ivIdx = colIdx(rows, 'invest');
+        function updateLastUpdated() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('lastUpdated').textContent = `${hours}:${minutes}`;
+            state.lastUpdateTime = now;
+        }
 
-    const slice  = rows.slice(1).slice(-24);
-    const labels = slice.map(r => r[dIdx] || '');
+        // ============ SETTINGS & STORAGE ============
+        function loadSettings() {
+            return localStorage.getItem('zhodler-sheet-id') || DEFAULTS.sheet_id;
+        }
 
-    const datasets = [];
-    if (nwIdx > -1) datasets.push({ label: 'Net Worth', data: slice.map(r => num(r[nwIdx])), borderColor: '#7c6fef', borderWidth: 2.5, fill: false, tension: 0.35, pointRadius: 3 });
-    if (dfIdx > -1) datasets.push({ label: 'DeFi', data: slice.map(r => num(r[dfIdx])), borderColor: '#00d4ff', borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 });
-    if (bkIdx > -1) datasets.push({ label: 'Bank', data: slice.map(r => num(r[bkIdx])), borderColor: '#00c896', borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 });
-    if (ivIdx > -1) datasets.push({ label: 'Investments', data: slice.map(r => num(r[ivIdx])), borderColor: '#ffb84d', borderWidth: 1.5, fill: false, tension: 0.35, pointRadius: 0 });
+        function saveSettings(sheetId) {
+            localStorage.setItem('zhodler-sheet-id', sheetId);
+        }
 
-    makeChart('c-snapshot', 'line', { labels, datasets }, {
-      plugins: {
-        legend: { display: true, position: 'top', labels: { color: '#7b82a0', font: { size: 10 }, boxWidth: 10, padding: 12 } }
-      },
-      scales: {
-        y: { ticks: { callback: v => S.currency + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) } }
-      }
-    });
-    document.getElementById('b-snapshot').textContent = `${slice.length} months`;
-  }
+        function extractSheetId(input) {
+            if (!input) return '';
+            if (input.startsWith('https://')) {
+                const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                return match ? match[1] : '';
+            }
+            return input;
+        }
 
-  function setEmpty(elId, msg) {
-    const el = document.getElementById(elId);
-    if (el) el.innerHTML = `<div class="empty-state"><div class="icon">📭</div>${msg}</div>`;
-  }
+        function loadLayout() {
+            const saved = localStorage.getItem('zhodler-layout');
+            return saved ? JSON.parse(saved) : null;
+        }
 
-  function renderAll() {
-    renderNetWorth();
-    renderPerformance();
-    renderAssetDistro();
-    renderBTCCrypto();
-    renderLoans();
-    renderBankAccounts();
-    renderInvestments();
-    renderGoals();
-    renderSnapshot();
-  }
+        function saveLayout() {
+            const grid = GridStack.getInstance('#grid');
+            const layout = grid.save(false);
+            localStorage.setItem('zhodler-layout', JSON.stringify(layout));
+        }
 
-  /* ── GRID SETUP ──────────────────────────────────────────────── */
-  const WIDGET_DEFS = {
-    'net-worth':    { content: kpiWidget('net-worth',    'Total Net Worth'),      title: 'Net Worth' },
-    'defi-value':   { content: kpiWidget('defi-value',   'DeFi Portfolio'),       title: 'DeFi' },
-    'bank-total':   { content: kpiWidget('bank-total',   'Bank Savings'),         title: 'Bank' },
-    'invest-total': { content: kpiWidget('invest-total', 'Investments'),          title: 'Investments' },
-    'performance':  { content: chartWidget('performance','Performance',  ''),     title: 'Performance' },
-    'asset-distro': { content: chartWidget('asset-distro','Asset Distribution',''),title:'Assets'},
-    'btc-crypto':   { content: tableWidget('btc-crypto', 'BTC & Crypto'),         title: 'Crypto' },
-    'loans':        { content: tableWidget('loans',      'Active Loans'),         title: 'Loans' },
-    'bank-accts':   { content: tableWidget('bank-accts', 'Bank Accounts'),        title: 'Bank' },
-    'investments':  { content: tableWidget('investments','Investments'),           title: 'Investments' },
-    'goals':        { content: goalsWidget('goals',      'Goals'),                title: 'Goals' },
-    'snapshot':     { content: chartWidget('snapshot',   'Monthly Net Worth',''), title: 'Snapshot' },
-  };
+        function resetLayout() {
+            localStorage.removeItem('zhodler-layout');
+            grid.load([
+                { x: 0, y: 0, w: 12, h: 1, content: '' },
+                { x: 0, y: 1, w: 8, h: 3, content: '' },
+                { x: 8, y: 1, w: 4, h: 3, content: '' },
+                { x: 0, y: 4, w: 6, h: 2, content: '' },
+                { x: 6, y: 4, w: 6, h: 2, content: '' },
+                { x: 0, y: 6, w: 7, h: 3, content: '' },
+                { x: 7, y: 6, w: 5, h: 3, content: '' }
+            ]);
+        }
 
-  function initGrid() {
-    const container = document.getElementById('main-grid');
-    const isMobile  = window.innerWidth < 768;
-    const layout    = S.layout || DEFAULT_LAYOUT;
+        // ============ DATA FETCHING ============
+        async function fetchData(sheetId) {
+            if (!sheetId) {
+                showToast('Please set Google Sheet ID in settings', 'error');
+                openSettings();
+                return false;
+            }
 
-    // Build grid items in DOM before initialising GridStack
-    layout.forEach(item => {
-      const def = WIDGET_DEFS[item.id];
-      if (!def) return;
-      const el = document.createElement('div');
-      el.className = 'grid-stack-item';
-      el.setAttribute('gs-id', item.id);
-      el.setAttribute('gs-w',  isMobile ? 12 : item.w);
-      el.setAttribute('gs-h',  item.h);
-      el.setAttribute('gs-x',  isMobile ? 0  : item.x);
-      el.setAttribute('gs-y',  item.y);
-      el.innerHTML = `<div class="grid-stack-item-content">${def.content}</div>`;
-      container.appendChild(el);
-    });
+            try {
+                const url = DEFAULTS.gviz_url(sheetId);
+                const response = await fetch(url);
+                let text = await response.text();
 
-    // Initialise GridStack after DOM is populated
-    S.grid = GridStack.init({
-      column:               isMobile ? 1 : 12,
-      columnOpts:           { breakpoints: [{ w: 768, c: 1 }] },
-      cellHeight:           80,
-      margin:               8,
-      animate:              true,
-      float:                false,
-      draggable:            { handle: '.widget-header' },
-      resizable:            { handles: 'se,sw,ne,nw' },
-      disableOneColumnMode: false,
-    }, container);
+                // Remove gviz callback wrapper
+                text = text.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+                const json = JSON.parse(text);
 
-    // Persist layout on any change
-    S.grid.on('change', () => {
-      const items = S.grid.save(false); // false = don't include content
-      localStorage.setItem('zhodler_layout', JSON.stringify(items));
-      S.layout = items;
-    });
+                state.data = json;
+                updateLastUpdated();
+                renderAllWidgets();
+                return true;
+            } catch (error) {
+                console.error('Data fetch error:', error);
+                showToast('Failed to load data. Check Sheet ID and permissions.', 'error');
+                return false;
+            }
+        }
 
-    // Resize all Chart.js instances when a widget is resized
-    S.grid.on('resizestop', () => {
-      setTimeout(() => Object.values(S.charts).forEach(c => c?.resize()), 50);
-    });
+        // ============ RENDERING ============
+        function renderKpiCard(label, value, subtext = '', isPositive = null) {
+            const div = document.createElement('div');
+            div.className = 'kpi-card';
 
-    // Column collapse on window resize
-    window.addEventListener('resize', debounce(() => {
-      const mobile = window.innerWidth < 768;
-      S.grid.column(mobile ? 1 : 12);
-      setTimeout(() => Object.values(S.charts).forEach(c => c?.resize()), 100);
-    }, 200));
-  }
+            let valueClass = '';
+            if (isPositive === true) valueClass = 'positive';
+            else if (isPositive === false) valueClass = 'negative';
 
-  function debounce(fn, ms) {
-    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-  }
+            div.innerHTML = `
+                <div class="kpi-label">${label}</div>
+                <div class="kpi-value ${valueClass} sensitive">${value}</div>
+                ${subtext ? `<div class="kpi-subtext">${subtext}</div>` : ''}
+            `;
+            return div;
+        }
 
-  /* ── EVENT HANDLERS ──────────────────────────────────────────── */
-  document.getElementById('btn-settings').addEventListener('click', () => {
-    document.getElementById('input-sheet-url').value = S.sheetId ? `https://docs.google.com/spreadsheets/d/${S.sheetId}` : '';
-    document.getElementById('input-currency').value = S.currency;
-    document.getElementById('modal-overlay').classList.add('open');
-  });
-  document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('modal-overlay').classList.remove('open'));
-  document.getElementById('btn-cancel-settings').addEventListener('click', () => document.getElementById('modal-overlay').classList.remove('open'));
-  document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+        function renderGlobalMetrics() {
+            const container = document.getElementById('globalMetrics');
+            container.innerHTML = '';
 
-  document.getElementById('btn-save-settings').addEventListener('click', () => {
-    const url = document.getElementById('input-sheet-url').value.trim();
-    const cur = document.getElementById('input-currency').value.trim() || '£';
-    if (url) {
-      const extracted = extractSheetId(url);
-      if (extracted && extracted.length >= 20) {
-        S.sheetId = extracted;
-        localStorage.setItem('zhodler_sheetId', S.sheetId);
-      } else {
-        toast('Invalid Sheet URL — paste the full Google Sheets URL', 'error');
-        return;
-      }
-    }
-    S.currency = cur;
-    localStorage.setItem('zhodler_currency', cur);
-    document.getElementById('modal-overlay').classList.remove('open');
-    toast('Settings saved ✓');
-    loadAllData();
-  });
+            const days = getNum(0, 1);
+            const yearProgress = getNum(1, 1);
 
-  document.getElementById('btn-refresh').addEventListener('click', () => { loadAllData(); toast('Refreshing data…'); });
+            const dayCard = renderKpiCard('Days Tracking', Math.round(days).toLocaleString());
+            container.appendChild(dayCard);
 
-  document.getElementById('btn-privacy').addEventListener('click', () => {
-    S.privacy = !S.privacy;
-    document.body.classList.toggle('privacy', S.privacy);
-    document.getElementById('btn-privacy').textContent = S.privacy ? '👁' : '🔒';
-  });
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'kpi-card';
+            progressDiv.innerHTML = `
+                <div class="kpi-label">Year Progress</div>
+                <div class="kpi-value sensitive">${fmtPct(yearProgress)}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${yearProgress * 100}%"></div>
+                </div>
+            `;
+            container.appendChild(progressDiv);
+        }
 
-  document.getElementById('btn-lock').addEventListener('click', () => {
-    S.locked = !S.locked;
-    document.body.classList.toggle('locked', S.locked);
-    document.getElementById('btn-lock').textContent = S.locked ? '🔐' : '🔓';
-    if (S.locked) { S.grid.disable(); } else { S.grid.enable(); }
-  });
+        function getPortfolioData(filter) {
+            // Row mappings (gviz 0-indexed):
+            // PORTFOLIO:  rows 3-14  (12 metrics, standard pattern)
+            // HOLDINGS:   rows 15-26 (12 metrics, standard pattern)
+            // CRYPTO:     rows 27-40 (14 rows: 3 extra DeFi/CeFi breakdown + 12 standard)
+            //   row 27: Total Crypto Value, 28: Total DeFi Value, 29: Total CeFi Value
+            //   rows 30-41: standard 12-metric pattern
+            // TRADFI:     rows 41-52 (12 metrics, standard pattern)
+            // Standard pattern (12 rows): TotalValue, TotalInvested, NWYearStart, CurrentNW,
+            // YTD$, YTD%, AvgDailyYTD, AvgMonthlyYTD, AllTime$, AllTime%, AvgDailyAT, AvgMonthlyAT
+            // Crypto has 3 extra rows (DeFi/CeFi split) between TotalValue and TotalInvested
+            // assetsRow = first row (Total Value), investedRow = Total Invested row
+            const filterConfig = {
+                'portfolio': { assetsRow: 3,  investedRow: 4 },   // rows 3-14
+                'holdings':  { assetsRow: 15, investedRow: 16 },  // rows 15-26
+                'crypto':    { assetsRow: 27, investedRow: 30 },  // rows 27,28,29(extra),30-40
+                'tradfi':    { assetsRow: 41, investedRow: 42 },  // rows 41-52
+            };
 
-  document.getElementById('theme-select').addEventListener('change', e => {
-    document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
-    document.body.classList.add(e.target.value);
-    S.theme = e.target.value;
-    localStorage.setItem('zhodler_theme', e.target.value);
-  });
+            const cfg = filterConfig[filter];
+            if (!cfg) return null;
 
-  document.getElementById('btn-export-layout').addEventListener('click', () => {
-    const layout = S.grid.save();
-    const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'zhodler-layout.json'; a.click();
-  });
+            const r = cfg.investedRow; // Start of standard metric sequence
+            const result = {
+                totalAssets:          getNum(cfg.assetsRow, 1),
+                totalInvested:        getNum(r, 1),
+                netWorthYearStart:    getNum(r + 1, 1),
+                currentNetWorth:      getNum(r + 2, 1),
+                ytdGainDollar:        getNum(r + 3, 1),
+                ytdGainPct:           getNum(r + 4, 1),
+                avgDailyGainYTD:      getNum(r + 5, 1),
+                avgMonthlyGainYTD:    getNum(r + 6, 1),
+                allTimeGainDollar:    getNum(r + 7, 1),
+                allTimeGainPct:       getNum(r + 8, 1),
+                avgDailyGainAllTime:  getNum(r + 9, 1),
+                avgMonthlyGainAllTime:getNum(r + 10, 1),
+            };
 
-  document.getElementById('input-import-layout').addEventListener('change', e => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const layout = JSON.parse(ev.target.result);
-        localStorage.setItem('zhodler_layout', JSON.stringify(layout));
-        S.layout = layout; toast('Layout imported — reload to apply');
-      } catch { toast('Invalid layout file', 'error'); }
-    };
-    reader.readAsText(file);
-  });
+            // For crypto, also include DeFi/CeFi breakdown
+            if (filter === 'crypto') {
+                result.defiValue = getNum(28, 1);
+                result.cefiValue = getNum(29, 1);
+            }
 
-  document.getElementById('btn-reset-layout').addEventListener('click', () => {
-    localStorage.removeItem('zhodler_layout');
-    S.layout = null;
-    location.reload();
-  });
+            return result;
+        }
 
-  /* ── INIT ────────────────────────────────────────────────────── */
-  document.addEventListener('DOMContentLoaded', () => {
-    // Apply saved theme
-    document.body.className = S.theme;
-    document.getElementById('theme-select').value = S.theme;
+        function renderPortfolioSummary(filter) {
+            const container = document.getElementById('portfolioSummary');
+            container.innerHTML = '';
 
-    // Init grid
-    initGrid();
+            const data = getPortfolioData(filter);
+            if (!data) return;
 
-    // Load data
-    if (S.sheetId) {
-      loadAllData();
-    } else {
-      setStatus('error', 'No sheet URL — click ⚙ Settings');
-      renderAll(); // render empty states
-    }
+            const isPositive = (val) => val > 0 ? true : val < 0 ? false : null;
 
-    // Auto refresh every 5 minutes
-    setInterval(loadAllData, 5 * 60 * 1000);
-  });
-  </script>
+            container.appendChild(renderKpiCard('Total Assets', fmt(data.totalAssets)));
+            container.appendChild(renderKpiCard('Total Invested', fmt(data.totalInvested)));
+            container.appendChild(renderKpiCard('Current Net Worth', fmt(data.currentNetWorth)));
+
+            // DeFi/CeFi breakdown for crypto filter
+            if (filter === 'crypto' && data.defiValue !== undefined) {
+                container.appendChild(renderKpiCard('DeFi Value', fmt(data.defiValue)));
+                container.appendChild(renderKpiCard('CeFi Value', fmt(data.cefiValue)));
+            }
+
+            container.appendChild(renderKpiCard('YTD Gain/Loss', fmt(data.ytdGainDollar), fmtPct(data.ytdGainPct), isPositive(data.ytdGainDollar)));
+            container.appendChild(renderKpiCard('All-Time Gain/Loss', fmt(data.allTimeGainDollar), fmtPct(data.allTimeGainPct), isPositive(data.allTimeGainDollar)));
+            container.appendChild(renderKpiCard('Avg Daily Gain (YTD)', fmt(data.avgDailyGainYTD), '', isPositive(data.avgDailyGainYTD)));
+            container.appendChild(renderKpiCard('Avg Monthly Gain (YTD)', fmt(data.avgMonthlyGainYTD), '', isPositive(data.avgMonthlyGainYTD)));
+            container.appendChild(renderKpiCard('Avg Daily Gain (All-Time)', fmt(data.avgDailyGainAllTime), '', isPositive(data.avgDailyGainAllTime)));
+        }
+
+        function renderBtcOverview() {
+            const container = document.getElementById('btcOverview');
+            container.innerHTML = '';
+
+            const holdings = getNum(54, 1);
+            const price = getNum(55, 1);
+            const pctSinceStart = getNum(56, 1);
+            const pctYtd = getNum(57, 1);
+
+            const value = holdings * price;
+
+            container.appendChild(renderKpiCard('BTC Holdings', holdings.toFixed(4) + ' â¿'));
+            container.appendChild(renderKpiCard('BTC Price', fmt(price)));
+            container.appendChild(renderKpiCard('Total BTC Value', fmt(value)));
+            container.appendChild(renderKpiCard('Change Since Start', fmtPct(pctSinceStart), '', pctSinceStart > 0));
+            container.appendChild(renderKpiCard('YTD Change', fmtPct(pctYtd), '', pctYtd > 0));
+        }
+
+        function renderDebtWidget(filter) {
+            const container = document.getElementById('debtContent');
+            container.innerHTML = '';
+
+            if (filter === 'all') {
+                // Row 59 = Total Portfolio/Holdings Debt (already includes crypto + tradfi)
+                const totalDebt = getNum(59, 1);
+                const cryptoDebt = getNum(60, 1);
+                const tradfiDebt = getNum(69, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total Debt', fmt(totalDebt)));
+                grid.appendChild(renderKpiCard('Crypto Debt', fmt(cryptoDebt)));
+                grid.appendChild(renderKpiCard('TradFi Debt', fmt(tradfiDebt)));
+                container.appendChild(grid);
+            } else if (filter === 'crypto') {
+                const cryptoDebt = getNum(60, 1);
+                const collateral = getNum(61, 1);
+                const defiDebt = getNum(62, 1);
+                const defiCollateral = getNum(63, 1);
+                const defiLtv = getNum(64, 1);
+                const compLiquidation = getNum(65, 1);
+                const cefiDebt = getNum(66, 1);
+                const cefiCollateral = getNum(67, 1);
+                const cefiLtv = getNum(68, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total Crypto Debt', fmt(cryptoDebt)));
+                grid.appendChild(renderKpiCard('Crypto Collateral', fmt(collateral)));
+                grid.appendChild(renderKpiCard('DeFi Debt', fmt(defiDebt)));
+                grid.appendChild(renderKpiCard('DeFi Collateral', fmt(defiCollateral)));
+
+                const defiLtvDiv = document.createElement('div');
+                defiLtvDiv.className = 'kpi-card';
+                const defiLtvClass = defiLtv < 0.5 ? 'ltv-green' : defiLtv < 0.75 ? 'ltv-yellow' : 'ltv-red';
+                defiLtvDiv.innerHTML = `
+                    <div class="kpi-label">Compound LTV</div>
+                    <div class="kpi-value ${defiLtvClass} sensitive">${fmtPct(defiLtv)}</div>
+                `;
+                grid.appendChild(defiLtvDiv);
+
+                grid.appendChild(renderKpiCard('Liquidation Price (Compound)', fmt(compLiquidation)));
+                grid.appendChild(renderKpiCard('CeFi Debt', fmt(cefiDebt)));
+                grid.appendChild(renderKpiCard('CeFi Collateral', fmt(cefiCollateral)));
+
+                const cefiLtvDiv = document.createElement('div');
+                cefiLtvDiv.className = 'kpi-card';
+                const cefiLtvClass = cefiLtv < 0.5 ? 'ltv-green' : cefiLtv < 0.75 ? 'ltv-yellow' : 'ltv-red';
+                cefiLtvDiv.innerHTML = `
+                    <div class="kpi-label">Bybit LTV</div>
+                    <div class="kpi-value ${cefiLtvClass} sensitive">${fmtPct(cefiLtv)}</div>
+                `;
+                grid.appendChild(cefiLtvDiv);
+
+                container.appendChild(grid);
+            } else if (filter === 'tradfi') {
+                const totalDebt = getNum(69, 1);
+                const bankDebt = getNum(70, 1);
+                const andreiaDebt = getNum(71, 1);
+
+                const grid = document.createElement('div');
+                grid.className = 'kpi-grid';
+                grid.appendChild(renderKpiCard('Total TradFi Debt', fmt(totalDebt)));
+                grid.appendChild(renderKpiCard('Bank Debt', fmt(bankDebt)));
+                grid.appendChild(renderKpiCard('Debt to Andreia', fmt(andreiaDebt)));
+                container.appendChild(grid);
+            }
+        }
+
+        function renderProjections(filter) {
+            const container = document.getElementById('projectionsContent');
+            container.innerHTML = '';
+
+            if (filter === 'portfolio') {
+                const eoy = getNum(73, 1);
+                const oneYear = getNum(74, 1);
+                const fiveYear = getNum(75, 1);
+
+                container.appendChild(renderKpiCard('End of Year', fmt(eoy)));
+                container.appendChild(renderKpiCard('1 Year Projection', fmt(oneYear)));
+                container.appendChild(renderKpiCard('5 Year Projection', fmt(fiveYear)));
+            } else if (filter === 'crypto') {
+                const eoy = getNum(76, 1);
+                const oneYear = getNum(77, 1);
+                const fiveYear = getNum(78, 1);
+
+                container.appendChild(renderKpiCard('End of Year', fmt(eoy)));
+                container.appendChild(renderKpiCard('1 Year Projection', fmt(oneYear)));
+                container.appendChild(renderKpiCard('5 Year Projection', fmt(fiveYear)));
+            }
+        }
+
+        function renderAssetsDistribution(filter) {
+            // Get assets (rows 81-92, which is gviz rows 81-92)
+            const assets = [];
+            for (let i = 81; i <= 92; i++) {
+                const name = getCell(i, 0);
+                const quantity = num(getCell(i, 1));
+                const value = num(getCell(i, 2));
+                const type = getCell(i, 3);
+                const platform = getCell(i, 4);
+                const active = getCell(i, 5);
+
+                if (!name) continue;
+
+                let typeFilter = '';
+                if (type === 'DeFi' || type === 'Collateral') typeFilter = 'crypto';
+                else if (type === 'TradFi' || type === 'Real Estate' || type === 'Motorbike') typeFilter = 'tradfi';
+
+                if (filter === 'all' || typeFilter === filter) {
+                    assets.push({ name, quantity, value, type, platform, active });
+                }
+            }
+
+            // Render chart
+            const chartData = {
+                labels: assets.map(a => a.name),
+                datasets: [{
+                    data: assets.map(a => a.value),
+                    backgroundColor: [
+                        '#7c6fef', '#00d4ff', '#b066ff', '#00c896',
+                        '#ffb84d', '#ff4d6d', '#7b82a0', '#1c1f2e',
+                        '#4a5070', '#161922', '#252840', '#1e2235'
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 0.07)',
+                    borderWidth: 1
+                }]
+            };
+
+            const ctx = document.getElementById('assetsChart').getContext('2d');
+            if (state.charts.assets) state.charts.assets.destroy();
+            state.charts.assets = new Chart(ctx, {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'rgba(232, 234, 239, 0.7)', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            // Render table
+            const table = document.getElementById('assetsTable');
+            table.innerHTML = '<thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody></tbody>';
+            const tbody = table.querySelector('tbody');
+
+            assets.forEach(a => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${a.name}</td>
+                    <td>${fmtNumber(a.quantity)}</td>
+                    <td class="sensitive">${fmt(a.value)}</td>
+                    <td>${a.type}</td>
+                    <td>${a.platform}</td>
+                    <td>${a.active}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderYearlyPerformance() {
+            // Get yearly data (rows 95-98, gviz indices)
+            const years = [];
+            for (let i = 95; i <= 98; i++) {
+                const year = getCell(i, 0);
+                const netWorth = num(getCell(i, 1));
+                const yoyPct = getCell(i, 2);  // May be string like "22.31%"
+                const totalAssets = num(getCell(i, 3));
+                const btcHoldings = num(getCell(i, 4));
+
+                if (year) {
+                    years.push({ year, netWorth, yoyPct, totalAssets, btcHoldings });
+                }
+            }
+
+            // Render chart
+            const chartData = {
+                labels: years.map(y => y.year),
+                datasets: [{
+                    label: 'Net Worth',
+                    data: years.map(y => y.netWorth),
+                    backgroundColor: '#7c6fef',
+                    borderColor: '#7c6fef',
+                    borderWidth: 1
+                }]
+            };
+
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            if (state.charts.yearly) state.charts.yearly.destroy();
+            state.charts.yearly = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: 'rgba(232, 234, 239, 0.7)', font: { size: 11 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: 'rgba(232, 234, 239, 0.5)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        x: {
+                            ticks: { color: 'rgba(232, 234, 239, 0.5)' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Render table
+            const table = document.getElementById('yearlyTable');
+            table.innerHTML = '<thead><tr><th>Year</th><th>Net Worth</th><th>YoY %</th><th>Assets</th><th>BTC (â¿)</th></tr></thead><tbody></tbody>';
+            const tbody = table.querySelector('tbody');
+
+            const currentYear = new Date().getFullYear();
+            years.forEach(y => {
+                const row = document.createElement('tr');
+                if (y.year === currentYear) row.className = 'current-year';
+                row.innerHTML = `
+                    <td>${y.year}</td>
+                    <td class="sensitive">${fmt(y.netWorth)}</td>
+                    <td>${fmtPct(y.yoyPct)}</td>
+                    <td class="sensitive">${fmt(y.totalAssets)}</td>
+                    <td>${fmtNumber(y.btcHoldings)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderAllWidgets() {
+            if (!state.data) return;
+
+            renderGlobalMetrics();
+            renderPortfolioSummary(state.currentFilter);
+            renderBtcOverview();
+            renderDebtWidget('all');
+            renderProjections('portfolio');
+            renderAssetsDistribution('all');
+            renderYearlyPerformance();
+        }
+
+        // ============ EVENT LISTENERS ============
+        function setupEventListeners() {
+            // Main filters
+            document.querySelectorAll('#mainFilters .pill').forEach(pill => {
+                pill.addEventListener('click', (e) => {
+                    document.querySelectorAll('#mainFilters .pill').forEach(p => p.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state.currentFilter = e.target.dataset.filter;
+                    renderPortfolioSummary(state.currentFilter);
+                    renderDebtWidget('all');
+                });
+            });
+
+            // Portfolio filters
+            document.querySelectorAll('#portfolioFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#portfolioFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderPortfolioSummary(e.target.dataset.filter);
+                });
+            });
+
+            // Debt filters
+            document.querySelectorAll('#debtFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#debtFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderDebtWidget(e.target.dataset.filter);
+                });
+            });
+
+            // Projections filters
+            document.querySelectorAll('#projectionsFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#projectionsFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderProjections(e.target.dataset.filter);
+                });
+            });
+
+            // Assets filters
+            document.querySelectorAll('#assetsFilters .widget-filter').forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    document.querySelectorAll('#assetsFilters .widget-filter').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderAssetsDistribution(e.target.dataset.filter);
+                });
+            });
+
+            // Lock toggle
+            document.getElementById('lockToggle').addEventListener('click', () => {
+                const toggle = document.getElementById('lockToggle');
+                toggle.classList.toggle('active');
+                const grid = GridStack.getInstance('#grid');
+                if (toggle.classList.contains('active')) {
+                    grid.disable();
+                    state.locked = true;
+                } else {
+                    grid.enable();
+                    state.locked = false;
+                }
+            });
+
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                const sheetId = loadSettings();
+                fetchData(sheetId);
+            });
+
+            // Settings button
+            document.getElementById('settingsBtn').addEventListener('click', openSettings);
+
+            // Privacy toggle
+            document.getElementById('privacyToggle').addEventListener('click', () => {
+                document.body.classList.toggle('privacy-mode');
+                state.privacyMode = !state.privacyMode;
+            });
+
+            // Settings modal
+            document.getElementById('closeSettings').addEventListener('click', closeSettings);
+            document.getElementById('settingsModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('settingsModal')) closeSettings();
+            });
+
+            document.getElementById('saveSettings').addEventListener('click', () => {
+                const input = document.getElementById('sheetInput').value.trim();
+                const sheetId = extractSheetId(input);
+                if (sheetId) {
+                    saveSettings(sheetId);
+                    closeSettings();
+                    fetchData(sheetId);
+                } else {
+                    showToast('Invalid Sheet URL or ID', 'error');
+                }
+            });
+
+            document.getElementById('resetLayout').addEventListener('click', () => {
+                resetLayout();
+                showToast('Layout reset to default', 'success');
+            });
+
+            document.getElementById('exportLayout').addEventListener('click', () => {
+                const grid = GridStack.getInstance('#grid');
+                const layout = grid.save(false);
+                const json = JSON.stringify(layout, null, 2);
+                navigator.clipboard.writeText(json).then(() => {
+                    showToast('Layout copied to clipboard', 'success');
+                });
+            });
+
+            document.getElementById('sheetInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('saveSettings').click();
+                }
+            });
+        }
+
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            const sheetId = loadSettings();
+            document.getElementById('sheetInput').value = sheetId;
+            modal.classList.add('show');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        // ============ GRIDSTACK SETUP ============
+        let grid;
+
+        function initGridstack() {
+            grid = GridStack.init({
+                column: 12,
+                float: true,
+                animate: true,
+                margin: 16,
+                removeTimeout: 100,
+                cellHeight: 'auto'
+            }, '#grid');
+
+            grid.on('change', () => {
+                saveLayout();
+            });
+
+            // Load saved layout or use defaults
+            const saved = loadLayout();
+            if (saved) {
+                grid.load(saved);
+            }
+        }
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            initGridstack();
+            setupEventListeners();
+
+            const sheetId = loadSettings();
+            if (sheetId) {
+                fetchData(sheetId);
+            } else {
+                showToast('Please set Google Sheet ID in settings', 'error');
+                openSettings();
+            }
+        });
+    </script>
 </body>
 </html>
