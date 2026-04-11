@@ -214,9 +214,9 @@ tr:hover td{background:rgba(255,255,255,.025);}
     <div class="hright">
         <!-- Filter pills -->
         <div class="pill active" data-filter="portfolio" onclick="setFilter(this)">Total Portfolio</div>
+        <div class="pill"        data-filter="liquid"    onclick="setFilter(this)">Liquid</div>
         <div class="pill"        data-filter="crypto"    onclick="setFilter(this)">Crypto</div>
         <div class="pill"        data-filter="tradfi"    onclick="setFilter(this)">TradFi</div>
-        <div class="pill"        data-filter="liquid"    onclick="setFilter(this)">Liquid</div>
         <div class="sep"></div>
         <!-- Themes -->
         <div class="tpill active" data-t="zhodler" onclick="setTheme('zhodler')" title="Zhodler"></div>
@@ -877,7 +877,7 @@ function renderMilestone() {
         ? ` &bull; Next: ${next.name} in ${moToNext > 0 ? moToNext + 'mo' : '∞'}`
         : ' &bull; 🏆 All milestones reached!';
 
-    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${pct.toFixed(1)}% to $1M${nextStr}`);
+    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${visualPct.toFixed(1)}% to $1M${nextStr}`);
 }
 
 // ── MONTE CARLO FIRE ──────────────────────────────────────────────────────────
