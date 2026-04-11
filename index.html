@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhodler Dashboard</title>
+    <!-- GridStack v10 via jsdelivr (proven stable) -->
+    <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack.min.css" rel="stylesheet">
+    <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-extra.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+/* ── THEMES ──────────────────────────────────────────────────────────────── */
+:root {
+    --bg:     #0f1117; --bg2:   #161922;
+    --card:   #1e2235; --card2: #252840;
+    --border: rgba(255,255,255,0.08);
+    --text:   #e8eaef; --text2: #7b82a0;
+    --accent: #7c6fef; --green: #00c896;
+    --red:    #ff4d6d; --yellow:#ffb84d;
+}
+.theme-cyan {
+    --bg:#0a1628; --bg2:#0f1f35; --card:#152a45; --card2:#1a3050;
+    --border:rgba(148,163,184,.15); --text:#f1f5f9; --text2:#94a3b8;
+    --accent:#22d3ee; --green:#22d3ee; --red:#f87171; --yellow:#fbbf24;
+}
+.theme-neon {
+    --bg:#0a0a1f; --bg2:#0f0f2a; --card:#1a1a40; --card2:#20204a;
+    --border:rgba(167,139,250,.15); --text:#f8fafc; --text2:#c4b5fd;
+    --accent:#c084fc; --green:#4ade80; --red:#fb7185; --yellow:#facc15;
+}
+.theme-cyber {
+    --bg:#0c1419; --bg2:#111d24; --card:#1a2f3a; --card2:#1f3a47;
+    --border:rgba(94,234,212,.12); --text:#e2e8f0; --text2:#5eead4;
+    --accent:#34d399; --green:#34d399; --red:#f87171; --yellow:#fde047;
+}
+
+/* ── RESET ───────────────────────────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-size:14px; min-height:100vh;
+}
+body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
+
+/* ── HEADER ──────────────────────────────────────────────────────────────── */
+.header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:200;
+    flex-wrap:wrap; gap:8px;
+}
+.brand{font-size:22px;font-weight:700;color:var(--accent);letter-spacing:-.5px;}
+.ts{font-size:11px;color:var(--text2);margin-left:10px;}
+.hright{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.sep{width:1px;height:20px;background:var(--border);margin:0 2px;}
+
+.pill{
+    padding:5px 13px;border-radius:20px;
+    border:1px solid var(--border); background:var(--card); color:var(--text2);
+    cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;user-select:none;
+}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600;}
+
+.ibtn{
+    height:30px;min-width:30px;padding:0 8px;border-radius:6px;
+    border:1px solid var(--border);background:var(--card);color:var(--text2);
+    cursor:pointer;font-size:12px;font-weight:500;
+    display:flex;align-items:center;gap:5px;white-space:nowrap;
+    transition:all .15s;
+}
+.ibtn:hover{border-color:var(--accent);color:var(--accent);}
+.ibtn.on{border-color:var(--green);color:var(--green);background:rgba(0,200,150,.1);}
+.ibtn.lock-on{border-color:var(--yellow);color:var(--yellow);background:rgba(255,184,77,.1);}
+
+/* Theme dots */
+.tpill{
+    width:16px;height:16px;border-radius:50%;border:2px solid transparent;
+    cursor:pointer;transition:all .15s;flex-shrink:0;
+}
+.tpill:hover,.tpill.active{border-color:var(--text);transform:scale(1.25);}
+.tpill[data-t="zhodler"]{background:linear-gradient(135deg,#7c6fef,#b066ff);}
+.tpill[data-t="cyan"]   {background:linear-gradient(135deg,#22d3ee,#3b82f6);}
+.tpill[data-t="neon"]   {background:linear-gradient(135deg,#c084fc,#4ade80);}
+.tpill[data-t="cyber"]  {background:linear-gradient(135deg,#34d399,#38bdf8);}
+
+/* ── GRIDSTACK OVERRIDES ─────────────────────────────────────────────────── */
+.grid-stack{background:transparent;padding:12px;}
+.grid-stack-item-content{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:10px;overflow:auto;
+    display:flex;flex-direction:column;
+    inset:4px !important;
+}
+body.editing .grid-stack-item-content{
+    border-color:var(--accent);border-style:dashed;
+}
+
+/* ── WIDGET INTERNALS ────────────────────────────────────────────────────── */
+.whead{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px 8px;flex-shrink:0;
+    border-bottom:1px solid var(--border);
+    cursor:grab;
+}
+.whead:active{cursor:grabbing;}
+.wsector{
+    font-size:13px;font-weight:700;color:var(--text);
+    line-height:1.1;margin-bottom:2px;
+}
+.wtitle{
+    font-size:9px;font-weight:500;color:var(--text2);
+    text-transform:uppercase;letter-spacing:1px;
+}
+.wbody{padding:12px 14px;flex:1;overflow:auto;}
+
+/* ── KPI ─────────────────────────────────────────────────────────────────── */
+.krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px;}
+.kpi{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;}
+.klbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.kval{font-size:15px;font-weight:700;line-height:1.2;}
+.ksub{font-size:11px;color:var(--text2);margin-top:3px;}
+.pos{color:var(--green);} .neg{color:var(--red);} .warn{color:var(--yellow);}
+
+/* Progress bar */
+.pbar{height:4px;background:var(--bg);border-radius:2px;margin-top:7px;overflow:hidden;}
+.pfill{height:100%;background:var(--accent);border-radius:2px;}
+
+/* ── TABLE ───────────────────────────────────────────────────────────────── */
+.twrap{overflow-x:auto;margin-top:8px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{color:var(--text2);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:500;white-space:nowrap;}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.025);}
+
+/* ── CHART ───────────────────────────────────────────────────────────────── */
+.chwrap{position:relative;min-height:140px;flex:1;}
+
+/* ── MONTE CARLO ─────────────────────────────────────────────────────────── */
+.mc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.mc-box{text-align:center;padding:7px 5px;background:var(--card2);border:1px solid var(--border);border-radius:7px;}
+.mc-box .klbl{margin-bottom:3px;font-size:9px;}
+.mc-box .kval{font-size:12px;font-weight:700;}
+.mc-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
+.mc-scenario{padding:7px 8px;background:var(--card2);border:1px solid var(--border);border-radius:7px;}
+.mc-scenario-title{font-size:10px;font-weight:600;margin-bottom:4px;}
+.mc-scenario-val{font-size:11px;color:var(--text2);}
+
+/* ── MILESTONE ───────────────────────────────────────────────────────────── */
+.ms-outer{padding:4px 0;}
+.ms-track{position:relative;height:32px;margin:0 13px;}
+.ms-line{position:absolute;top:50%;left:0;right:0;height:3px;background:var(--card2);border-radius:2px;transform:translateY(-50%);z-index:0;}
+.ms-fill{position:absolute;top:50%;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transform:translateY(-50%);z-index:1;}
+.ms-dots{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;z-index:2;}
+.ms-circle{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .2s;}
+.ms-circle.done{background:var(--green);border-color:var(--green);color:#000;font-size:12px;}
+.ms-circle.next{border-color:var(--accent);box-shadow:0 0 8px rgba(124,111,239,.5);}
+.ms-labels{display:flex;justify-content:space-between;margin:5px 0 0 0;}
+.ms-label{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0;}
+.ms-name{font-size:9px;color:var(--text2);text-align:center;white-space:nowrap;}
+.ms-eta{font-size:8px;margin-top:1px;text-align:center;}
+
+/* ── VELOCITY SPARK ──────────────────────────────────────────────────────── */
+.vel-hero{text-align:center;padding:10px 0 4px;}
+.vel-hero .kval{font-size:28px;}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+#toast{
+    position:fixed;bottom:20px;right:20px;
+    background:var(--card2);border:1px solid var(--border);
+    border-radius:8px;padding:9px 14px;font-size:12px;
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:999;max-width:280px;
+}
+#toast.show{opacity:1;}
+#toast.ok{border-color:var(--green);color:var(--green);}
+#toast.err{border-color:var(--red);color:var(--red);}
+
+/* ── MODAL ───────────────────────────────────────────────────────────────── */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.mbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;width:460px;max-width:95vw;}
+.mtitle{font-size:15px;font-weight:600;margin-bottom:16px;}
+.mrow{margin-bottom:14px;}
+.mlabel{font-size:11px;color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px;}
+.minput{width:100%;padding:8px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;}
+.minput:focus{outline:none;border-color:var(--accent);}
+.mactions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+.mprimary{padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#000;cursor:pointer;font-size:13px;font-weight:600;}
+.mcancel{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:13px;}
+.mgray{padding:8px 14px;background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px;}
+.mrow-row{display:flex;gap:8px;}
+
+/* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
+#loadOverlay{
+    position:fixed;inset:0;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    z-index:300;flex-direction:column;gap:10px;
+}
+#loadOverlay .brand{font-size:32px;}
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div style="display:flex;align-items:center;">
+        <span class="brand">Zhodler</span>
+        <span class="ts">Last updated: <span id="ts">--:--</span></span>
+    </div>
+    <div class="hright">
+        <!-- Filter pills -->
+        <div class="pill active" data-filter="portfolio" onclick="setFilter(this)">Total Portfolio</div>
+        <div class="pill"        data-filter="crypto"    onclick="setFilter(this)">Crypto</div>
+        <div class="pill"        data-filter="tradfi"    onclick="setFilter(this)">TradFi</div>
+        <div class="pill"        data-filter="liquid"    onclick="setFilter(this)">Liquid</div>
+        <div class="sep"></div>
+        <!-- Themes -->
+        <div class="tpill active" data-t="zhodler" onclick="setTheme('zhodler')" title="Zhodler"></div>
+        <div class="tpill"        data-t="cyan"    onclick="setTheme('cyan')"    title="Cyan"></div>
+        <div class="tpill"        data-t="neon"    onclick="setTheme('neon')"    title="Neon"></div>
+        <div class="tpill"        data-t="cyber"   onclick="setTheme('cyber')"   title="Cyber"></div>
+        <div class="sep"></div>
+        <!-- Actions -->
+        <button class="ibtn" id="lockBtn"    onclick="toggleLock()"    >&#128275; Unlocked</button>
+        <button class="ibtn" id="editBtn"    onclick="toggleEdit()"    >&#9998; Edit Layout</button>
+        <button class="ibtn" id="privacyBtn" onclick="togglePrivacy()" >&#128065;</button>
+        <button class="ibtn"                 onclick="doRefresh()"     >&#8635;</button>
+        <button class="ibtn"                 onclick="openSettings()"  >&#9881;</button>
+    </div>
+</div>
+
+<!-- GRIDSTACK CONTAINER -->
+<div class="grid-stack" id="grid"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loadOverlay">
+    <div class="brand">Zhodler</div>
+    <div style="color:var(--text2);font-size:13px;" id="loadMsg">Loading data&#8230;</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="modal">
+    <div class="mbox">
+        <div class="mtitle">Settings</div>
+        <div class="mrow">
+            <label class="mlabel">Google Sheet URL or ID</label>
+            <input class="minput" id="sheetInput" placeholder="Paste URL or Sheet ID">
+        </div>
+        <div class="mrow">
+            <label class="mlabel">Layout</label>
+            <div class="mrow-row">
+                <button class="mgray" onclick="resetLayout()">&#8635; Reset Layout</button>
+                <button class="mgray" onclick="exportLayout()">&#8599; Export Layout</button>
+                <label class="mgray" style="cursor:pointer;">
+                    &#8600; Import Layout
+                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importLayout(this)">
+                </label>
+            </div>
+        </div>
+        <div class="mactions">
+            <button class="mcancel"  onclick="closeSettings()">Cancel</button>
+            <button class="mprimary" onclick="saveAndReload()">Save &amp; Reload</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
+const LS = {
+    sheet:   'zh-sheet-id',
+    layout:  'zh-layout-v5',
+    theme:   'zh-theme',
+    locked:  'zh-locked',
+    privacy: 'zh-privacy',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let rows = [], activeFilter = 'portfolio', charts = {};
+let privacyOn = false, editMode = false, isLocked = false;
+let grid = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROW ACCESSORS
+// Dashboard_Data verified mapping (0-indexed):
+//  0 Days tracking   1 Year % (decimal)
+//  2 Header          3 Total Assets     4 Total Invested
+//  5 NW Year Start   6 Current NW       7 YTD Gain $
+//  8 YTD Gain %      9 Avg Daily YTD   10 Avg Monthly YTD
+// 11 AT Gain $      12 AT Gain %       13 Avg Daily AT   14 Avg Monthly AT
+// 27 Crypto Value   28 DeFi Val        29 CeFi Val
+// 30 Crypto Invest  31 Crypto NW Start 32 Crypto NW Now
+// 33 YTD Gain $     34 YTD %           35 Avg Daily YTD  36 Avg Mo YTD
+// 37 AT Gain $      38 AT %            39 Avg Daily AT   40 Avg Mo AT
+// 41 TradFi Assets  42 TradFi Invest   43 TradFi NW Start 44 TradFi NW Now
+// 45 YTD Gain $     46 YTD %           47 Avg Daily YTD   48 Avg Mo YTD
+// 49 AT Gain $      50 AT %            51 Avg Daily AT    52 Avg Mo AT
+// 54 BTC Holdings   55 BTC Price       56 % Since Start   57 % YTD
+// 59 Total Debt     60 Crypto Debt     61 Crypto Coll
+// 62 DeFi Debt      63 DeFi Coll       64 Compound LTV    65 Liq Price
+// 66 CeFi Debt      67 CeFi Coll       68 Bybit LTV
+// 69 TradFi Debt    70 Bank Debt       71 Andreia Debt
+// 73 Port EOY       74 Port 1Y         75 Port 5Y
+// 76 Crypto EOY     77 Crypto 1Y       78 Crypto 5Y
+// 81-92 Assets: c0=name c1=qty c2=value(str) c3=type c4=platform c5=status
+// 95-98 Years: c0=year c1=NW c2=YoY% c3=TotalAssets c4=BTC
+// ─────────────────────────────────────────────────────────────────────────────
+function V(r,c){c=c===undefined?1:c;if(!rows[r])return null;const x=rows[r].c;if(!x||x[c]==null)return null;return x[c].v!==undefined?x[c].v:null;}
+function N(r,c){const v=V(r,c);if(v===null||v==='')return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$,%\s]/g,''));return isNaN(n)?0:n;}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FORMATTERS
+// ─────────────────────────────────────────────────────────────────────────────
+function fd(n){const a=Math.abs(n);const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-$':'$')+s;}
+function fp(n){if(typeof n==='string')return n;const p=(n>-2&&n<2)?n*100:n;return(p>=0?'+':'')+p.toFixed(2)+'%';}
+function fq(n){return n.toLocaleString(undefined,{maximumFractionDigits:6});}
+function cc(n){return n>0?'pos':n<0?'neg':'';}
+function lc(v){return v<0.5?'pos':v<0.75?'warn':'neg';}
+function kpi(label,val,sub,cls){return`<div class="kpi"><div class="klbl">${label}</div><div class="kval ${cls||''} sensitive">${val}</div>${sub?`<div class="ksub">${sub}</div>`:''}</div>`;}
+function gi(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIDGET DEFINITIONS
+// ─────────────────────────────────────────────────────────────────────────────
+const WIDGET_HTML = {
+    'w-global': `<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div></div></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
+    'w-btc':    `<div class="whead"><div><div class="wsector">Market</div><div class="wtitle">BTC Overview</div></div></div><div class="wbody"><div class="krow" id="btcKpis"></div></div>`,
+    'w-summary':`<div class="whead"><div><div class="wsector" id="summaryFilter">Portfolio</div><div class="wtitle">Summary</div></div></div><div class="wbody"><div class="krow" id="summaryKpis"></div></div>`,
+    'w-debt':   `<div class="whead"><div><div class="wsector" id="debtFilter">Portfolio</div><div class="wtitle">Debt &amp; Liabilities</div></div></div><div class="wbody"><div class="krow" id="debtKpis"></div></div>`,
+    'w-proj':   `<div class="whead"><div><div class="wsector" id="projFilter">Portfolio</div><div class="wtitle">Projections</div></div></div><div class="wbody"><div class="krow" id="projKpis"></div></div>`,
+    'w-velocity':`<div class="whead"><div><div class="wsector" id="velFilter">Portfolio</div><div class="wtitle">Net Worth Velocity</div></div></div>
+        <div class="wbody">
+            <div class="vel-hero"><div class="klbl">Annualised Rate</div><div class="kval sensitive" id="vel-annual">--</div></div>
+            <div class="krow" style="margin-top:10px;">
+                <div class="kpi"><div class="klbl">Monthly</div><div class="kval sensitive" id="vel-monthly">--</div></div>
+                <div class="kpi"><div class="klbl">Daily</div><div class="kval sensitive" id="vel-daily">--</div></div>
+                <div class="kpi"><div class="klbl">Current Net Worth</div><div class="kval sensitive" id="vel-nw">--</div></div>
+                <div class="kpi"><div class="klbl">Momentum</div><div class="kval" id="vel-momentum">--</div></div>
+            </div>
+        </div>`,
+    'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Milestone Timeline</div></div></div>
+        <div class="wbody">
+            <div class="ms-outer">
+                <div class="ms-track">
+                    <div class="ms-line"></div>
+                    <div class="ms-fill" id="ms-fill"></div>
+                    <div class="ms-dots" id="ms-dots"></div>
+                </div>
+                <div class="ms-labels" id="ms-labels"></div>
+            </div>
+            <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text2);" id="ms-status"></div>
+        </div>`,
+    'w-monte':`<div class="whead"><div><div class="wsector" id="monteFilter">Portfolio</div><div class="wtitle">Monte Carlo FIRE Simulation</div></div><span style="font-size:10px;color:var(--text2);" id="mc-params"></span></div>
+        <div class="wbody">
+            <div class="mc-stats" id="mc-stats"></div>
+            <div class="mc-scenarios" id="mc-scenarios"></div>
+            <div class="chwrap" style="min-height:140px;"><canvas id="mcChart"></canvas></div>
+            <div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>
+        </div>`,
+    'w-assets':`<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Assets Distribution</div></div></div>
+        <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
+            <div class="chwrap" style="min-height:220px;flex:2;"><canvas id="assetsChart"></canvas></div>
+            <div class="twrap" id="assetsTable" style="flex:1;"></div>
+        </div>`,
+    'w-yearly':`<div class="whead"><div><div class="wsector" id="yearlyFilter">Portfolio</div><div class="wtitle">Yearly Performance</div></div></div>
+        <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
+            <div class="chwrap"><canvas id="yearChart"></canvas></div>
+            <div class="twrap" id="yearTable"></div>
+        </div>`,
+};
+
+const DEFAULT_LAYOUT = [
+    {id:'w-global',   x:0,  y:0,  w:8,  h:2},
+    {id:'w-btc',      x:8,  y:0,  w:4,  h:2},
+    {id:'w-summary',  x:0,  y:2,  w:12, h:3},
+    {id:'w-debt',     x:0,  y:5,  w:6,  h:3},
+    {id:'w-proj',     x:6,  y:5,  w:6,  h:3},
+    {id:'w-velocity', x:0,  y:8,  w:4,  h:3},
+    {id:'w-milestone',x:4,  y:8,  w:8,  h:3},
+    {id:'w-assets',   x:0,  y:11, w:7,  h:5},
+    {id:'w-yearly',   x:7,  y:11, w:5,  h:5},
+    {id:'w-monte',    x:0,  y:16, w:12, h:6},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRIDSTACK INIT  (called once on first successful data load)
+// ─────────────────────────────────────────────────────────────────────────────
+function initGrid() {
+    if (grid) return;
+
+    if (typeof GridStack === 'undefined') {
+        throw new Error('GridStack library failed to load. Check your internet connection.');
+    }
+
+    grid = GridStack.init({
+        column: 12,
+        cellHeight: 80,
+        margin: 0,
+        float: false,
+        animate: true,
+        disableDrag: true,
+        disableResize: true,
+        resizable: {handles: 'se,s,e'},
+        draggable: {handle: '.whead'},
+    }, '#grid');
+
+    // Load saved or default layout
+    const savedLayout = loadLayout();
+    const layout = savedLayout || DEFAULT_LAYOUT;
+
+    layout.forEach(item => {
+        if (!WIDGET_HTML[item.id]) return;
+        grid.addWidget({
+            id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
+            content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
+        });
+    });
+
+    grid.on('change', saveLayout);
+
+    // Restore lock state
+    if (localStorage.getItem(LS.locked) === 'true') {
+        applyLock(true, false);
+    }
+}
+
+function saveLayout() {
+    if (!grid) return;
+    const items = grid.getGridItems().map(el => {
+        const n = el.gridstackNode;
+        return {id: n.id, x: n.x, y: n.y, w: n.w, h: n.h};
+    });
+    localStorage.setItem(LS.layout, JSON.stringify(items));
+}
+
+function loadLayout() {
+    try {
+        const s = localStorage.getItem(LS.layout);
+        if (!s) return null;
+        const parsed = JSON.parse(s);
+        // Validate all widget IDs are still valid; add missing ones
+        const validIds = Object.keys(WIDGET_HTML);
+        const filtered = parsed.filter(i => validIds.includes(i.id));
+        const savedIds = filtered.map(i => i.id);
+        const missing  = DEFAULT_LAYOUT.filter(i => !savedIds.includes(i.id));
+        const maxY     = filtered.length ? Math.max(...filtered.map(i => i.y + i.h)) : 0;
+        missing.forEach((w, idx) => filtered.push({...w, y: maxY + idx * 4}));
+        return filtered;
+    } catch { return null; }
+}
+
+function resetLayout() {
+    if (!grid) return;
+    localStorage.removeItem(LS.layout);
+    grid.removeAll();
+    DEFAULT_LAYOUT.forEach(item => {
+        grid.addWidget({
+            id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
+            content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
+        });
+    });
+    if (rows.length > 0) setTimeout(() => renderAll(), 80);
+    toast('Layout reset to default', false);
+}
+
+function exportLayout() {
+    if (!grid) return;
+    const items = grid.getGridItems().map(el => {
+        const n = el.gridstackNode;
+        return {id: n.id, x: n.x, y: n.y, w: n.w, h: n.h};
+    });
+    const data = {
+        version: '4', date: new Date().toISOString(),
+        theme: document.body.className.replace('privacy','').trim() || 'zhodler',
+        locked: isLocked, layout: items,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(blob),
+        download: `zhodler-layout-${new Date().toISOString().slice(0,10)}.json`,
+    });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    toast('Layout exported', false);
+}
+
+function importLayout(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.layout || !Array.isArray(data.layout)) throw new Error('Invalid layout file');
+            localStorage.setItem(LS.layout, JSON.stringify(data.layout));
+            if (data.theme) setTheme(data.theme);
+            grid.removeAll();
+            data.layout.forEach(item => {
+                if (!WIDGET_HTML[item.id]) return;
+                grid.addWidget({
+                    id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
+                    content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
+                });
+            });
+            if (data.locked !== undefined) applyLock(data.locked, true);
+            if (rows.length > 0) setTimeout(() => renderAll(), 80);
+            closeSettings();
+            toast('Layout imported', false);
+        } catch(err) { toast('Import failed: ' + err.message, true); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA FETCH
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadData() {
+    const id  = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
+    const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`;
+
+    const isFirstLoad = !grid;
+    if (isFirstLoad) {
+        document.getElementById('loadMsg').textContent = 'Loading data\u2026';
+        document.getElementById('loadOverlay').style.display = 'flex';
+    } else {
+        // On refresh, show a subtle spinner in the timestamp instead of blanking the dashboard
+        document.getElementById('ts').textContent = '⟳ refreshing…';
+    }
+
+    // ── Fetch data ───────────────────────────────────────────────────────────
+    let fetchErr = null;
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const text = await resp.text();
+        const s = text.indexOf('{'), e = text.lastIndexOf('}');
+        if (s === -1) throw new Error('Bad response from Google Sheets');
+        rows = JSON.parse(text.slice(s, e + 1)).table.rows;
+    } catch(err) {
+        fetchErr = err;
+    }
+
+    // ── Init GridStack (only on first load — skips if grid already exists) ────
+    let gridErr = null;
+    try {
+        initGrid();
+    } catch(err) {
+        gridErr = err;
+    }
+
+    // ── Handle errors ────────────────────────────────────────────────────────
+    if (gridErr) {
+        document.getElementById('loadMsg').innerHTML =
+            `<span style="color:var(--red)">&#10005; ${gridErr.message}</span>`;
+        toast(gridErr.message, true);
+        return;
+    }
+    if (fetchErr) {
+        if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
+        document.getElementById('ts').textContent = 'error';
+        toast('Data load failed: ' + fetchErr.message, true);
+        return;
+    }
+
+    // ── Success ───────────────────────────────────────────────────────────────
+    const now = new Date();
+    document.getElementById('ts').textContent =
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0');
+
+    try { renderAll(); } catch(err) { console.error('renderAll error:', err); }
+    if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
+    toast('Data refreshed', false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────────────────────────────────────
+function renderAll() {
+    renderGlobal();
+    renderBtc();
+    renderSummary();
+    renderDebt();
+    renderProjections();
+    renderVelocity();
+    renderMilestone();
+    renderMonteCarlo();
+    renderAssets();
+    renderYearly();
+}
+
+function renderGlobal() {
+    const days = Math.round(N(0)), yr = N(1);
+    gi('globalKpis',
+        kpi('Days Tracking', days.toLocaleString()) +
+        `<div class="kpi"><div class="klbl">Year Progress</div>
+        <div class="kval sensitive">${(yr*100).toFixed(1)}%</div>
+        <div class="pbar"><div class="pfill" style="width:${Math.min(yr*100,100)}%"></div></div></div>`
+    );
+}
+
+function renderBtc() {
+    const h=N(54),p=N(55),cs=N(56),cy=N(57);
+    gi('btcKpis',
+        kpi('Holdings', fq(h)+' &#x20bf;') +
+        kpi('BTC Price', fd(p)) +
+        kpi('BTC Value', fd(h*p),'','sensitive') +
+        kpi('Since Start', fp(cs),'',cc(cs)) +
+        kpi('YTD Change', fp(cy),'',cc(cy))
+    );
+}
+
+// ── LIQUID ASSETS HELPERS ─────────────────────────────────────────────────────
+const LIQUID_EXCLUDE = ['real estate', 'realestate', 'motorbike', 'motorcycle'];
+function isLiquidExcluded(type) {
+    const t = (type || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    return LIQUID_EXCLUDE.some(e => t.includes(e));
+}
+function getLiquidAssets() {
+    let total = 0;
+    for (let i = 81; i <= 92; i++) {
+        const name = V(i, 0); if (!name) continue;
+        if (isLiquidExcluded(V(i, 3))) continue;
+        total += N(i, 2);
+    }
+    return total;
+}
+
+// ── FILTER-AWARE DATA ACCESSORS ───────────────────────────────────────────────
+// These return the right row values based on the active filter so all widgets
+// can call the same helpers instead of hard-coding portfolio rows.
+function getFilterNW() {
+    if (activeFilter === 'crypto')  return N(32);
+    if (activeFilter === 'tradfi')  return N(44);
+    if (activeFilter === 'liquid')  return Math.max(0, getLiquidAssets() - N(59));
+    return N(6); // portfolio
+}
+function getFilterMonthly() {
+    if (activeFilter === 'crypto')  return N(36);
+    if (activeFilter === 'tradfi')  return N(48);
+    return N(10); // portfolio (also used for liquid — best approximation)
+}
+function getFilterDaily() {
+    if (activeFilter === 'crypto')  return N(35);
+    if (activeFilter === 'tradfi')  return N(47);
+    return N(9);
+}
+function getFilterAtMonthly() {
+    if (activeFilter === 'crypto')  return N(40);
+    if (activeFilter === 'tradfi')  return N(52);
+    return N(14);
+}
+function getFilterAtPct() {
+    if (activeFilter === 'crypto')  return N(38);
+    if (activeFilter === 'tradfi')  return N(50);
+    return N(12);
+}
+
+function getSectorLabel() {
+    if (activeFilter === 'crypto')  return 'Crypto';
+    if (activeFilter === 'tradfi')  return 'TradFi';
+    if (activeFilter === 'liquid')  return 'Liquid';
+    return 'Portfolio';
+}
+function updateSectorHeaders() {
+    const lbl = getSectorLabel();
+    ['summaryFilter','debtFilter','projFilter','velFilter',
+     'milestoneFilter','monteFilter','yearlyFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = lbl;
+    });
+}
+
+function renderSummary() {
+    updateSectorHeaders();
+    let html;
+    if (activeFilter === 'liquid') {
+        const liquidA = getLiquidAssets();
+        const debt    = N(59);
+        const liquidNW= Math.max(0, liquidA - debt);
+        const dm      = getFilterMonthly();
+        const dd      = getFilterDaily();
+        html =
+            kpi('Liquid Assets',         fd(liquidA),  '','sensitive') +
+            kpi('Total Portfolio Debt',  fd(debt),     '','sensitive') +
+            kpi('Approx. Net Worth',     fd(liquidNW), '','sensitive') +
+            kpi('Avg Monthly (YTD)',     fd(dm),       '(portfolio rate)', cc(dm)) +
+            kpi('Avg Daily (YTD)',       fd(dd),       '(portfolio rate)', cc(dd)) +
+            `<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:10px;color:var(--text2)">Excludes real estate &amp; motorbike. Gains use portfolio rates.</div></div>`;
+    } else {
+        let d;
+        if (activeFilter==='portfolio') {
+            d={a:N(3),inv:N(4),nw:N(6),yd:N(7),yp:N(8),dd:N(9),dm:N(10),ad:N(11),ap:N(12),ald:N(13),alm:N(14)};
+        } else if (activeFilter==='crypto') {
+            d={a:N(27),inv:N(30),nw:N(32),yd:N(33),yp:N(34),dd:N(35),dm:N(36),ad:N(37),ap:N(38),ald:N(39),alm:N(40),defi:N(28),cefi:N(29)};
+        } else {
+            d={a:N(41),inv:N(42),nw:N(44),yd:N(45),yp:N(46),dd:N(47),dm:N(48),ad:N(49),ap:N(50),ald:N(51),alm:N(52)};
+        }
+        html =
+            kpi('Total Assets',         fd(d.a),   '','sensitive') +
+            kpi('Total Invested',        fd(d.inv), '','sensitive') +
+            kpi('Current Net Worth',     fd(d.nw),  '','sensitive') +
+            kpi('YTD Gain/Loss',         fd(d.yd),  fp(d.yp), cc(d.yd)) +
+            kpi('All-Time Gain/Loss',    fd(d.ad),  fp(d.ap), cc(d.ad)) +
+            kpi('Avg Daily (YTD)',       fd(d.dd),  '', cc(d.dd)) +
+            kpi('Avg Monthly (YTD)',     fd(d.dm),  '', cc(d.dm)) +
+            kpi('Avg Daily (All-Time)',  fd(d.ald), '', cc(d.ald)) +
+            kpi('Avg Monthly (All-Time)',fd(d.alm), '', cc(d.alm));
+        if (activeFilter==='crypto') {
+            html += kpi('DeFi Value',fd(d.defi),'','sensitive') + kpi('CeFi Value',fd(d.cefi),'','sensitive');
+        }
+    }
+    gi('summaryKpis', html);
+}
+
+function renderDebt() {
+    let html='';
+    if (activeFilter==='portfolio' || activeFilter==='liquid') {
+        html = kpi('Total Debt',   fd(N(59)),'','neg sensitive') +
+               kpi('Crypto Debt', fd(N(60)),'','sensitive') +
+               kpi('TradFi Debt', fd(N(69)),'','sensitive');
+        if (activeFilter==='liquid') html += `<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:10px;color:var(--text2)">Debt is portfolio-wide (not liquid-specific)</div></div>`;
+    } else if (activeFilter==='crypto') {
+        const dl=N(64),cl=N(68);
+        html = kpi('Total Crypto Debt', fd(N(60)),'','neg sensitive') +
+               kpi('Crypto Collateral', fd(N(61)),'','sensitive') +
+               kpi('DeFi Debt',         fd(N(62)),'','sensitive') +
+               kpi('DeFi Collateral',   fd(N(63)),'','sensitive') +
+               kpi('Compound LTV',      fp(dl).replace('+',''),'',lc(dl)) +
+               kpi('Liq. Price',        fd(N(65)),'','neg') +
+               kpi('CeFi Debt',         fd(N(66)),'','sensitive') +
+               kpi('CeFi Collateral',   fd(N(67)),'','sensitive') +
+               kpi('Bybit LTV',         fp(cl).replace('+',''),'',lc(cl));
+    } else {
+        html = kpi('Total TradFi Debt', fd(N(69)),'','neg sensitive') +
+               kpi('Bank Debt',         fd(N(70)),'','sensitive') +
+               kpi('Debt to Andreia',   fd(N(71)),'','sensitive');
+    }
+    gi('debtKpis', html);
+}
+
+function renderProjections() {
+    let html='';
+    if (activeFilter==='portfolio') {
+        html = kpi('End of Year',fd(N(73)),'',cc(N(73))) +
+               kpi('1 Year',    fd(N(74)),'',cc(N(74))) +
+               kpi('5 Years',   fd(N(75)),'',cc(N(75)));
+    } else if (activeFilter==='crypto') {
+        html = kpi('Crypto EOY',fd(N(76)),'',cc(N(76))) +
+               kpi('1 Year',   fd(N(77)),'',cc(N(77))) +
+               kpi('5 Years',  fd(N(78)),'',cc(N(78)));
+    } else if (activeFilter==='liquid') {
+        // Estimate projections using liquid NW + portfolio monthly rate
+        const lnw   = getFilterNW();
+        const dm    = getFilterMonthly();
+        const yr    = N(1); // year progress (decimal)
+        const moLeft= Math.round((1 - yr) * 12);
+        const eoy   = lnw + dm * moLeft;
+        const yr1   = lnw + dm * 12;
+        // 5-yr compound using AT return rate
+        const ar    = Math.max(0.04, Math.min(0.5, Math.abs(getFilterAtPct())));
+        const mm    = ar / 12;
+        let v5      = lnw;
+        for (let m = 0; m < 60; m++) v5 = v5 * (1 + mm) + dm;
+        html = kpi('Liquid EOY',  fd(eoy), '(est.)', cc(eoy)) +
+               kpi('1 Year',      fd(yr1), '(est.)', cc(yr1)) +
+               kpi('5 Years',     fd(v5),  '(est.)', cc(v5));
+    } else {
+        html=`<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:12px;color:var(--text2)">No TradFi projections in sheet</div></div>`;
+    }
+    gi('projKpis', html);
+}
+
+// ── NET WORTH VELOCITY ────────────────────────────────────────────────────────
+function renderVelocity() {
+    const monthly   = getFilterMonthly();
+    const daily     = getFilterDaily();
+    const nw        = getFilterNW();
+    const annual    = monthly * 12;
+
+    // YoY acceleration: compare YTD avg vs all-time avg
+    const atMonthly = getFilterAtMonthly();
+    const momentum  = monthly - atMonthly;
+
+    gi('vel-annual', fd(annual)+'/yr');
+    gi('vel-monthly', fd(monthly)+'/mo');
+    gi('vel-daily', fd(daily)+'/day');
+    gi('vel-nw', fd(nw));
+
+    const mEl = document.getElementById('vel-annual');
+    const annualCls = cc(annual); if (mEl && annualCls) mEl.classList.add(annualCls);
+    const moEl = document.getElementById('vel-monthly');
+    const monthlyCls = cc(monthly); if (moEl && monthlyCls) moEl.classList.add(monthlyCls);
+
+    const momEl = document.getElementById('vel-momentum');
+    if (momEl) {
+        momEl.textContent = (momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating');
+        momEl.innerHTML = momEl.textContent;
+        momEl.className = 'kval ' + cc(momentum);
+    }
+}
+
+// ── MILESTONE TIMELINE ────────────────────────────────────────────────────────
+function renderMilestone() {
+    const currentNW     = getFilterNW();
+    const monthlyGrowth = getFilterMonthly();
+
+    const milestones = [
+        {name:'$50K', target:50000,  icon:'🎯'},
+        {name:'$100K',target:100000, icon:'💯'},
+        {name:'$150K',target:150000, icon:'🚀'},
+        {name:'$250K',target:250000, icon:'⭐'},
+        {name:'$500K',target:500000, icon:'💎'},
+        {name:'$750K',target:750000, icon:'👑'},
+        {name:'$1M',  target:1000000,icon:'🏆'},
+    ];
+
+    // Find the next milestone first (used for dots AND fill)
+    const nextIdx = milestones.findIndex(m => currentNW < m.target);
+
+    // Compute visual fill % aligned with evenly-spaced dot positions.
+    // Dots are spaced 1/(n-1) apart visually but milestones are NOT evenly
+    // distributed in $ value — so we interpolate within the current segment.
+    const n = milestones.length;
+    let visualPct;
+    if (nextIdx === -1) {
+        visualPct = 100; // past all milestones
+    } else if (nextIdx === 0) {
+        // Before the first milestone: scale from 0 to the 1st dot position
+        visualPct = Math.max(0, (currentNW / milestones[0].target) * (100 / (n - 1)));
+    } else {
+        const prevM = milestones[nextIdx - 1];
+        const nextM = milestones[nextIdx];
+        const segFrac = (currentNW - prevM.target) / (nextM.target - prevM.target);
+        visualPct = ((nextIdx - 1 + segFrac) / (n - 1)) * 100;
+    }
+
+    const fill = document.getElementById('ms-fill');
+    if (fill) fill.style.width = visualPct + '%';
+
+    const dots = milestones.map((m, i) => {
+        const done = currentNW >= m.target;
+        const isNext = i === nextIdx;
+        let cls = done ? ' done' : (isNext ? ' next' : '');
+        return `<div class="ms-circle${cls}" title="${m.name}">${done ? '✓' : m.icon}</div>`;
+    }).join('');
+
+    const labels = milestones.map(m => {
+        const done = currentNW >= m.target;
+        const months = (!done && monthlyGrowth > 0) ? Math.ceil((m.target - currentNW) / monthlyGrowth) : 0;
+        const eta = done ? '' : (months > 0 ? months + 'mo' : '∞');
+        const etaColor = done ? 'var(--green)' : (months > 0 && months < 24 ? 'var(--yellow)' : 'var(--text2)');
+        return `<div class="ms-label">
+            <div class="ms-name">${m.name}</div>
+            <div class="ms-eta" style="color:${etaColor}">${eta}</div>
+        </div>`;
+    }).join('');
+
+    gi('ms-dots', dots);
+    gi('ms-labels', labels);
+
+    const next = nextIdx >= 0 ? milestones[nextIdx] : null;
+    const remainToNext = next ? next.target - currentNW : 0;
+    const moToNext = (next && monthlyGrowth > 0) ? Math.ceil(remainToNext / monthlyGrowth) : 0;
+    const nextStr = next
+        ? ` &bull; Next: ${next.name} in ${moToNext > 0 ? moToNext + 'mo' : '∞'}`
+        : ' &bull; 🏆 All milestones reached!';
+
+    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${pct.toFixed(1)}% to $1M${nextStr}`);
+}
+
+// ── MONTE CARLO FIRE ──────────────────────────────────────────────────────────
+function renderMonteCarlo() {
+    const statsEl = document.getElementById('mc-stats');
+    if (!statsEl) return;
+
+    const currentNW   = getFilterNW();
+    const monthly     = getFilterMonthly();
+    const atPct       = getFilterAtPct();
+    const FIRE_TARGET = 1000000;
+    const SIMS        = 800;
+    const YEARS       = 15;
+
+    if (currentNW <= 0) {
+        gi('mc-stats', `<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data for simulation</div>`);
+        gi('mc-scenarios', '');
+        return;
+    }
+
+    // Annual return: use AT return clamped sensibly
+    const annualReturn = Math.max(0.04, Math.min(0.5, Math.abs(atPct > 0 ? atPct : 0.08)));
+    const meanMonthly  = annualReturn / 12;
+    const vol          = 0.045;  // 4.5% monthly volatility (crypto-heavy)
+
+    // Run simulations, tracking yearly snapshots
+    const tracks   = [];  // [sim][year 0..YEARS]
+    const fireYrs  = [];
+    for (let sim = 0; sim < SIMS; sim++) {
+        let value  = currentNW;
+        let fireYr = null;
+        const track = [value];
+        for (let mo = 0; mo < YEARS * 12; mo++) {
+            const u1 = Math.random(), u2 = Math.random();
+            const z  = Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
+            value = value * (1 + meanMonthly + z * vol) + monthly;
+            if ((mo + 1) % 12 === 0) track.push(Math.max(0, value));
+            if (value >= FIRE_TARGET && fireYr === null) fireYr = (mo + 1) / 12;
+        }
+        tracks.push(track);
+        if (fireYr !== null) fireYrs.push(fireYr);
+    }
+
+    // Percentile helper
+    function pct(arr, p) {
+        const s = [...arr].sort((a, b) => a - b);
+        return s[Math.floor(s.length * p)];
+    }
+
+    // Final values at YEARS
+    const finals = tracks.map(t => t[YEARS]);
+    const p10 = pct(finals, 0.10), p25 = pct(finals, 0.25);
+    const p50 = pct(finals, 0.50), p75 = pct(finals, 0.75);
+    const p90 = pct(finals, 0.90);
+    const fireProb   = (fireYrs.length / SIMS * 100).toFixed(0);
+    const medianFire = fireYrs.length > 0 ? pct(fireYrs, 0.5).toFixed(1) : '--';
+    const bestFire   = fireYrs.length > 0 ? Math.min(...fireYrs).toFixed(1) : '--';
+
+    // Stats boxes (8-box grid, 4 cols × 2 rows)
+    gi('mc-stats', `
+        <div class="mc-box"><div class="klbl">Bear (P10)</div><div class="kval neg">${fd(p10)}</div></div>
+        <div class="mc-box"><div class="klbl">Cautious (P25)</div><div class="kval warn">${fd(p25)}</div></div>
+        <div class="mc-box"><div class="klbl">Median (P50)</div><div class="kval pos">${fd(p50)}</div></div>
+        <div class="mc-box"><div class="klbl">Bull (P90)</div><div class="kval" style="color:var(--accent)">${fd(p90)}</div></div>
+        <div class="mc-box"><div class="klbl">FIRE Probability</div><div class="kval ${parseFloat(fireProb)>50?'pos':'warn'}">${fireProb}%</div></div>
+        <div class="mc-box"><div class="klbl">Median FIRE</div><div class="kval">${medianFire === '--' ? '—' : medianFire + ' yrs'}</div></div>
+        <div class="mc-box"><div class="klbl">Best-Case FIRE</div><div class="kval pos">${bestFire === '--' ? '—' : bestFire + ' yrs'}</div></div>
+        <div class="mc-box"><div class="klbl">Simulations</div><div class="kval">${SIMS.toLocaleString()}</div></div>
+    `);
+
+    // Scenarios panel
+    const bearAnnual = Math.max(0.01, annualReturn * 0.4);
+    const bullAnnual = Math.min(0.6,  annualReturn * 1.8);
+    function projFinal(ar) {
+        let v = currentNW;
+        const mm = ar / 12;
+        for (let mo = 0; mo < YEARS * 12; mo++) v = v * (1 + mm) + monthly;
+        return v;
+    }
+    gi('mc-scenarios', `
+        <div class="mc-scenario">
+            <div class="mc-scenario-title" style="color:var(--red)">🐻 Bear (${(bearAnnual*100).toFixed(0)}%/yr)</div>
+            <div class="mc-scenario-val">Final: <b>${fd(projFinal(bearAnnual))}</b></div>
+        </div>
+        <div class="mc-scenario">
+            <div class="mc-scenario-title" style="color:var(--green)">📈 Base (${(annualReturn*100).toFixed(0)}%/yr)</div>
+            <div class="mc-scenario-val">Final: <b>${fd(projFinal(annualReturn))}</b></div>
+        </div>
+        <div class="mc-scenario">
+            <div class="mc-scenario-title" style="color:var(--accent)">🚀 Bull (${(bullAnnual*100).toFixed(0)}%/yr)</div>
+            <div class="mc-scenario-val">Final: <b>${fd(projFinal(bullAnnual))}</b></div>
+        </div>
+    `);
+
+    gi('mc-footer', `${YEARS}-yr horizon &bull; Monthly contrib: ${fd(monthly)} &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
+    gi('mc-params', `Target $1M`);
+
+    // Fan chart: percentile bands over years
+    const yearLabels = Array.from({length: YEARS + 1}, (_, i) => i === 0 ? 'Now' : `Y${i}`);
+    const p10s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.10));
+    const p50s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.50));
+    const p90s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.90));
+    const fireTargetLine = yearLabels.map(() => FIRE_TARGET);
+
+    if (charts.monte) charts.monte.destroy();
+    const ctx = document.getElementById('mcChart');
+    if (ctx) {
+        charts.monte = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: yearLabels,
+                datasets: [
+                    {
+                        label: 'P90 (Bull)',
+                        data: p90s,
+                        borderColor: 'rgba(124,111,239,.8)',
+                        backgroundColor: 'rgba(124,111,239,.12)',
+                        fill: '+1',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.4,
+                    },
+                    {
+                        label: 'P50 (Median)',
+                        data: p50s,
+                        borderColor: '#00c896',
+                        backgroundColor: 'rgba(0,200,150,.08)',
+                        fill: '+1',
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        tension: 0.4,
+                    },
+                    {
+                        label: 'P10 (Bear)',
+                        data: p10s,
+                        borderColor: 'rgba(255,77,109,.7)',
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        borderWidth: 1.5,
+                        borderDash: [4, 3],
+                        pointRadius: 0,
+                        tension: 0.4,
+                    },
+                    {
+                        label: '$1M FIRE Target',
+                        data: fireTargetLine,
+                        borderColor: 'rgba(255,184,77,.6)',
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { color: '#7b82a0', font: { size: 10 }, boxWidth: 12, padding: 8 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ${fd(ctx.raw)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+                    y: {
+                        ticks: {
+                            color: '#7b82a0',
+                            maxTicksLimit: 5,
+                            callback: v => v >= 1e6 ? '$' + (v/1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v/1e3).toFixed(0) + 'k' : '$' + v
+                        },
+                        grid: { color: 'rgba(255,255,255,.05)' }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ── ASSETS ────────────────────────────────────────────────────────────────────
+function renderAssets() {
+    const assets=[];
+    for(let i=81;i<=92;i++){
+        const name=V(i,0); if(!name)continue;
+        assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});
+    }
+    const COLORS=['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
+    if(charts.assets)charts.assets.destroy();
+    const ctx=document.getElementById('assetsChart');
+    if(ctx){
+        charts.assets=new Chart(ctx,{
+            type:'doughnut',
+            data:{labels:assets.map(a=>`${a.name} (${a.plat})`),datasets:[{data:assets.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:10},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
+        });
+    }
+    const tbody=assets.map(a=>`<tr><td><b>${a.name}</b></td><td>${fq(a.qty)}</td><td class="sensitive">${fd(a.val)}</td><td>${a.type}</td><td>${a.plat}</td><td>${a.status}</td></tr>`).join('');
+    gi('assetsTable',`<table><thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody>${tbody}</tbody></table>`);
+}
+
+// ── YEARLY PERFORMANCE ────────────────────────────────────────────────────────
+function renderYearly() {
+    const years=[];
+    for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4)});}
+    if(charts.year)charts.year.destroy();
+    const ctx=document.getElementById('yearChart');
+    if(ctx){
+        charts.year=new Chart(ctx,{
+            type:'bar',
+            data:{labels:years.map(y=>y.yr),datasets:[{label:'Net Worth',data:years.map(y=>y.nw),backgroundColor:'#7c6fef',borderRadius:4},{label:'Total Assets',data:years.map(y=>y.ta),backgroundColor:'rgba(0,212,255,.35)',borderColor:'#00d4ff',borderWidth:1,borderRadius:4}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7b82a0',font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}},scales:{x:{ticks:{color:'#7b82a0'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#7b82a0',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'rgba(255,255,255,.05)'}}}}
+        });
+    }
+    const tbody=years.map(y=>`<tr><td><b>${y.yr}</b></td><td class="sensitive">${fd(y.nw)}</td><td>${typeof y.yoy==='number'?(y.yoy===0?'—':fp(y.yoy)):y.yoy}</td><td class="sensitive">${fd(y.ta)}</td><td>${fq(y.btc)} &#x20bf;</td></tr>`).join('');
+    gi('yearTable',`<table><thead><tr><th>Year</th><th>Net Worth</th><th>YoY</th><th>Total Assets</th><th>BTC</th></tr></thead><tbody>${tbody}</tbody></table>`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTROLS
+// ─────────────────────────────────────────────────────────────────────────────
+function setFilter(el) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    activeFilter = el.dataset.filter;
+    if (rows.length > 0) {
+        updateSectorHeaders();
+        renderSummary(); renderDebt(); renderProjections();
+        renderVelocity(); renderMilestone(); renderMonteCarlo(); renderYearly();
+    }
+}
+
+function doRefresh() {
+    // Do NOT null-out grid — that triggers re-creation and widget duplication.
+    // Just clear cached rows and re-fetch; initGrid() skips if grid exists.
+    rows = [];
+    loadData();
+}
+
+function applyLock(lock, save) {
+    isLocked = lock;
+    const btn = document.getElementById('lockBtn');
+    if (lock) {
+        grid && grid.enableMove(false) && grid.enableResize(false);
+        if (btn) { btn.textContent = '\uD83D\uDD12 Locked'; btn.classList.add('lock-on'); }
+    } else {
+        if (editMode) { grid && grid.enableMove(true) && grid.enableResize(true); }
+        if (btn) { btn.textContent = '\uD83D\uDD13 Unlocked'; btn.classList.remove('lock-on'); }
+    }
+    if (save) localStorage.setItem(LS.locked, lock ? 'true' : 'false');
+}
+
+function toggleLock() {
+    applyLock(!isLocked, true);
+    if (isLocked && editMode) { editMode = false; document.body.classList.remove('editing'); document.getElementById('editBtn').classList.remove('on'); }
+}
+
+function toggleEdit() {
+    if (isLocked) { toast('Unlock layout first', true); return; }
+    editMode = !editMode;
+    document.body.classList.toggle('editing', editMode);
+    document.getElementById('editBtn').classList.toggle('on', editMode);
+    if (grid) {
+        if (editMode) { grid.enableMove(true); grid.enableResize(true); }
+        else          { grid.enableMove(false); grid.enableResize(false); saveLayout(); toast('Layout saved', false); }
+    }
+}
+
+function togglePrivacy() {
+    privacyOn = !privacyOn;
+    document.body.classList.toggle('privacy', privacyOn);
+    document.getElementById('privacyBtn').classList.toggle('on', privacyOn);
+    localStorage.setItem(LS.privacy, privacyOn ? '1' : '0');
+}
+
+function setTheme(t) {
+    document.body.className = document.body.className.replace(/theme-\w+/g,'').trim();
+    if (t !== 'zhodler') document.body.classList.add('theme-' + t);
+    document.querySelectorAll('.tpill').forEach(p => p.classList.toggle('active', p.dataset.t === t));
+    localStorage.setItem(LS.theme, t);
+    if (rows.length > 0) { renderAssets(); renderYearly(); renderMonteCarlo(); }
+}
+
+function openSettings() {
+    document.getElementById('sheetInput').value = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
+    document.getElementById('modal').classList.add('open');
+}
+function closeSettings() { document.getElementById('modal').classList.remove('open'); }
+function saveAndReload() {
+    const raw = document.getElementById('sheetInput').value.trim();
+    if (!raw) return;
+    const m = raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    localStorage.setItem(LS.sheet, m ? m[1] : raw);
+    closeSettings();
+    rows = [];
+    loadData();
+}
+document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal'))closeSettings(); });
+
+function toast(msg, isErr) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show ' + (isErr ? 'err' : 'ok');
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+(function init() {
+    const theme = localStorage.getItem(LS.theme) || 'zhodler';
+    setTheme(theme);
+    if (localStorage.getItem(LS.privacy) === '1') togglePrivacy();
+    loadData();
+})();
+</script>
+</body>
+</html>
