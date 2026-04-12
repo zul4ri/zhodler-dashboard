@@ -40,37 +40,37 @@
 body{
     background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    font-size:14px; min-height:100vh;
+    font-size:clamp(11px,1.1vw,14px); min-height:100vh;
 }
 body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 
 /* ── HEADER ──────────────────────────────────────────────────────────────── */
 .header{
     display:flex; align-items:center; justify-content:space-between;
-    padding:10px 20px; background:var(--bg2);
+    padding:clamp(6px,0.8vh,10px) clamp(10px,1.4vw,20px); background:var(--bg2);
     border-bottom:1px solid var(--border);
     position:sticky; top:0; z-index:200;
-    flex-wrap:wrap; gap:8px;
+    flex-wrap:wrap; gap:6px;
 }
-.brand{font-size:22px;font-weight:700;color:var(--accent);letter-spacing:-.5px;}
-.ts{font-size:11px;color:var(--text2);margin-left:10px;}
-.hright{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.sep{width:1px;height:20px;background:var(--border);margin:0 2px;}
+.brand{font-size:clamp(15px,1.7vw,22px);font-weight:700;color:var(--accent);letter-spacing:-.5px;}
+.ts{font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-left:8px;}
+.hright{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.sep{width:1px;height:18px;background:var(--border);margin:0 2px;}
 
 .pill{
-    padding:5px 13px;border-radius:20px;
+    padding:clamp(3px,0.4vh,5px) clamp(7px,0.9vw,13px);border-radius:20px;
     border:1px solid var(--border); background:var(--card); color:var(--text2);
-    cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;user-select:none;
+    cursor:pointer;font-size:clamp(10px,0.9vw,12px);font-weight:500;
+    transition:all .15s;user-select:none;
 }
 .pill:hover{border-color:var(--accent);color:var(--accent);}
 .pill.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600;}
 
 .ibtn{
-    height:30px;min-width:30px;padding:0 8px;border-radius:6px;
-    border:1px solid var(--border);background:var(--card);color:var(--text2);
-    cursor:pointer;font-size:12px;font-weight:500;
-    display:flex;align-items:center;gap:5px;white-space:nowrap;
-    transition:all .15s;
+    height:clamp(24px,2.4vh,30px);min-width:clamp(24px,2.4vh,30px);padding:0 clamp(5px,0.6vw,8px);
+    border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);
+    cursor:pointer;font-size:clamp(10px,0.9vw,12px);font-weight:500;
+    display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s;
 }
 .ibtn:hover{border-color:var(--accent);color:var(--accent);}
 .ibtn.on{border-color:var(--green);color:var(--green);background:rgba(0,200,150,.1);}
@@ -78,7 +78,8 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 
 /* Theme dots */
 .tpill{
-    width:16px;height:16px;border-radius:50%;border:2px solid transparent;
+    width:clamp(12px,1.1vw,16px);height:clamp(12px,1.1vw,16px);
+    border-radius:50%;border:2px solid transparent;
     cursor:pointer;transition:all .15s;flex-shrink:0;
 }
 .tpill:hover,.tpill.active{border-color:var(--text);transform:scale(1.25);}
@@ -88,7 +89,7 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 .tpill[data-t="cyber"]  {background:linear-gradient(135deg,#34d399,#38bdf8);}
 
 /* ── GRIDSTACK OVERRIDES ─────────────────────────────────────────────────── */
-.grid-stack{background:transparent;padding:12px;}
+.grid-stack{background:transparent;padding:clamp(6px,0.8vw,12px);}
 .grid-stack-item-content{
     background:var(--card);border:1px solid var(--border);
     border-radius:10px;overflow:auto;
@@ -102,77 +103,87 @@ body.editing .grid-stack-item-content{
 /* ── WIDGET INTERNALS ────────────────────────────────────────────────────── */
 .whead{
     display:flex;align-items:center;justify-content:space-between;
-    padding:10px 14px 8px;flex-shrink:0;
-    border-bottom:1px solid var(--border);
-    cursor:grab;
+    padding:clamp(6px,0.8vh,10px) clamp(8px,1.1vw,14px);flex-shrink:0;
+    border-bottom:1px solid var(--border);cursor:grab;
 }
 .whead:active{cursor:grabbing;}
 .wsector{
-    font-size:13px;font-weight:700;color:var(--text);
+    font-size:clamp(11px,1.1vw,13px);font-weight:700;color:var(--text);
     line-height:1.1;margin-bottom:2px;
 }
 .wtitle{
-    font-size:9px;font-weight:500;color:var(--text2);
+    font-size:clamp(7px,0.72vw,9px);font-weight:500;color:var(--text2);
     text-transform:uppercase;letter-spacing:1px;
 }
-.wbody{padding:12px 14px;flex:1;overflow:auto;}
+.wbody{padding:clamp(8px,1vh,12px) clamp(8px,1.1vw,14px);flex:1;overflow:auto;}
 
 /* ── KPI ─────────────────────────────────────────────────────────────────── */
-.krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px;}
-.kpi{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;}
-.klbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
-.kval{font-size:15px;font-weight:700;line-height:1.2;}
-.ksub{font-size:11px;color:var(--text2);margin-top:3px;}
+.krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(95px,10vw,135px),1fr));gap:clamp(5px,0.55vw,8px);}
+.kpi{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:clamp(7px,0.9vh,10px) clamp(8px,0.9vw,12px);}
+.klbl{font-size:clamp(8px,0.82vw,10px);color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.kval{font-size:clamp(12px,1.3vw,15px);font-weight:700;line-height:1.2;}
+.ksub{font-size:clamp(9px,0.88vw,11px);color:var(--text2);margin-top:2px;}
 .pos{color:var(--green);} .neg{color:var(--red);} .warn{color:var(--yellow);}
 
 /* Progress bar */
-.pbar{height:4px;background:var(--bg);border-radius:2px;margin-top:7px;overflow:hidden;}
+.pbar{height:4px;background:var(--bg);border-radius:2px;margin-top:6px;overflow:hidden;}
 .pfill{height:100%;background:var(--accent);border-radius:2px;}
 
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
-.twrap{overflow-x:auto;margin-top:8px;}
-table{width:100%;border-collapse:collapse;font-size:12px;}
-th{color:var(--text2);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:500;white-space:nowrap;}
-td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;}
+.twrap{overflow-x:auto;margin-top:6px;}
+table{width:100%;border-collapse:collapse;font-size:clamp(10px,1vw,12px);}
+th{color:var(--text2);text-align:left;padding:clamp(3px,0.4vh,5px) clamp(5px,0.7vw,8px);
+   border-bottom:1px solid var(--border);font-size:clamp(8px,0.82vw,10px);
+   text-transform:uppercase;letter-spacing:.5px;font-weight:500;white-space:nowrap;}
+td{padding:clamp(4px,0.5vh,6px) clamp(5px,0.7vw,8px);
+   border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(255,255,255,.025);}
 
 /* ── CHART ───────────────────────────────────────────────────────────────── */
-.chwrap{position:relative;min-height:140px;flex:1;}
+.chwrap{position:relative;min-height:clamp(100px,14vh,140px);flex:1;}
 
 /* ── MONTE CARLO ─────────────────────────────────────────────────────────── */
-.mc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-.mc-box{text-align:center;padding:7px 5px;background:var(--card2);border:1px solid var(--border);border-radius:7px;}
-.mc-box .klbl{margin-bottom:3px;font-size:9px;}
-.mc-box .kval{font-size:12px;font-weight:700;}
-.mc-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;}
-.mc-scenario{padding:7px 8px;background:var(--card2);border:1px solid var(--border);border-radius:7px;}
-.mc-scenario-title{font-size:10px;font-weight:600;margin-bottom:4px;}
-.mc-scenario-val{font-size:11px;color:var(--text2);}
+.mc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(4px,0.5vw,6px);margin-bottom:clamp(5px,0.7vh,8px);}
+.mc-box{text-align:center;padding:clamp(5px,0.7vh,7px) clamp(3px,0.4vw,5px);
+        background:var(--card2);border:1px solid var(--border);border-radius:7px;}
+.mc-box .klbl{margin-bottom:2px;font-size:clamp(7px,0.72vw,9px);}
+.mc-box .kval{font-size:clamp(10px,1.1vw,12px);font-weight:700;}
+.mc-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(4px,0.5vw,6px);margin-bottom:clamp(5px,0.7vh,8px);}
+.mc-scenario{padding:clamp(5px,0.7vh,7px) clamp(6px,0.7vw,8px);
+             background:var(--card2);border:1px solid var(--border);border-radius:7px;}
+.mc-scenario-title{font-size:clamp(8px,0.88vw,10px);font-weight:600;margin-bottom:3px;}
+.mc-scenario-val{font-size:clamp(9px,0.9vw,11px);color:var(--text2);}
 
 /* ── MILESTONE ───────────────────────────────────────────────────────────── */
 .ms-outer{padding:4px 0;}
-.ms-track{position:relative;height:32px;margin:0 13px;}
+.ms-track{position:relative;height:clamp(24px,3.2vh,32px);margin:0 13px;}
 .ms-line{position:absolute;top:50%;left:0;right:0;height:3px;background:var(--card2);border-radius:2px;transform:translateY(-50%);z-index:0;}
 .ms-fill{position:absolute;top:50%;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transform:translateY(-50%);z-index:1;}
 .ms-dots{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;z-index:2;}
-.ms-circle{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .2s;}
-.ms-circle.done{background:var(--green);border-color:var(--green);color:#000;font-size:12px;}
+.ms-circle{width:clamp(18px,2vw,26px);height:clamp(18px,2vw,26px);border-radius:50%;
+           border:2px solid var(--border);background:var(--card);
+           display:flex;align-items:center;justify-content:center;
+           font-size:clamp(8px,0.9vw,10px);flex-shrink:0;transition:all .2s;}
+.ms-circle.done{background:var(--green);border-color:var(--green);color:#000;}
 .ms-circle.next{border-color:var(--accent);box-shadow:0 0 8px rgba(124,111,239,.5);}
-.ms-labels{display:flex;justify-content:space-between;margin:5px 0 0 0;}
-.ms-label{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0;}
-.ms-name{font-size:9px;color:var(--text2);text-align:center;white-space:nowrap;}
-.ms-eta{font-size:8px;margin-top:1px;text-align:center;}
+.ms-labels{display:flex;justify-content:space-between;margin:4px 0 0 0;}
+.ms-label{display:flex;flex-direction:column;align-items:center;width:clamp(18px,2vw,26px);flex-shrink:0;}
+.ms-name{font-size:clamp(6px,0.68vw,9px);color:var(--text2);text-align:center;white-space:nowrap;}
+.ms-eta{font-size:clamp(5px,0.62vw,8px);margin-top:1px;text-align:center;}
+.ms-legend{font-size:clamp(8px,0.82vw,10px);color:var(--text2);
+           margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.ms-legend-bar{width:24px;height:3px;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;flex-shrink:0;}
 
-/* ── VELOCITY SPARK ──────────────────────────────────────────────────────── */
-.vel-hero{text-align:center;padding:10px 0 4px;}
-.vel-hero .kval{font-size:28px;}
+/* ── VELOCITY ────────────────────────────────────────────────────────────── */
+.vel-hero{text-align:center;padding:clamp(6px,1vh,10px) 0 4px;}
+.vel-hero .kval{font-size:clamp(18px,2.2vw,28px);}
 
 /* ── TOAST ───────────────────────────────────────────────────────────────── */
 #toast{
     position:fixed;bottom:20px;right:20px;
     background:var(--card2);border:1px solid var(--border);
-    border-radius:8px;padding:9px 14px;font-size:12px;
+    border-radius:8px;padding:9px 14px;font-size:clamp(10px,1vw,12px);
     opacity:0;pointer-events:none;transition:opacity .25s;z-index:999;max-width:280px;
 }
 #toast.show{opacity:1;}
@@ -182,16 +193,16 @@ tr:hover td{background:rgba(255,255,255,.025);}
 /* ── MODAL ───────────────────────────────────────────────────────────────── */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;}
 .modal.open{display:flex;}
-.mbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;width:460px;max-width:95vw;}
-.mtitle{font-size:15px;font-weight:600;margin-bottom:16px;}
+.mbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:clamp(16px,2vw,22px);width:460px;max-width:95vw;}
+.mtitle{font-size:clamp(13px,1.3vw,15px);font-weight:600;margin-bottom:16px;}
 .mrow{margin-bottom:14px;}
-.mlabel{font-size:11px;color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px;}
-.minput{width:100%;padding:8px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;}
+.mlabel{font-size:clamp(9px,0.9vw,11px);color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px;}
+.minput{width:100%;padding:8px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:clamp(11px,1.1vw,13px);}
 .minput:focus{outline:none;border-color:var(--accent);}
 .mactions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
-.mprimary{padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#000;cursor:pointer;font-size:13px;font-weight:600;}
-.mcancel{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:13px;}
-.mgray{padding:8px 14px;background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px;}
+.mprimary{padding:8px 16px;background:var(--accent);border:none;border-radius:6px;color:#000;cursor:pointer;font-size:clamp(11px,1.1vw,13px);font-weight:600;}
+.mcancel{padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:clamp(11px,1.1vw,13px);}
+.mgray{padding:8px 14px;background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:clamp(11px,1.1vw,13px);}
 .mrow-row{display:flex;gap:8px;}
 
 /* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
@@ -200,7 +211,22 @@ tr:hover td{background:rgba(255,255,255,.025);}
     display:flex;align-items:center;justify-content:center;
     z-index:300;flex-direction:column;gap:10px;
 }
-#loadOverlay .brand{font-size:32px;}
+#loadOverlay .brand{font-size:clamp(22px,2.5vw,32px);}
+
+/* ── RESPONSIVE BREAKPOINTS ──────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+    .mc-stats{grid-template-columns:repeat(4,1fr);}   /* stays 4-col down to 1100 */
+}
+@media (max-width: 860px) {
+    .mc-stats{grid-template-columns:repeat(2,1fr);}
+    .mc-scenarios{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width: 600px) {
+    .mc-scenarios{grid-template-columns:1fr;}
+    .krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}
+    .header{gap:4px;}
+    .ibtn{padding:0 5px;}
+}
     </style>
 </head>
 <body>
@@ -349,9 +375,10 @@ const WIDGET_HTML = {
                 <div class="kpi"><div class="klbl">Momentum</div><div class="kval" id="vel-momentum">--</div></div>
             </div>
         </div>`,
-    'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Milestone Timeline</div></div></div>
+    'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div></div>
         <div class="wbody">
             <div class="ms-outer">
+                <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:5px;text-align:center">Tracking <strong style="color:var(--text1)">Net Worth</strong> toward $1M &mdash; bar fills between reached milestone dots</div>
                 <div class="ms-track">
                     <div class="ms-line"></div>
                     <div class="ms-fill" id="ms-fill"></div>
@@ -359,7 +386,7 @@ const WIDGET_HTML = {
                 </div>
                 <div class="ms-labels" id="ms-labels"></div>
             </div>
-            <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text2);" id="ms-status"></div>
+            <div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>
         </div>`,
     'w-monte':`<div class="whead"><div><div class="wsector" id="monteFilter">Portfolio</div><div class="wtitle">Monte Carlo FIRE Simulation</div></div><span style="font-size:10px;color:var(--text2);" id="mc-params"></span></div>
         <div class="wbody">
@@ -396,6 +423,12 @@ const DEFAULT_LAYOUT = [
 // ─────────────────────────────────────────────────────────────────────────────
 // GRIDSTACK INIT  (called once on first successful data load)
 // ─────────────────────────────────────────────────────────────────────────────
+// ── RESPONSIVE CELL HEIGHT ────────────────────────────────────────────────────
+// Scale grid rows with viewport height: ~55px on small screens, up to ~95px on large
+function calcCellHeight() {
+    return Math.max(52, Math.min(95, Math.round(window.innerHeight / 14)));
+}
+
 function initGrid() {
     if (grid) return;
 
@@ -405,7 +438,7 @@ function initGrid() {
 
     grid = GridStack.init({
         column: 12,
-        cellHeight: 80,
+        cellHeight: calcCellHeight(),
         margin: 0,
         float: false,
         animate: true,
@@ -433,6 +466,15 @@ function initGrid() {
     if (localStorage.getItem(LS.locked) === 'true') {
         applyLock(true, false);
     }
+
+    // Update cell height whenever the window is resized
+    let _rhTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_rhTimer);
+        _rhTimer = setTimeout(() => {
+            if (grid) grid.cellHeight(calcCellHeight());
+        }, 150);
+    });
 }
 
 function saveLayout() {
@@ -621,49 +663,39 @@ function renderBtc() {
     );
 }
 
-// ── LIQUID ASSETS HELPERS ─────────────────────────────────────────────────────
-const LIQUID_EXCLUDE = ['real estate', 'realestate', 'motorbike', 'motorcycle'];
-function isLiquidExcluded(type) {
-    const t = (type || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    return LIQUID_EXCLUDE.some(e => t.includes(e));
-}
-function getLiquidAssets() {
-    let total = 0;
-    for (let i = 81; i <= 92; i++) {
-        const name = V(i, 0); if (!name) continue;
-        if (isLiquidExcluded(V(i, 3))) continue;
-        total += N(i, 2);
-    }
-    return total;
-}
-
 // ── FILTER-AWARE DATA ACCESSORS ───────────────────────────────────────────────
-// These return the right row values based on the active filter so all widgets
-// can call the same helpers instead of hard-coding portfolio rows.
+// Liquid = Crypto NW + TradFi NW (sheet pre-computes both; no exclusion logic needed)
 function getFilterNW() {
     if (activeFilter === 'crypto')  return N(32);
     if (activeFilter === 'tradfi')  return N(44);
-    if (activeFilter === 'liquid')  return Math.max(0, getLiquidAssets() - N(59));
+    if (activeFilter === 'liquid')  return N(32) + N(44);
     return N(6); // portfolio
 }
 function getFilterMonthly() {
     if (activeFilter === 'crypto')  return N(36);
     if (activeFilter === 'tradfi')  return N(48);
-    return N(10); // portfolio (also used for liquid — best approximation)
+    if (activeFilter === 'liquid')  return N(36) + N(48);
+    return N(10); // portfolio
 }
 function getFilterDaily() {
     if (activeFilter === 'crypto')  return N(35);
     if (activeFilter === 'tradfi')  return N(47);
+    if (activeFilter === 'liquid')  return N(35) + N(47);
     return N(9);
 }
 function getFilterAtMonthly() {
     if (activeFilter === 'crypto')  return N(40);
     if (activeFilter === 'tradfi')  return N(52);
+    if (activeFilter === 'liquid')  return N(40) + N(52);
     return N(14);
 }
 function getFilterAtPct() {
     if (activeFilter === 'crypto')  return N(38);
     if (activeFilter === 'tradfi')  return N(50);
+    if (activeFilter === 'liquid') {
+        const ci = N(30), ti = N(42), total = ci + ti;
+        return total > 0 ? (N(38) * ci + N(50) * ti) / total : N(12);
+    }
     return N(12);
 }
 
@@ -686,18 +718,29 @@ function renderSummary() {
     updateSectorHeaders();
     let html;
     if (activeFilter === 'liquid') {
-        const liquidA = getLiquidAssets();
-        const debt    = N(59);
-        const liquidNW= Math.max(0, liquidA - debt);
-        const dm      = getFilterMonthly();
-        const dd      = getFilterDaily();
+        const d = {
+            a:   N(27) + N(41),
+            inv: N(30) + N(42),
+            nw:  N(32) + N(44),
+            yd:  N(33) + N(45),
+            yp:  (N(30)+N(42)) > 0 ? (N(33)+N(45)) / (N(30)+N(42)) : 0,
+            dd:  N(35) + N(47),
+            dm:  N(36) + N(48),
+            ad:  N(37) + N(49),
+            ap:  getFilterAtPct(),
+            ald: N(39) + N(51),
+            alm: N(40) + N(52)
+        };
         html =
-            kpi('Liquid Assets',         fd(liquidA),  '','sensitive') +
-            kpi('Total Portfolio Debt',  fd(debt),     '','sensitive') +
-            kpi('Approx. Net Worth',     fd(liquidNW), '','sensitive') +
-            kpi('Avg Monthly (YTD)',     fd(dm),       '(portfolio rate)', cc(dm)) +
-            kpi('Avg Daily (YTD)',       fd(dd),       '(portfolio rate)', cc(dd)) +
-            `<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:10px;color:var(--text2)">Excludes real estate &amp; motorbike. Gains use portfolio rates.</div></div>`;
+            kpi('Total Assets',          fd(d.a),   '','sensitive') +
+            kpi('Total Invested',         fd(d.inv), '','sensitive') +
+            kpi('Net Worth',              fd(d.nw),  '','sensitive') +
+            kpi('YTD Gain/Loss',          fd(d.yd),  fp(d.yp), cc(d.yd)) +
+            kpi('All-Time Gain/Loss',     fd(d.ad),  fp(d.ap), cc(d.ad)) +
+            kpi('Avg Daily (YTD)',        fd(d.dd),  '', cc(d.dd)) +
+            kpi('Avg Monthly (YTD)',      fd(d.dm),  '', cc(d.dm)) +
+            kpi('Avg Daily (All-Time)',   fd(d.ald), '', cc(d.ald)) +
+            kpi('Avg Monthly (All-Time)', fd(d.alm), '', cc(d.alm));
     } else {
         let d;
         if (activeFilter==='portfolio') {
@@ -726,11 +769,15 @@ function renderSummary() {
 
 function renderDebt() {
     let html='';
-    if (activeFilter==='portfolio' || activeFilter==='liquid') {
+    if (activeFilter==='portfolio') {
         html = kpi('Total Debt',   fd(N(59)),'','neg sensitive') +
                kpi('Crypto Debt', fd(N(60)),'','sensitive') +
                kpi('TradFi Debt', fd(N(69)),'','sensitive');
-        if (activeFilter==='liquid') html += `<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:10px;color:var(--text2)">Debt is portfolio-wide (not liquid-specific)</div></div>`;
+    } else if (activeFilter==='liquid') {
+        const lDebt = N(60) + N(69);
+        html = kpi('Total Liquid Debt', fd(lDebt),'','neg sensitive') +
+               kpi('Crypto Debt',       fd(N(60)),'','sensitive') +
+               kpi('TradFi Debt',       fd(N(69)),'','sensitive');
     } else if (activeFilter==='crypto') {
         const dl=N(64),cl=N(68);
         html = kpi('Total Crypto Debt', fd(N(60)),'','neg sensitive') +
@@ -761,7 +808,7 @@ function renderProjections() {
                kpi('1 Year',   fd(N(77)),'',cc(N(77))) +
                kpi('5 Years',  fd(N(78)),'',cc(N(78)));
     } else if (activeFilter==='liquid') {
-        // Estimate projections using liquid NW + portfolio monthly rate
+        // Estimate projections using liquid NW (Crypto + TradFi) and their combined rates
         const lnw   = getFilterNW();
         const dm    = getFilterMonthly();
         const yr    = N(1); // year progress (decimal)
@@ -877,7 +924,8 @@ function renderMilestone() {
         ? ` &bull; Next: ${next.name} in ${moToNext > 0 ? moToNext + 'mo' : '∞'}`
         : ' &bull; 🏆 All milestones reached!';
 
-    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${visualPct.toFixed(1)}% to $1M${nextStr}`);
+    const actualPct = Math.min(100, (currentNW / 1000000) * 100);
+    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${actualPct.toFixed(1)}% of $1M goal${nextStr}`);
 }
 
 // ── MONTE CARLO FIRE ──────────────────────────────────────────────────────────
