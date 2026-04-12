@@ -217,6 +217,10 @@ body[data-filter="tradfi"] .wsector[id]{
     font-size:clamp(11px,2.2cqi,15px);font-weight:700;color:var(--text);
     letter-spacing:-.2px;
 }
+.wsub{
+    font-size:clamp(8px,1.6cqi,10px);color:var(--text2);
+    font-style:italic;margin-top:1px;letter-spacing:.1px;
+}
 .wbody{
     padding:clamp(8px,1.1vh,14px) clamp(10px,1.2vw,16px);
     flex:1;overflow:auto;
@@ -461,7 +465,7 @@ tr:hover td{background:color-mix(in srgb,var(--accent) 4%,transparent);}
 const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
 const LS = {
     sheet:   'zh-sheet-id',
-    layout:  'zh-layout-v7',  // bumped: 24-col CSS fix
+    layout:  'zh-layout-v8',  // bumped: removed duplicate cards, added subtitles
     theme:   'zh-theme',
     locked:  'zh-locked',
     privacy: 'zh-privacy',
@@ -526,52 +530,50 @@ function sv(id,val,colorCls){
 // WIDGET DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: build a stat card template
-function _sc(sector, sectorId, title, valId, cls, subId, titleId) {
+function _sc(sector, sectorId, title, valId, cls, subId, titleId, subtitle) {
     const sEl = sectorId ? `<div class="wsector" id="${sectorId}">${sector}</div>` : `<div class="wsector">${sector}</div>`;
     const tEl = titleId  ? `<div class="wtitle" id="${titleId}">${title}</div>` : `<div class="wtitle">${title}</div>`;
+    const stEl = subtitle ? `<div class="wsub">${subtitle}</div>` : '';
     const vCls = `stat-val${cls?' '+cls:''}`;
     const sub  = subId ? `<div class="stat-sub" id="${subId}"></div>` : '';
-    return `<div class="whead"><div>${sEl}${tEl}</div></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
+    return `<div class="whead"><div>${sEl}${tEl}${stEl}</div></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
 }
 
 const WIDGET_HTML = {
-    // ── GLOBAL (kept as small summary card) ──────────────────────────────────
-    'w-global': `<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div></div></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
+    // ── GLOBAL (kept as grouped KPI card) ────────────────────────────────────
+    'w-global': `<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div><div class="wsub">Days tracked · Year %</div></div></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
 
     // ── SUMMARY — individual cards ───────────────────────────────────────────
-    'w-c-nw':         _sc('Portfolio','s-sec-nw',        'Net Worth',            'c-nw',         'hero sensitive'),
-    'w-c-assets':     _sc('Portfolio','s-sec-assets',    'Total Assets',         'c-assets',     'sensitive'),
-    'w-c-invested':   _sc('Portfolio','s-sec-invested',  'Total Invested',       'c-invested',   'sensitive'),
-    'w-c-ytd':        _sc('Portfolio','s-sec-ytd',       'YTD Gain/Loss',        'c-ytd',        'sensitive', 'c-ytd-sub'),
-    'w-c-atgain':     _sc('Portfolio','s-sec-atgain',    'All-Time Gain',        'c-atgain',     'sensitive', 'c-atgain-sub'),
-    'w-c-monthly-ytd':_sc('Portfolio','s-sec-myt',       'Monthly Avg (YTD)',    'c-monthly-ytd','sensitive'),
-    'w-c-daily-ytd':  _sc('Portfolio','s-sec-dyt',       'Daily Avg (YTD)',      'c-daily-ytd',  'sensitive'),
-    'w-c-monthly-at': _sc('Portfolio','s-sec-mat',       'Monthly Avg (All‑Time)','c-monthly-at','sensitive'),
-    'w-c-daily-at':   _sc('Portfolio','s-sec-dat',       'Daily Avg (All‑Time)', 'c-daily-at',   'sensitive'),
+    'w-c-nw':          _sc('Portfolio','s-sec-nw',        'Net Worth',         'c-nw',          'hero sensitive', null,          null,               'Current balance'),
+    'w-c-assets':      _sc('Portfolio','s-sec-assets',    'Total Assets',      'c-assets',      'sensitive',      null,          null,               'All holdings'),
+    'w-c-invested':    _sc('Portfolio','s-sec-invested',  'Total Invested',    'c-invested',    'sensitive',      null,          null,               'Capital deployed'),
+    'w-c-ytd':         _sc('Portfolio','s-sec-ytd',       'YTD Gain / Loss',   'c-ytd',         'sensitive',      'c-ytd-sub',   null,               'Since Jan 1'),
+    'w-c-atgain':      _sc('Portfolio','s-sec-atgain',    'All-Time Gain',     'c-atgain',      'sensitive',      'c-atgain-sub',null,               'Since inception'),
+    'w-c-monthly-ytd': _sc('Portfolio','s-sec-myt',       'Monthly Avg',       'c-monthly-ytd', 'sensitive',      null,          null,               'YTD average'),
+    'w-c-daily-ytd':   _sc('Portfolio','s-sec-dyt',       'Daily Avg',         'c-daily-ytd',   'sensitive',      null,          null,               'YTD average'),
+    'w-c-monthly-at':  _sc('Portfolio','s-sec-mat',       'Monthly Avg',       'c-monthly-at',  'sensitive',      null,          null,               'All-time average'),
+    'w-c-daily-at':    _sc('Portfolio','s-sec-dat',       'Daily Avg',         'c-daily-at',    'sensitive',      null,          null,               'All-time average'),
 
-    // ── VELOCITY — individual cards ──────────────────────────────────────────
-    'w-c-vel-annual':  _sc('Portfolio','vel-sec-annual',  'Annual Rate',         'c-vel-annual',  'hero sensitive'),
-    'w-c-vel-monthly': _sc('Portfolio','vel-sec-monthly', 'Monthly Rate',        'c-vel-monthly', 'sensitive'),
-    'w-c-vel-daily':   _sc('Portfolio','vel-sec-daily',   'Daily Rate',          'c-vel-daily',   'sensitive'),
-    'w-c-vel-nw':      _sc('Portfolio','vel-sec-nw',      'Net Worth',           'c-vel-nw',      'sensitive'),
-    'w-c-vel-momentum':_sc('Portfolio','vel-sec-mom',     'Momentum',            'c-vel-momentum',''),
+    // ── VELOCITY — unique cards only (monthly/daily/nw removed — duplicates of Summary) ──
+    'w-c-vel-annual':  _sc('Portfolio','vel-sec-annual',  'Annual Rate',       'c-vel-annual',  'hero sensitive', null,          null,               'YTD × 12 months'),
+    'w-c-vel-momentum':_sc('Portfolio','vel-sec-mom',     'Momentum',          'c-vel-momentum','',               null,          null,               'vs all-time avg'),
 
     // ── PROJECTIONS — individual cards ───────────────────────────────────────
-    'w-c-eoy': _sc('Portfolio','proj-sec-eoy','End of Year','c-proj-eoy','sensitive','c-proj-eoy-sub'),
-    'w-c-1y':  _sc('Portfolio','proj-sec-1y', '1 Year',     'c-proj-1y', 'sensitive','c-proj-1y-sub'),
-    'w-c-5y':  _sc('Portfolio','proj-sec-5y', '5 Years',    'c-proj-5y', 'sensitive','c-proj-5y-sub'),
+    'w-c-eoy': _sc('Portfolio','proj-sec-eoy','End of Year', 'c-proj-eoy','sensitive','c-proj-eoy-sub',null,'Dec 31 estimate'),
+    'w-c-1y':  _sc('Portfolio','proj-sec-1y', '1-Year',      'c-proj-1y', 'sensitive','c-proj-1y-sub', null,'12 months ahead'),
+    'w-c-5y':  _sc('Portfolio','proj-sec-5y', '5-Year',      'c-proj-5y', 'sensitive','c-proj-5y-sub', null,'60 months ahead'),
 
     // ── DEBT — individual cards ───────────────────────────────────────────────
-    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',    'c-debt-total',  'sensitive'),
-    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',   'c-debt-crypto', 'sensitive', null, 'c-debt-crypto-lbl'),
-    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',   'c-debt-tradfi', 'sensitive', null, 'c-debt-tradfi-lbl'),
+    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',        'c-debt-total',  'sensitive', null,'c-debt-total-lbl', 'All categories'),
+    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',       'c-debt-crypto', 'sensitive', null,'c-debt-crypto-lbl','DeFi + CeFi'),
+    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',       'c-debt-tradfi', 'sensitive', null,'c-debt-tradfi-lbl','Bank + personal'),
 
     // ── BTC — individual cards ────────────────────────────────────────────────
-    'w-c-btc-value':    _sc('Market', null, 'BTC Value',    'c-btc-value',    'sensitive'),
-    'w-c-btc-price':    _sc('Market', null, 'BTC Price',    'c-btc-price',    ''),
-    'w-c-btc-holdings': _sc('Market', null, 'BTC Holdings', 'c-btc-holdings', ''),
-    'w-c-btc-since':    _sc('Market', null, 'Since Start',  'c-btc-since',    ''),
-    'w-c-btc-ytd':      _sc('Market', null, 'BTC YTD',      'c-btc-ytd',      ''),
+    'w-c-btc-value':    _sc('Market', null,'BTC Value',    'c-btc-value',    'sensitive',null,null,'At spot price'),
+    'w-c-btc-price':    _sc('Market', null,'BTC Price',    'c-btc-price',    '',         null,null,'USD spot'),
+    'w-c-btc-holdings': _sc('Market', null,'BTC Holdings', 'c-btc-holdings', '',         null,null,'Total in portfolio'),
+    'w-c-btc-since':    _sc('Market', null,'% Since Start','c-btc-since',    '',         null,null,'vs entry price'),
+    'w-c-btc-ytd':      _sc('Market', null,'BTC YTD',      'c-btc-ytd',      '',         null,null,'Year-to-date'),
     'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div></div>
         <div class="wbody">
             <div class="ms-outer">
@@ -619,12 +621,9 @@ const DEFAULT_LAYOUT = [
     {id:'w-c-monthly-at',   x:16, y:4,  w:4,  h:3},
     {id:'w-c-daily-at',     x:20, y:4,  w:4,  h:3},
 
-    // ── Row 7 — Velocity detail + Global (h=3) ──────────────────────────────
-    {id:'w-c-vel-monthly',  x:0,  y:7,  w:4,  h:3},
-    {id:'w-c-vel-daily',    x:4,  y:7,  w:4,  h:3},
-    {id:'w-c-vel-nw',       x:8,  y:7,  w:4,  h:3},
-    {id:'w-c-vel-momentum', x:12, y:7,  w:4,  h:3},
-    {id:'w-global',         x:16, y:7,  w:8,  h:3},
+    // ── Row 7 — Velocity unique + Global (monthly/daily/nw removed — duplicates) ──
+    {id:'w-c-vel-momentum', x:0,  y:7,  w:6,  h:3},
+    {id:'w-global',         x:6,  y:7,  w:18, h:3},
 
     // ── Row 10 — Projections + BTC (h=3) ────────────────────────────────────
     {id:'w-c-eoy',          x:0,  y:10, w:4,  h:3},
