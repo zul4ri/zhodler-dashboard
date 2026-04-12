@@ -282,6 +282,25 @@ tr:hover td{background:color-mix(in srgb,var(--accent) 4%,transparent);}
 }
 #loadOverlay .brand{font-size:clamp(28px,3vw,40px);}
 
+/* ── INDIVIDUAL STAT CARDS ───────────────────────────────────────────────── */
+.stat-body{
+    display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:center;
+    padding:clamp(10px,1.4vh,18px) clamp(14px,1.6vw,22px);
+    flex:1;min-height:0;overflow:hidden;
+}
+.stat-val{
+    font-size:clamp(18px,2.2vw,28px);font-weight:900;
+    line-height:1.1;letter-spacing:-.5px;white-space:nowrap;
+}
+.stat-val.hero{
+    font-size:clamp(24px,3.4vw,46px);
+    letter-spacing:-1.5px;
+}
+.stat-sub{
+    font-size:clamp(10px,0.95vw,13px);color:var(--text2);margin-top:5px;
+}
+
 /* ── RESPONSIVE BREAKPOINTS ──────────────────────────────────────────────── */
 @media (max-width: 1100px) {
     .mc-stats{grid-template-columns:repeat(4,1fr);}
@@ -373,7 +392,7 @@ tr:hover td{background:color-mix(in srgb,var(--accent) 4%,transparent);}
 const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
 const LS = {
     sheet:   'zh-sheet-id',
-    layout:  'zh-layout-v5',
+    layout:  'zh-layout-v6',  // bumped: individual stat cards
     theme:   'zh-theme',
     locked:  'zh-locked',
     privacy: 'zh-privacy',
@@ -424,26 +443,66 @@ function cc(n){return n>0?'pos':n<0?'neg':'';}
 function lc(v){return v<0.5?'pos':v<0.75?'warn':'neg';}
 function kpi(label,val,sub,cls){return`<div class="kpi"><div class="klbl">${label}</div><div class="kval ${cls||''} sensitive">${val}</div>${sub?`<div class="ksub">${sub}</div>`:''}</div>`;}
 function gi(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
+// sv — set a stat-card value element; optionally update its color class
+function sv(id,val,colorCls){
+    const el=document.getElementById(id); if(!el)return;
+    el.textContent=val;
+    if(colorCls!==undefined){
+        el.className=el.className.replace(/\b(pos|neg|warn)\b/g,'').trim();
+        if(colorCls) el.classList.add(colorCls);
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIDGET DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
+// Helper: build a stat card template
+function _sc(sector, sectorId, title, valId, cls, subId, titleId) {
+    const sEl = sectorId ? `<div class="wsector" id="${sectorId}">${sector}</div>` : `<div class="wsector">${sector}</div>`;
+    const tEl = titleId  ? `<div class="wtitle" id="${titleId}">${title}</div>` : `<div class="wtitle">${title}</div>`;
+    const vCls = `stat-val${cls?' '+cls:''}`;
+    const sub  = subId ? `<div class="stat-sub" id="${subId}"></div>` : '';
+    return `<div class="whead"><div>${sEl}${tEl}</div></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
+}
+
 const WIDGET_HTML = {
+    // ── GLOBAL (kept as small summary card) ──────────────────────────────────
     'w-global': `<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div></div></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
-    'w-btc':    `<div class="whead"><div><div class="wsector">Market</div><div class="wtitle">BTC Overview</div></div></div><div class="wbody"><div class="krow" id="btcKpis"></div></div>`,
-    'w-summary':`<div class="whead"><div><div class="wsector" id="summaryFilter">Portfolio</div><div class="wtitle">Summary</div></div></div><div class="wbody"><div class="krow" id="summaryKpis"></div></div>`,
-    'w-debt':   `<div class="whead"><div><div class="wsector" id="debtFilter">Portfolio</div><div class="wtitle">Debt &amp; Liabilities</div></div></div><div class="wbody"><div class="krow" id="debtKpis"></div></div>`,
-    'w-proj':   `<div class="whead"><div><div class="wsector" id="projFilter">Portfolio</div><div class="wtitle">Projections</div></div></div><div class="wbody"><div class="krow" id="projKpis"></div></div>`,
-    'w-velocity':`<div class="whead"><div><div class="wsector" id="velFilter">Portfolio</div><div class="wtitle">Net Worth Velocity</div></div></div>
-        <div class="wbody">
-            <div class="vel-hero"><div class="klbl">Annualised Rate</div><div class="kval sensitive" id="vel-annual">--</div></div>
-            <div class="krow" style="margin-top:10px;">
-                <div class="kpi"><div class="klbl">Monthly</div><div class="kval sensitive" id="vel-monthly">--</div></div>
-                <div class="kpi"><div class="klbl">Daily</div><div class="kval sensitive" id="vel-daily">--</div></div>
-                <div class="kpi"><div class="klbl">Current Net Worth</div><div class="kval sensitive" id="vel-nw">--</div></div>
-                <div class="kpi"><div class="klbl">Momentum</div><div class="kval" id="vel-momentum">--</div></div>
-            </div>
-        </div>`,
+
+    // ── SUMMARY — individual cards ───────────────────────────────────────────
+    'w-c-nw':         _sc('Portfolio','s-sec-nw',        'Net Worth',            'c-nw',         'hero sensitive'),
+    'w-c-assets':     _sc('Portfolio','s-sec-assets',    'Total Assets',         'c-assets',     'sensitive'),
+    'w-c-invested':   _sc('Portfolio','s-sec-invested',  'Total Invested',       'c-invested',   'sensitive'),
+    'w-c-ytd':        _sc('Portfolio','s-sec-ytd',       'YTD Gain/Loss',        'c-ytd',        'sensitive', 'c-ytd-sub'),
+    'w-c-atgain':     _sc('Portfolio','s-sec-atgain',    'All-Time Gain',        'c-atgain',     'sensitive', 'c-atgain-sub'),
+    'w-c-monthly-ytd':_sc('Portfolio','s-sec-myt',       'Monthly Avg (YTD)',    'c-monthly-ytd','sensitive'),
+    'w-c-daily-ytd':  _sc('Portfolio','s-sec-dyt',       'Daily Avg (YTD)',      'c-daily-ytd',  'sensitive'),
+    'w-c-monthly-at': _sc('Portfolio','s-sec-mat',       'Monthly Avg (All‑Time)','c-monthly-at','sensitive'),
+    'w-c-daily-at':   _sc('Portfolio','s-sec-dat',       'Daily Avg (All‑Time)', 'c-daily-at',   'sensitive'),
+
+    // ── VELOCITY — individual cards ──────────────────────────────────────────
+    'w-c-vel-annual':  _sc('Portfolio','vel-sec-annual',  'Annual Rate',         'c-vel-annual',  'hero sensitive'),
+    'w-c-vel-monthly': _sc('Portfolio','vel-sec-monthly', 'Monthly Rate',        'c-vel-monthly', 'sensitive'),
+    'w-c-vel-daily':   _sc('Portfolio','vel-sec-daily',   'Daily Rate',          'c-vel-daily',   'sensitive'),
+    'w-c-vel-nw':      _sc('Portfolio','vel-sec-nw',      'Net Worth',           'c-vel-nw',      'sensitive'),
+    'w-c-vel-momentum':_sc('Portfolio','vel-sec-mom',     'Momentum',            'c-vel-momentum',''),
+
+    // ── PROJECTIONS — individual cards ───────────────────────────────────────
+    'w-c-eoy': _sc('Portfolio','proj-sec-eoy','End of Year','c-proj-eoy','sensitive','c-proj-eoy-sub'),
+    'w-c-1y':  _sc('Portfolio','proj-sec-1y', '1 Year',     'c-proj-1y', 'sensitive','c-proj-1y-sub'),
+    'w-c-5y':  _sc('Portfolio','proj-sec-5y', '5 Years',    'c-proj-5y', 'sensitive','c-proj-5y-sub'),
+
+    // ── DEBT — individual cards ───────────────────────────────────────────────
+    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',    'c-debt-total',  'sensitive'),
+    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',   'c-debt-crypto', 'sensitive', null, 'c-debt-crypto-lbl'),
+    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',   'c-debt-tradfi', 'sensitive', null, 'c-debt-tradfi-lbl'),
+
+    // ── BTC — individual cards ────────────────────────────────────────────────
+    'w-c-btc-value':    _sc('Market', null, 'BTC Value',    'c-btc-value',    'sensitive'),
+    'w-c-btc-price':    _sc('Market', null, 'BTC Price',    'c-btc-price',    ''),
+    'w-c-btc-holdings': _sc('Market', null, 'BTC Holdings', 'c-btc-holdings', ''),
+    'w-c-btc-since':    _sc('Market', null, 'Since Start',  'c-btc-since',    ''),
+    'w-c-btc-ytd':      _sc('Market', null, 'BTC YTD',      'c-btc-ytd',      ''),
     'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div></div>
         <div class="wbody">
             <div class="ms-outer">
@@ -477,16 +536,47 @@ const WIDGET_HTML = {
 };
 
 const DEFAULT_LAYOUT = [
-    {id:'w-global',   x:0,  y:0,  w:8,  h:2},
-    {id:'w-btc',      x:8,  y:0,  w:4,  h:2},
-    {id:'w-summary',  x:0,  y:2,  w:12, h:3},
-    {id:'w-debt',     x:0,  y:5,  w:6,  h:3},
-    {id:'w-proj',     x:6,  y:5,  w:6,  h:3},
-    {id:'w-velocity', x:0,  y:8,  w:4,  h:3},
-    {id:'w-milestone',x:4,  y:8,  w:8,  h:3},
-    {id:'w-assets',   x:0,  y:11, w:7,  h:5},
-    {id:'w-yearly',   x:7,  y:11, w:5,  h:5},
-    {id:'w-monte',    x:0,  y:16, w:12, h:6},
+    // ── Row 0 — Hero metrics (h=3) ──────────────────────────────────────────
+    {id:'w-c-nw',           x:0,  y:0,  w:3, h:3},
+    {id:'w-c-vel-annual',   x:3,  y:0,  w:3, h:3},
+    {id:'w-c-assets',       x:6,  y:0,  w:3, h:3},
+    {id:'w-c-invested',     x:9,  y:0,  w:3, h:3},
+
+    // ── Row 3 — YTD / AT metrics (h=2) ─────────────────────────────────────
+    {id:'w-c-ytd',          x:0,  y:3,  w:2, h:2},
+    {id:'w-c-atgain',       x:2,  y:3,  w:2, h:2},
+    {id:'w-c-monthly-ytd',  x:4,  y:3,  w:2, h:2},
+    {id:'w-c-daily-ytd',    x:6,  y:3,  w:2, h:2},
+    {id:'w-c-monthly-at',   x:8,  y:3,  w:2, h:2},
+    {id:'w-c-daily-at',     x:10, y:3,  w:2, h:2},
+
+    // ── Row 5 — Velocity detail + Global (h=2) ──────────────────────────────
+    {id:'w-c-vel-monthly',  x:0,  y:5,  w:2, h:2},
+    {id:'w-c-vel-daily',    x:2,  y:5,  w:2, h:2},
+    {id:'w-c-vel-nw',       x:4,  y:5,  w:2, h:2},
+    {id:'w-c-vel-momentum', x:6,  y:5,  w:2, h:2},
+    {id:'w-global',         x:8,  y:5,  w:4, h:2},
+
+    // ── Row 7 — Projections + BTC (h=2) ────────────────────────────────────
+    {id:'w-c-eoy',          x:0,  y:7,  w:2, h:2},
+    {id:'w-c-1y',           x:2,  y:7,  w:2, h:2},
+    {id:'w-c-5y',           x:4,  y:7,  w:2, h:2},
+    {id:'w-c-btc-value',    x:6,  y:7,  w:2, h:2},
+    {id:'w-c-btc-price',    x:8,  y:7,  w:2, h:2},
+    {id:'w-c-btc-holdings', x:10, y:7,  w:2, h:2},
+
+    // ── Row 9 — Debt + BTC misc (h=2) ──────────────────────────────────────
+    {id:'w-c-debt-total',   x:0,  y:9,  w:2, h:2},
+    {id:'w-c-debt-crypto',  x:2,  y:9,  w:2, h:2},
+    {id:'w-c-debt-tradfi',  x:4,  y:9,  w:2, h:2},
+    {id:'w-c-btc-since',    x:6,  y:9,  w:2, h:2},
+    {id:'w-c-btc-ytd',      x:8,  y:9,  w:2, h:2},
+
+    // ── Row 11+ — Chart widgets ─────────────────────────────────────────────
+    {id:'w-milestone',      x:0,  y:11, w:12, h:3},
+    {id:'w-assets',         x:0,  y:14, w:7,  h:5},
+    {id:'w-yearly',         x:7,  y:14, w:5,  h:5},
+    {id:'w-monte',          x:0,  y:19, w:12, h:6},
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -722,14 +812,12 @@ function renderGlobal() {
 }
 
 function renderBtc() {
-    const h=N(54),p=N(55),cs=N(56),cy=N(57);
-    gi('btcKpis',
-        kpi('Holdings', fq(h)+' &#x20bf;') +
-        kpi('BTC Price', fd(p)) +
-        kpi('BTC Value', fd(h*p),'','sensitive') +
-        kpi('Since Start', fp(cs),'',cc(cs)) +
-        kpi('YTD Change', fp(cy),'',cc(cy))
-    );
+    const h=N(54), p=N(55), cs=N(56), cy=N(57);
+    sv('c-btc-holdings', fq(h)+' ₿');
+    sv('c-btc-price',    fd(p));
+    sv('c-btc-value',    fd(h*p));
+    sv('c-btc-since',    fp(cs), cc(cs));
+    sv('c-btc-ytd',      fp(cy), cc(cy));
 }
 
 // ── FILTER-AWARE DATA ACCESSORS ───────────────────────────────────────────────
@@ -776,154 +864,111 @@ function getSectorLabel() {
 }
 function updateSectorHeaders() {
     const lbl = getSectorLabel();
-    ['summaryFilter','debtFilter','projFilter','velFilter',
-     'milestoneFilter','monteFilter','yearlyFilter'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = lbl;
-    });
+    [
+        // summary cards
+        's-sec-nw','s-sec-assets','s-sec-invested','s-sec-ytd','s-sec-atgain',
+        's-sec-myt','s-sec-dyt','s-sec-mat','s-sec-dat',
+        // velocity cards
+        'vel-sec-annual','vel-sec-monthly','vel-sec-daily','vel-sec-nw','vel-sec-mom',
+        // projection cards
+        'proj-sec-eoy','proj-sec-1y','proj-sec-5y',
+        // debt cards
+        'debt-sec-total','debt-sec-crypto','debt-sec-tradfi',
+        // chart widgets
+        'milestoneFilter','monteFilter','yearlyFilter',
+    ].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=lbl; });
 }
 
 function renderSummary() {
     updateSectorHeaders();
-    let html;
+    let d;
     if (activeFilter === 'liquid') {
-        const d = {
-            a:   N(27) + N(41),
-            inv: N(30) + N(42),
-            nw:  N(32) + N(44),
-            yd:  N(33) + N(45),
-            yp:  (N(30)+N(42)) > 0 ? (N(33)+N(45)) / (N(30)+N(42)) : 0,
-            dd:  N(35) + N(47),
-            dm:  N(36) + N(48),
-            ad:  N(37) + N(49),
-            ap:  getFilterAtPct(),
-            ald: N(39) + N(51),
-            alm: N(40) + N(52)
-        };
-        html =
-            kpi('Total Assets',          fd(d.a),   '','sensitive') +
-            kpi('Total Invested',         fd(d.inv), '','sensitive') +
-            kpi('Net Worth',              fd(d.nw),  '','sensitive') +
-            kpi('YTD Gain/Loss',          fd(d.yd),  fp(d.yp), cc(d.yd)) +
-            kpi('All-Time Gain/Loss',     fd(d.ad),  fp(d.ap), cc(d.ad)) +
-            kpi('Avg Daily (YTD)',        fd(d.dd),  '', cc(d.dd)) +
-            kpi('Avg Monthly (YTD)',      fd(d.dm),  '', cc(d.dm)) +
-            kpi('Avg Daily (All-Time)',   fd(d.ald), '', cc(d.ald)) +
-            kpi('Avg Monthly (All-Time)', fd(d.alm), '', cc(d.alm));
-    } else {
-        let d;
-        if (activeFilter==='portfolio') {
-            d={a:N(3),inv:N(4),nw:N(6),yd:N(7),yp:N(8),dd:N(9),dm:N(10),ad:N(11),ap:N(12),ald:N(13),alm:N(14)};
-        } else if (activeFilter==='crypto') {
-            d={a:N(27),inv:N(30),nw:N(32),yd:N(33),yp:N(34),dd:N(35),dm:N(36),ad:N(37),ap:N(38),ald:N(39),alm:N(40),defi:N(28),cefi:N(29)};
-        } else {
-            d={a:N(41),inv:N(42),nw:N(44),yd:N(45),yp:N(46),dd:N(47),dm:N(48),ad:N(49),ap:N(50),ald:N(51),alm:N(52)};
-        }
-        html =
-            kpi('Total Assets',         fd(d.a),   '','sensitive') +
-            kpi('Total Invested',        fd(d.inv), '','sensitive') +
-            kpi('Current Net Worth',     fd(d.nw),  '','sensitive') +
-            kpi('YTD Gain/Loss',         fd(d.yd),  fp(d.yp), cc(d.yd)) +
-            kpi('All-Time Gain/Loss',    fd(d.ad),  fp(d.ap), cc(d.ad)) +
-            kpi('Avg Daily (YTD)',       fd(d.dd),  '', cc(d.dd)) +
-            kpi('Avg Monthly (YTD)',     fd(d.dm),  '', cc(d.dm)) +
-            kpi('Avg Daily (All-Time)',  fd(d.ald), '', cc(d.ald)) +
-            kpi('Avg Monthly (All-Time)',fd(d.alm), '', cc(d.alm));
-        if (activeFilter==='crypto') {
-            html += kpi('DeFi Value',fd(d.defi),'','sensitive') + kpi('CeFi Value',fd(d.cefi),'','sensitive');
-        }
+        d = { a:N(27)+N(41), inv:N(30)+N(42), nw:N(32)+N(44),
+              yd:N(33)+N(45), yp:(N(30)+N(42))>0?(N(33)+N(45))/(N(30)+N(42)):0,
+              dd:N(35)+N(47), dm:N(36)+N(48),
+              ad:N(37)+N(49), ap:getFilterAtPct(), ald:N(39)+N(51), alm:N(40)+N(52) };
+    } else if (activeFilter === 'portfolio') {
+        d = {a:N(3),inv:N(4),nw:N(6),yd:N(7),yp:N(8),dd:N(9),dm:N(10),ad:N(11),ap:N(12),ald:N(13),alm:N(14)};
+    } else if (activeFilter === 'crypto') {
+        d = {a:N(27),inv:N(30),nw:N(32),yd:N(33),yp:N(34),dd:N(35),dm:N(36),ad:N(37),ap:N(38),ald:N(39),alm:N(40)};
+    } else { // tradfi
+        d = {a:N(41),inv:N(42),nw:N(44),yd:N(45),yp:N(46),dd:N(47),dm:N(48),ad:N(49),ap:N(50),ald:N(51),alm:N(52)};
     }
-    gi('summaryKpis', html);
+    sv('c-nw',          fd(d.nw));
+    sv('c-assets',      fd(d.a));
+    sv('c-invested',    fd(d.inv));
+    sv('c-ytd',         fd(d.yd),         cc(d.yd));  gi('c-ytd-sub',    fp(d.yp));
+    sv('c-atgain',      fd(d.ad),         cc(d.ad));  gi('c-atgain-sub', fp(d.ap));
+    sv('c-monthly-ytd', fd(d.dm)+'/mo',   cc(d.dm));
+    sv('c-daily-ytd',   fd(d.dd)+'/day',  cc(d.dd));
+    sv('c-monthly-at',  fd(d.alm)+'/mo',  cc(d.alm));
+    sv('c-daily-at',    fd(d.ald)+'/day', cc(d.ald));
 }
 
 function renderDebt() {
-    let html='';
-    if (activeFilter==='portfolio') {
-        html = kpi('Total Debt',   fd(N(59)),'','neg sensitive') +
-               kpi('Crypto Debt', fd(N(60)),'','sensitive') +
-               kpi('TradFi Debt', fd(N(69)),'','sensitive');
-    } else if (activeFilter==='liquid') {
-        const lDebt = N(60) + N(69);
-        html = kpi('Total Liquid Debt', fd(lDebt),'','neg sensitive') +
-               kpi('Crypto Debt',       fd(N(60)),'','sensitive') +
-               kpi('TradFi Debt',       fd(N(69)),'','sensitive');
-    } else if (activeFilter==='crypto') {
-        const dl=N(64),cl=N(68);
-        html = kpi('Total Crypto Debt', fd(N(60)),'','neg sensitive') +
-               kpi('Crypto Collateral', fd(N(61)),'','sensitive') +
-               kpi('DeFi Debt',         fd(N(62)),'','sensitive') +
-               kpi('DeFi Collateral',   fd(N(63)),'','sensitive') +
-               kpi('Compound LTV',      fp(dl).replace('+',''),'',lc(dl)) +
-               kpi('Liq. Price',        fd(N(65)),'','neg') +
-               kpi('CeFi Debt',         fd(N(66)),'','sensitive') +
-               kpi('CeFi Collateral',   fd(N(67)),'','sensitive') +
-               kpi('Bybit LTV',         fp(cl).replace('+',''),'',lc(cl));
-    } else {
-        html = kpi('Total TradFi Debt', fd(N(69)),'','neg sensitive') +
-               kpi('Bank Debt',         fd(N(70)),'','sensitive') +
-               kpi('Debt to Andreia',   fd(N(71)),'','sensitive');
+    updateSectorHeaders();
+    let total, lbl1, val1, lbl2, val2;
+    if (activeFilter === 'portfolio') {
+        total=N(59);      lbl1='Crypto Debt';    val1=N(60); lbl2='TradFi Debt';    val2=N(69);
+    } else if (activeFilter === 'liquid') {
+        total=N(60)+N(69);lbl1='Crypto Debt';    val1=N(60); lbl2='TradFi Debt';    val2=N(69);
+    } else if (activeFilter === 'crypto') {
+        total=N(60);      lbl1='DeFi Debt';      val1=N(62); lbl2='CeFi Debt';      val2=N(66);
+    } else { // tradfi
+        total=N(69);      lbl1='Bank Debt';       val1=N(70); lbl2='Andreia Debt';   val2=N(71);
     }
-    gi('debtKpis', html);
+    sv('c-debt-total',  fd(total), 'neg');
+    sv('c-debt-crypto', fd(val1));
+    sv('c-debt-tradfi', fd(val2));
+    gi('c-debt-crypto-lbl', lbl1);
+    gi('c-debt-tradfi-lbl', lbl2);
 }
 
 function renderProjections() {
-    let html='';
-    if (activeFilter==='portfolio') {
-        html = kpi('End of Year',fd(N(73)),'',cc(N(73))) +
-               kpi('1 Year',    fd(N(74)),'',cc(N(74))) +
-               kpi('5 Years',   fd(N(75)),'',cc(N(75)));
-    } else if (activeFilter==='crypto') {
-        html = kpi('Crypto EOY',fd(N(76)),'',cc(N(76))) +
-               kpi('1 Year',   fd(N(77)),'',cc(N(77))) +
-               kpi('5 Years',  fd(N(78)),'',cc(N(78)));
-    } else if (activeFilter==='liquid') {
-        // Estimate projections using liquid NW (Crypto + TradFi) and their combined rates
-        const lnw   = getFilterNW();
-        const dm    = getFilterMonthly();
-        const yr    = N(1); // year progress (decimal)
-        const moLeft= Math.round((1 - yr) * 12);
-        const eoy   = lnw + dm * moLeft;
-        const yr1   = lnw + dm * 12;
-        // 5-yr compound using AT return rate
-        const ar    = Math.max(0.04, Math.min(0.5, Math.abs(getFilterAtPct())));
-        const mm    = ar / 12;
-        let v5      = lnw;
-        for (let m = 0; m < 60; m++) v5 = v5 * (1 + mm) + dm;
-        html = kpi('Liquid EOY',  fd(eoy), '(est.)', cc(eoy)) +
-               kpi('1 Year',      fd(yr1), '(est.)', cc(yr1)) +
-               kpi('5 Years',     fd(v5),  '(est.)', cc(v5));
-    } else {
-        html=`<div class="kpi"><div class="klbl">Note</div><div class="kval" style="font-size:12px;color:var(--text2)">No TradFi projections in sheet</div></div>`;
+    updateSectorHeaders();
+    if (activeFilter === 'tradfi') {
+        sv('c-proj-eoy','N/A'); gi('c-proj-eoy-sub','no data');
+        sv('c-proj-1y', 'N/A'); gi('c-proj-1y-sub', 'no data');
+        sv('c-proj-5y', 'N/A'); gi('c-proj-5y-sub', 'no data');
+        return;
     }
-    gi('projKpis', html);
+    let eoy, yr1, v5, sub='';
+    if (activeFilter === 'portfolio') {
+        eoy=N(73); yr1=N(74); v5=N(75);
+    } else if (activeFilter === 'crypto') {
+        eoy=N(76); yr1=N(77); v5=N(78);
+    } else { // liquid — estimated
+        const lnw=getFilterNW(), dm=getFilterMonthly(), yr=N(1);
+        const moLeft=Math.round((1-yr)*12);
+        eoy=lnw+dm*moLeft; yr1=lnw+dm*12;
+        const ar=Math.max(0.04,Math.min(0.5,Math.abs(getFilterAtPct())));
+        v5=lnw; for(let m=0;m<60;m++) v5=v5*(1+ar/12)+dm;
+        sub='est.';
+    }
+    sv('c-proj-eoy', fd(eoy), cc(eoy)); gi('c-proj-eoy-sub', sub);
+    sv('c-proj-1y',  fd(yr1), cc(yr1)); gi('c-proj-1y-sub',  sub);
+    sv('c-proj-5y',  fd(v5),  cc(v5));  gi('c-proj-5y-sub',  sub);
 }
 
 // ── NET WORTH VELOCITY ────────────────────────────────────────────────────────
 function renderVelocity() {
+    updateSectorHeaders();
     const monthly   = getFilterMonthly();
     const daily     = getFilterDaily();
     const nw        = getFilterNW();
     const annual    = monthly * 12;
+    const momentum  = monthly - getFilterAtMonthly();
 
-    // YoY acceleration: compare YTD avg vs all-time avg
-    const atMonthly = getFilterAtMonthly();
-    const momentum  = monthly - atMonthly;
+    sv('c-vel-annual',  fd(annual)+'/yr',  cc(annual));
+    sv('c-vel-monthly', fd(monthly)+'/mo', cc(monthly));
+    sv('c-vel-daily',   fd(daily)+'/day',  cc(daily));
+    sv('c-vel-nw',      fd(nw));
 
-    gi('vel-annual', fd(annual)+'/yr');
-    gi('vel-monthly', fd(monthly)+'/mo');
-    gi('vel-daily', fd(daily)+'/day');
-    gi('vel-nw', fd(nw));
-
-    const mEl = document.getElementById('vel-annual');
-    const annualCls = cc(annual); if (mEl && annualCls) mEl.classList.add(annualCls);
-    const moEl = document.getElementById('vel-monthly');
-    const monthlyCls = cc(monthly); if (moEl && monthlyCls) moEl.classList.add(monthlyCls);
-
-    const momEl = document.getElementById('vel-momentum');
+    const momEl = document.getElementById('c-vel-momentum');
     if (momEl) {
-        momEl.textContent = (momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating');
-        momEl.innerHTML = momEl.textContent;
-        momEl.className = 'kval ' + cc(momentum);
+        momEl.innerHTML = momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating';
+        momEl.className = momEl.className.replace(/\b(pos|neg|warn)\b/g,'').trim();
+        const cls = cc(momentum); if(cls) momEl.classList.add(cls);
     }
 }
 
