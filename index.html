@@ -133,7 +133,8 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
     inset:0 !important;
     transition:border-color .2s;
     position:relative;
-    container-type:inline-size;
+    padding: 16px 18px 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04) inset;
 }
 .grid-stack-item-content:hover{
     border-color:rgba(255,255,255,.22);
@@ -156,14 +157,23 @@ body.editing .grid-stack-item-content{
 /* Header section — flex:1 — grows at rate 1
    --sh / --sw written by ResizeObserver so child fonts scale to actual size  */
 .whead{
-    display:flex; align-items:flex-start; justify-content:space-between;
-    padding:clamp(8px,1vh,14px) clamp(12px,1.5vw,20px);
-    border-bottom:1px solid var(--border); cursor:grab;
+    display:flex; flex-direction:column;
+    align-items:flex-start; justify-content:center;
+    padding:0; cursor:grab;
     background:transparent;
     flex:1; min-height:65px; overflow:visible;
     --sh:65px; --sw:300px;
+    gap: min(calc(var(--sh) * .055), 10px);
 }
 .whead:active{cursor:grabbing;}
+
+/* Gradient divider between header and body — matches portfolio-card design */
+.wdivider{
+    height:1px;
+    background:linear-gradient(90deg, var(--border) 0%, transparent 100%);
+    flex-shrink:0;
+    margin: 5px 0;
+}
 
 /* Proportional fonts for all widget headers — driven by --sh / --sw */
 .whead .wsector{ font-size:max(10px, min(calc(var(--sh) * .17), calc(var(--sw) * .065))); }
@@ -195,11 +205,11 @@ body[data-filter="tradfi"] .wsector[id]{
 }
 /* Base type styles (font-size overridden by .whead .wtitle / .whead .wsub above) */
 .wtitle{ font-weight:700; color:var(--text); letter-spacing:0; }
-.wsub  { color:var(--text2); margin-top:3px; font-style:normal; text-transform:uppercase; letter-spacing:.5px; }
+.wsub  { color:var(--text2); margin-top:0; font-style:normal; text-transform:uppercase; letter-spacing:.5px; }
 
 /* Body section — flex:5 — grows 5× faster than the header */
 .wbody{
-    padding:clamp(8px,1vh,14px) clamp(10px,1.2vw,16px);
+    padding:0;
     flex:5; min-height:80px; overflow:auto;
     display:flex; flex-direction:column; justify-content:center;
     --sh:80px; --sw:300px;
@@ -334,10 +344,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
    min-height:70px gives 1.5× the original minimum content sizes. */
 .stat-head {
     min-height: 70px;
-    flex-direction: column;   /* stack badge → title → subtitle vertically */
-    justify-content: center;
-    gap: min(calc(var(--sh, 70px) * 0.05), 8px);
     --sh: 70px;
+    /* flex-direction:column, justify-content:center, gap all inherited from .whead */
 }
 
 /* Body section — main value + secondary value */
@@ -468,7 +476,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
 const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
 const LS = {
     sheet:   'zh-sheet-id',
-    layout:  'zh-layout-v8',  // bumped: removed duplicate cards, added subtitles
+    layout:  'zh-layout-v9',  // bumped: full portfolio-card structure on all widgets
     theme:   'zh-theme',
     locked:  'zh-locked',
     privacy: 'zh-privacy',
@@ -588,13 +596,14 @@ function _sc(sector, sectorId, title, valId, cls, subId, titleId, subtitle) {
     const vCls = `stat-val${cls?' '+cls:''}`;
     const sub  = subId ? `<div class="stat-sub" id="${subId}"></div>` : '';
     // whead + stat-head: header section (flex:1) — direct children, no inner wrapper
+    // .wdivider: gradient line between header and body
     // stat-body: body section (flex:5, grows 5× faster)
-    return `<div class="whead stat-head">${sEl}${tEl}${stEl}</div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
+    return `<div class="whead stat-head">${sEl}${tEl}${stEl}</div><div class="wdivider"></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
 }
 
 const WIDGET_HTML = {
     // ── GLOBAL (kept as grouped KPI card) ────────────────────────────────────
-    'w-global': `<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div><div class="wsub">Days tracked · Year %</div></div></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
+    'w-global': `<div class="whead"><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div><div class="wsub">Days tracked · Year %</div></div><div class="wdivider"></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
 
     // ── SUMMARY — individual cards ───────────────────────────────────────────
     'w-c-nw':          _sc('Portfolio','s-sec-nw',        'Net Worth',         'c-nw',          'hero sensitive', null,          null,               'Current balance'),
@@ -627,7 +636,7 @@ const WIDGET_HTML = {
     'w-c-btc-holdings': _sc('Market', null,'BTC Holdings', 'c-btc-holdings', '',         null,null,'Total in portfolio'),
     'w-c-btc-since':    _sc('Market', null,'% Since Start','c-btc-since',    '',         null,null,'vs entry price'),
     'w-c-btc-ytd':      _sc('Market', null,'BTC YTD',      'c-btc-ytd',      '',         null,null,'Year-to-date'),
-    'w-milestone':`<div class="whead"><div><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div></div>
+    'w-milestone':`<div class="whead"><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div><div class="wdivider"></div>
         <div class="wbody">
             <div class="ms-outer">
                 <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:5px;text-align:center">Tracking <strong style="color:var(--text1)">Net Worth</strong> toward $1M &mdash; bar fills between reached milestone dots</div>
@@ -640,19 +649,19 @@ const WIDGET_HTML = {
             </div>
             <div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>
         </div>`,
-    'w-monte':`<div class="whead"><div><div class="wsector" id="monteFilter">Portfolio</div><div class="wtitle">Monte Carlo FIRE Simulation</div></div><span style="font-size:10px;color:var(--text2);" id="mc-params"></span></div>
+    'w-monte':`<div class="whead"><div class="wsector" id="monteFilter">Portfolio</div><div class="wtitle">Monte Carlo FIRE Simulation</div><div class="wsub" id="mc-params"></div></div><div class="wdivider"></div>
         <div class="wbody">
             <div class="mc-stats" id="mc-stats"></div>
             <div class="mc-scenarios" id="mc-scenarios"></div>
             <div class="chwrap" style="min-height:140px;"><canvas id="mcChart"></canvas></div>
             <div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>
         </div>`,
-    'w-assets':`<div class="whead"><div><div class="wsector">Portfolio</div><div class="wtitle">Assets Distribution</div></div></div>
+    'w-assets':`<div class="whead"><div class="wsector">Portfolio</div><div class="wtitle">Assets Distribution</div></div><div class="wdivider"></div>
         <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
             <div class="chwrap" style="min-height:220px;flex:2;"><canvas id="assetsChart"></canvas></div>
             <div class="twrap" id="assetsTable" style="flex:1;"></div>
         </div>`,
-    'w-yearly':`<div class="whead"><div><div class="wsector" id="yearlyFilter">Portfolio</div><div class="wtitle">Yearly Performance</div></div></div>
+    'w-yearly':`<div class="whead"><div class="wsector" id="yearlyFilter">Portfolio</div><div class="wtitle">Yearly Performance</div></div><div class="wdivider"></div>
         <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
             <div class="chwrap"><canvas id="yearChart"></canvas></div>
             <div class="twrap" id="yearTable"></div>
