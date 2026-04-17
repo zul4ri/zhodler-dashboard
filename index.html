@@ -156,7 +156,7 @@ body.editing .grid-stack-item-content{
 /* ── WIDGET INTERNALS ────────────────────────────────────────────────────── */
 .whead{
     display:flex; align-items:flex-start; justify-content:space-between;
-    padding:clamp(6px,0.8vh,10px) clamp(10px,1.2vw,16px); flex-shrink:0;
+    padding:clamp(10px,1.2vh,16px) clamp(12px,1.5vw,20px); flex-shrink:0;
     border-bottom:1px solid var(--border); cursor:grab;
     background:transparent;
 }
@@ -165,8 +165,8 @@ body.editing .grid-stack-item-content{
 /* Sector badge — small label pill */
 .wsector{
     display:inline-flex; align-items:center;
-    padding:1px 7px; border-radius:3px; margin-bottom:3px;
-    font-size:clamp(7px,1.2cqi,10px); font-weight:700;
+    padding:2px 10px; border-radius:3px; margin-bottom:5px;
+    font-size:clamp(11px,2cqi,16px); font-weight:700;
     letter-spacing:1px; text-transform:uppercase;
     transition:color .2s, background .2s, border-color .2s;
     /* default = accent */
@@ -195,12 +195,12 @@ body[data-filter="tradfi"] .wsector[id]{
     border-color:color-mix(in srgb,var(--f-trad) 25%,transparent);
 }
 .wtitle{
-    font-size:clamp(10px,1.8cqi,14px); font-weight:700; color:var(--text);
+    font-size:clamp(16px,3.2cqi,24px); font-weight:700; color:var(--text);
     letter-spacing:0;
 }
 .wsub{
-    font-size:clamp(8px,1.2cqi,10px); color:var(--text2);
-    margin-top:2px; font-style:normal;
+    font-size:clamp(12px,2cqi,17px); color:var(--text2);
+    margin-top:3px; font-style:normal;
     text-transform:uppercase; letter-spacing:.5px;
 }
 .wbody{
@@ -219,9 +219,9 @@ body[data-filter="tradfi"] .wsector[id]{
     container-type:inline-size;
 }
 .kpi:hover{border-color:rgba(255,255,255,.22);}
-.klbl{font-size:clamp(7px,8cqi,10px);color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;font-weight:600;}
-.kval{font-size:clamp(12px,11cqi,22px);font-weight:800;line-height:1.15;letter-spacing:-.3px;}
-.ksub{font-size:clamp(9px,7cqi,11px);color:var(--text2);margin-top:3px;}
+.klbl{font-size:clamp(10px,12cqi,15px);color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;font-weight:600;}
+.kval{font-size:clamp(16px,17cqi,32px);font-weight:800;line-height:1.15;letter-spacing:-.3px;}
+.ksub{font-size:clamp(11px,10cqi,16px);color:var(--text2);margin-top:4px;}
 .pos{color:var(--green);} .neg{color:var(--red);} .warn{color:var(--yellow);}
 
 /* Progress bar */
@@ -230,12 +230,12 @@ body[data-filter="tradfi"] .wsector[id]{
 
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 .twrap{overflow-x:auto;margin-top:6px;}
-table{width:100%;border-collapse:collapse;font-size:clamp(10px,1vw,12px);}
-th{color:var(--text2);text-align:left;padding:clamp(4px,0.5vh,7px) clamp(6px,0.8vw,10px);
-   border-bottom:1px solid var(--border);font-size:clamp(8px,0.78vw,10px);
+table{width:100%;border-collapse:collapse;font-size:clamp(12px,1.2vw,15px);}
+th{color:var(--text2);text-align:left;padding:clamp(5px,0.6vh,9px) clamp(8px,0.9vw,12px);
+   border-bottom:1px solid var(--border);font-size:clamp(11px,1.05vw,14px);
    text-transform:uppercase;letter-spacing:.7px;font-weight:600;white-space:nowrap;}
-td{padding:clamp(5px,0.6vh,8px) clamp(6px,0.8vw,10px);
-   border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;font-size:clamp(10px,1vw,12px);}
+td{padding:clamp(6px,0.7vh,10px) clamp(8px,0.9vw,12px);
+   border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;font-size:clamp(12px,1.2vw,15px);}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(255,255,255,.03);}
 
@@ -246,13 +246,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .mc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(4px,0.5vw,7px);margin-bottom:clamp(5px,0.7vh,9px);}
 .mc-box{text-align:center;padding:clamp(6px,0.8vh,9px) clamp(3px,0.4vw,6px);
         background:var(--card2);border:1px solid var(--border);border-radius:2px;}
-.mc-box .klbl{margin-bottom:3px;font-size:clamp(7px,0.72vw,9px);}
-.mc-box .kval{font-size:clamp(11px,1.15vw,14px);font-weight:800;}
+.mc-box .klbl{margin-bottom:4px;font-size:clamp(10px,1.1vw,14px);}
+.mc-box .kval{font-size:clamp(14px,1.6vw,20px);font-weight:800;}
 .mc-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(4px,0.5vw,7px);margin-bottom:clamp(5px,0.7vh,9px);}
 .mc-scenario{padding:clamp(6px,0.8vh,9px) clamp(7px,0.8vw,10px);
              background:var(--card2);border:1px solid var(--border);border-radius:2px;}
-.mc-scenario-title{font-size:clamp(8px,0.88vw,10px);font-weight:700;margin-bottom:4px;}
-.mc-scenario-val{font-size:clamp(9px,0.9vw,11px);color:var(--text2);}
+.mc-scenario-title{font-size:clamp(12px,1.2vw,16px);font-weight:700;margin-bottom:5px;}
+.mc-scenario-val{font-size:clamp(11px,1.1vw,15px);color:var(--text2);}
 
 /* ── MILESTONE ───────────────────────────────────────────────────────────── */
 .ms-outer{padding:4px 0;}
@@ -486,6 +486,51 @@ function V(r,c){c=c===undefined?1:c;if(!rows[r])return null;const x=rows[r].c;if
 function N(r,c){const v=V(r,c);if(v===null||v==='')return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$,%\s]/g,''));return isNaN(n)?0:n;}
 
 // ─────────────────────────────────────────────────────────────────────────────
+// STAT VALUE AUTO-FIT  (scales with both widget width AND height)
+// ─────────────────────────────────────────────────────────────────────────────
+let _statRO = null;
+
+function fitStatVal(body) {
+    const val = body.querySelector('.stat-val');
+    if (!val) return;
+    const sub = body.querySelector('.stat-sub');
+    const w = body.offsetWidth;
+    const h = body.offsetHeight;
+    if (!w || !h) return;
+    const hero = val.classList.contains('hero');
+    // Scale to the smaller of 38% of width or 55% of height so the value
+    // fills whichever dimension is more constrained without ever overflowing.
+    const size = Math.max(14, Math.min(120,
+        Math.min(w * (hero ? 0.44 : 0.38), h * (hero ? 0.60 : 0.55))
+    ));
+    val.style.fontSize = size + 'px';
+    val.style.letterSpacing = size > 48 ? '-0.04em' : '-0.02em';
+    if (sub) sub.style.fontSize = Math.max(10, Math.round(size * 0.24)) + 'px';
+}
+
+function fitAllStatVals() {
+    document.querySelectorAll('.stat-body').forEach(fitStatVal);
+}
+
+function initStatResizeObserver() {
+    if (_statRO || typeof ResizeObserver === 'undefined') return;
+    _statRO = new ResizeObserver(entries => {
+        entries.forEach(e => fitStatVal(e.target));
+    });
+    // Observe existing stat-bodies
+    document.querySelectorAll('.stat-body').forEach(el => _statRO.observe(el));
+    // Auto-observe any stat-bodies added later (reset / import layout)
+    new MutationObserver(muts => {
+        muts.forEach(m => m.addedNodes.forEach(n => {
+            if (!(n instanceof Element)) return;
+            n.querySelectorAll('.stat-body').forEach(el => _statRO.observe(el));
+            if (n.classList && n.classList.contains('stat-body')) _statRO.observe(n);
+        }));
+    }).observe(document.getElementById('grid') || document.body,
+        {childList: true, subtree: true});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS
 // ─────────────────────────────────────────────────────────────────────────────
 function fd(n){const a=Math.abs(n);const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-$':'$')+s;}
@@ -668,6 +713,9 @@ function initGrid() {
 
     grid.on('change', saveLayout);
 
+    // Boot the stat-value ResizeObserver after widgets are in the DOM
+    setTimeout(initStatResizeObserver, 80);
+
     // Restore lock state
     if (localStorage.getItem(LS.locked) === 'true') {
         applyLock(true, false);
@@ -718,7 +766,7 @@ function resetLayout() {
             content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
         });
     });
-    if (rows.length > 0) setTimeout(() => renderAll(), 80);
+    if (rows.length > 0) setTimeout(() => { renderAll(); fitAllStatVals(); }, 80);
     toast('Layout reset to default', false);
 }
 
@@ -846,6 +894,8 @@ function renderAll() {
     renderMonteCarlo();
     renderAssets();
     renderYearly();
+    // Re-fit stat values after content updates (values may have changed length)
+    setTimeout(fitAllStatVals, 0);
 }
 
 function renderGlobal() {
