@@ -128,12 +128,11 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 .grid-stack-item-content{
     background:var(--card);
     border:1px solid var(--border);
-    border-radius:2px; overflow:auto;
+    border-radius:10px; overflow:hidden;   /* rounded card, clip at edge only */
     display:flex; flex-direction:column;
     inset:0 !important;
     transition:border-color .2s;
     position:relative;
-    /* container queries: children size relative to the card */
     container-type:inline-size;
 }
 .grid-stack-item-content:hover{
@@ -154,59 +153,56 @@ body.editing .grid-stack-item-content{
 }
 
 /* ── WIDGET INTERNALS ────────────────────────────────────────────────────── */
+/* Header section — flex:1 — grows at rate 1
+   --sh / --sw written by ResizeObserver so child fonts scale to actual size  */
 .whead{
     display:flex; align-items:flex-start; justify-content:space-between;
-    padding:clamp(10px,1.2vh,16px) clamp(12px,1.5vw,20px); flex-shrink:0;
+    padding:clamp(8px,1vh,14px) clamp(12px,1.5vw,20px);
     border-bottom:1px solid var(--border); cursor:grab;
     background:transparent;
+    flex:1; min-height:65px; overflow:visible;
+    --sh:65px; --sw:300px;
 }
 .whead:active{cursor:grabbing;}
 
-/* Sector badge — small label pill */
+/* Proportional fonts for all widget headers — driven by --sh / --sw */
+.whead .wsector{ font-size:max(10px, min(calc(var(--sh) * .17), calc(var(--sw) * .065))); }
+.whead .wtitle { font-size:max(14px, min(calc(var(--sh) * .25), calc(var(--sw) * .09 ))); }
+.whead .wsub   { font-size:max(10px, min(calc(var(--sh) * .17), calc(var(--sw) * .065))); }
+
+/* Sector badge — outlined label pill (matches portfolio-card design) */
 .wsector{
     display:inline-flex; align-items:center;
-    padding:2px 10px; border-radius:3px; margin-bottom:5px;
-    font-size:clamp(11px,2cqi,16px); font-weight:700;
-    letter-spacing:1px; text-transform:uppercase;
-    transition:color .2s, background .2s, border-color .2s;
-    /* default = accent */
+    padding:0.22em 0.55em; border-radius:4px; margin-bottom:0;
+    font-weight:700; letter-spacing:0.11em; text-transform:uppercase;
+    line-height:1.4; white-space:nowrap;
+    transition:color .2s, border-color .2s;
     color:var(--accent);
-    background:color-mix(in srgb,var(--accent) 10%,transparent);
-    border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);
+    background:transparent;                  /* no fill — clean outline */
+    border:1.5px solid var(--accent);
 }
 body[data-filter="portfolio"] .wsector[id]{
-    color:var(--f-port);
-    background:color-mix(in srgb,var(--f-port) 10%,transparent);
-    border-color:color-mix(in srgb,var(--f-port) 25%,transparent);
+    color:var(--f-port); border-color:var(--f-port);
 }
 body[data-filter="liquid"] .wsector[id]{
-    color:var(--f-liq);
-    background:color-mix(in srgb,var(--f-liq) 10%,transparent);
-    border-color:color-mix(in srgb,var(--f-liq) 25%,transparent);
+    color:var(--f-liq);  border-color:var(--f-liq);
 }
 body[data-filter="crypto"] .wsector[id]{
-    color:var(--f-cryp);
-    background:color-mix(in srgb,var(--f-cryp) 10%,transparent);
-    border-color:color-mix(in srgb,var(--f-cryp) 25%,transparent);
+    color:var(--f-cryp); border-color:var(--f-cryp);
 }
 body[data-filter="tradfi"] .wsector[id]{
-    color:var(--f-trad);
-    background:color-mix(in srgb,var(--f-trad) 10%,transparent);
-    border-color:color-mix(in srgb,var(--f-trad) 25%,transparent);
+    color:var(--f-trad); border-color:var(--f-trad);
 }
-.wtitle{
-    font-size:clamp(16px,3.2cqi,24px); font-weight:700; color:var(--text);
-    letter-spacing:0;
-}
-.wsub{
-    font-size:clamp(12px,2cqi,17px); color:var(--text2);
-    margin-top:3px; font-style:normal;
-    text-transform:uppercase; letter-spacing:.5px;
-}
+/* Base type styles (font-size overridden by .whead .wtitle / .whead .wsub above) */
+.wtitle{ font-weight:700; color:var(--text); letter-spacing:0; }
+.wsub  { color:var(--text2); margin-top:3px; font-style:normal; text-transform:uppercase; letter-spacing:.5px; }
+
+/* Body section — flex:5 — grows 5× faster than the header */
 .wbody{
     padding:clamp(8px,1vh,14px) clamp(10px,1.2vw,16px);
-    flex:1; overflow:auto;
+    flex:5; min-height:80px; overflow:auto;
     display:flex; flex-direction:column; justify-content:center;
+    --sh:80px; --sw:300px;
 }
 
 /* ── KPI ─────────────────────────────────────────────────────────────────── */
@@ -333,32 +329,15 @@ tr:hover td{background:rgba(255,255,255,.03);}
    overflow:visible on both sections — clipping happens only at the card edge.
 ─────────────────────────────────────────────────────────────────────────── */
 
-/* Header section — label / title / subtitle */
+/* Stat-card header — extends .whead with column layout for the 3 stacked elements.
+   Font scaling inherited from .whead .wsector / .wtitle / .wsub rules above.
+   min-height:70px gives 1.5× the original minimum content sizes. */
 .stat-head {
-    flex: 1;
-    min-height: 70px;    /* 1.5× minimum: badge ~0.9rem, title ~1.08rem, sub ~0.9rem */
-    overflow: visible;
-    /* override whead's default row-flex */
-    flex-direction: column;
-    align-items: flex-start;
+    min-height: 70px;
+    flex-direction: column;   /* stack badge → title → subtitle vertically */
     justify-content: center;
     gap: min(calc(var(--sh, 70px) * 0.05), 8px);
-    /* CSS fallbacks — replaced by ResizeObserver */
     --sh: 70px;
-    --sw: 300px;
-}
-
-/* Header element fonts — all relative to --sh (header section height) */
-.stat-head .wsector {
-    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
-    margin-bottom: 0;
-}
-.stat-head .wtitle {
-    font-size: min(calc(var(--sh) * 0.24), calc(var(--sw) * 0.09));
-}
-.stat-head .wsub {
-    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
-    margin-top: 0;
 }
 
 /* Body section — main value + secondary value */
@@ -554,8 +533,14 @@ function initSectionResizeObserver() {
         }
     });
 
+    // Observe every header and body section across all widget types:
+    //   .whead      — all widget headers (chart, stat, milestone, etc.)
+    //   .wbody      — chart / special widget bodies
+    //   .stat-body  — stat-card value bodies
+    // (.stat-head already carries .whead so it's included automatically)
     function observeSections(root) {
-        (root.querySelectorAll ? root : document).querySelectorAll('.stat-head, .stat-body').forEach(el => {
+        const q = root.querySelectorAll ? root : document;
+        q.querySelectorAll('.whead, .wbody, .stat-body').forEach(el => {
             _sectionRO.observe(el);
         });
     }
