@@ -15,13 +15,13 @@
     --card:   #16181e; --card2: #0d0d0d;
     --border: rgba(255,255,255,0.11);
     --text:   #ffffff; --text2: #888888;
-    --accent: #00ff7f; --green: #00ff7f;
-    --red:    #ff4d6d; --yellow:#ffcc00;
-    --glow:   rgba(0,255,127,0.06);
+    --accent: #ABFF1A; --green: #ABFF1A;
+    --red:    #F71F8B; --yellow:#ffcc00;
+    --glow:   rgba(171,255,26,0.06);
     --f-port: var(--accent);
     --f-liq:  #00d4ff;
-    --f-cryp: #ff9500;
-    --f-trad: #c084fc;
+    --f-cryp: #E38215;
+    --f-trad: #1FF7F7;
 }
 .theme-cyan {
     --bg:#000000; --bg2:#040a0e; --card:#060e14; --card2:#0a141c;
@@ -154,7 +154,8 @@ body.editing .grid-stack-item-content{border-color:var(--accent);border-style:da
    --sh / --sw written by ResizeObserver; fonts scale to actual section size
    ════════════════════════════════════════════════════════════════════════════ */
 .card-header{
-    flex:1; min-height:70px; overflow:visible;
+    flex:0 0 auto;          /* fixed height — does not grow with the card */
+    min-height:70px; overflow:visible;
     display:flex; flex-direction:column;
     align-items:flex-start; justify-content:center;
     --sh:70px; --sw:300px;
@@ -209,7 +210,8 @@ body[data-filter="tradfi"]    .card-label[id]{color:var(--f-trad);border-color:v
    --sh / --sw written by ResizeObserver
    ════════════════════════════════════════════════════════════════════════════ */
 .card-body{
-    flex:5; min-height:55px; overflow:visible;
+    flex:1;                 /* takes all remaining space after the fixed header */
+    min-height:55px; overflow:visible;
     display:flex; flex-direction:column; justify-content:center;
     --sh:55px; --sw:300px;
     gap:min(calc(var(--sh) * .04), 8px);
