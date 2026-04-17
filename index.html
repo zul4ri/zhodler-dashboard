@@ -322,29 +322,75 @@ tr:hover td{background:rgba(255,255,255,.03);}
 }
 #loadOverlay .brand{font-size:clamp(32px,4vw,52px);}
 
-/* ── INDIVIDUAL STAT CARDS ───────────────────────────────────────────────── */
-.stat-body{
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    text-align:center;
-    padding:0;
-    flex:1; min-height:0; overflow:hidden; gap:4px;
-    /* No container-type — ResizeObserver measures the card directly */
+/* ── INDIVIDUAL STAT CARDS ──────────────────────────────────────────────────
+   Header (.stat-head): label + title + subtitle  → flex:1  (grows at rate 1)
+   Body   (.stat-body): main value + secondary    → flex:5  (grows at rate 5)
+
+   --sh / --sw are set by ResizeObserver to the section's actual rendered
+   dimensions. All font-size rules use min(calc(var(--sh)*fH),calc(var(--sw)*fW))
+   so text scales proportionally to whichever axis is more constrained.
+   CSS fallbacks cover the instant before the first observer callback fires.
+   overflow:visible on both sections — clipping happens only at the card edge.
+─────────────────────────────────────────────────────────────────────────── */
+
+/* Header section — label / title / subtitle */
+.stat-head {
+    flex: 1;
+    min-height: 70px;    /* 1.5× minimum: badge ~0.9rem, title ~1.08rem, sub ~0.9rem */
+    overflow: visible;
+    /* override whead's default row-flex */
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: min(calc(var(--sh, 70px) * 0.05), 8px);
+    /* CSS fallbacks — replaced by ResizeObserver */
+    --sh: 70px;
+    --sw: 300px;
 }
-/* Fluid stat value — scales with card width */
-.stat-val{
-    font-size:clamp(16px, 7cqi, 48px); font-weight:900;
-    line-height:1.0; letter-spacing:-0.5px;
-    white-space:nowrap; max-width:100%;
-    overflow:hidden; text-overflow:ellipsis;
+
+/* Header element fonts — all relative to --sh (header section height) */
+.stat-head .wsector {
+    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
+    margin-bottom: 0;
 }
-.stat-val.hero{
-    font-size:clamp(22px, 10cqi, 72px);
-    letter-spacing:-1.5px;
+.stat-head .wtitle {
+    font-size: min(calc(var(--sh) * 0.24), calc(var(--sw) * 0.09));
 }
-.stat-sub{
-    font-size:clamp(9px, 2cqi, 13px); color:var(--text2);
-    text-transform:uppercase; letter-spacing:.5px;
+.stat-head .wsub {
+    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
+    margin-top: 0;
+}
+
+/* Body section — main value + secondary value */
+.stat-body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0;
+    flex: 5;             /* grows 5× faster than header */
+    min-height: 55px;
+    overflow: visible;
+    gap: min(calc(var(--sh, 55px) * 0.04), 6px);
+    /* CSS fallbacks — replaced by ResizeObserver */
+    --sh: 55px;
+    --sw: 300px;
+}
+
+/* Body element fonts — all relative to --sh (body section height) */
+.stat-val {
+    font-size: min(calc(var(--sh) * 0.40), calc(var(--sw) * 0.14));
+    font-weight: 900;
+    line-height: 1.0; letter-spacing: -0.5px;
+    white-space: nowrap;
+}
+.stat-val.hero {
+    font-size: min(calc(var(--sh) * 0.52), calc(var(--sw) * 0.18));
+    letter-spacing: -1.5px;
+}
+.stat-sub {
+    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
+    color: var(--text2);
+    text-transform: uppercase; letter-spacing: .5px;
 }
 
 /* ── 24-COLUMN GRID SUPPORT (gridstack-extra only ships up to col-11) ────── */
@@ -485,53 +531,42 @@ function V(r,c){c=c===undefined?1:c;if(!rows[r])return null;const x=rows[r].c;if
 function N(r,c){const v=V(r,c);if(v===null||v==='')return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$,%\s]/g,''));return isNaN(n)?0:n;}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STAT VALUE AUTO-FIT  (scales with both widget width AND height)
-// Observes the card element so offsetHeight is always reliable — no dependency
-// on flex-child sizing which can report 0 with container-type applied.
+// SECTION RESIZE OBSERVER
+// Writes --sh (section height px) and --sw (section width px) onto every
+// .stat-head and .stat-body element whenever their dimensions change.
+// All font-size rules use min(calc(var(--sh)*fH), calc(var(--sw)*fW)) so
+// content scales proportionally to its own section size — no JS arithmetic.
+// ResizeObserver fires once immediately on observe(), so values are correct
+// before the first paint; the CSS fallbacks on .stat-head / .stat-body are
+// just a safety net for that brief gap.
 // ─────────────────────────────────────────────────────────────────────────────
-let _statRO = null;
+let _sectionRO = null;
 
-function fitStatVal(card) {
-    const body = card.querySelector('.stat-body');
-    const val  = body && body.querySelector('.stat-val');
-    if (!val) return;
-    const sub  = body.querySelector('.stat-sub');
-    const head = card.querySelector('.whead');
-    const w = card.offsetWidth;
-    const h = card.offsetHeight - (head ? head.offsetHeight : 0);
-    if (!w || h <= 0) return;
-    const hero = val.classList.contains('hero');
-    // Fill the body area: constrained by whichever dimension is smaller
-    const size = Math.max(14, Math.min(120,
-        Math.min(w * (hero ? 0.44 : 0.38), h * (hero ? 0.62 : 0.58))
-    ));
-    val.style.fontSize = size + 'px';
-    val.style.letterSpacing = size > 48 ? '-0.04em' : '-0.02em';
-    if (sub) sub.style.fontSize = Math.max(10, Math.round(size * 0.24)) + 'px';
-}
+function initSectionResizeObserver() {
+    if (_sectionRO || typeof ResizeObserver === 'undefined') return;
 
-function fitAllStatVals() {
-    document.querySelectorAll('.grid-stack-item-content').forEach(card => {
-        if (card.querySelector('.stat-body')) fitStatVal(card);
+    _sectionRO = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const h = entry.contentRect.height;
+            const w = entry.contentRect.width;
+            entry.target.style.setProperty('--sh', h + 'px');
+            entry.target.style.setProperty('--sw', w + 'px');
+        }
     });
-}
 
-function initStatResizeObserver() {
-    if (_statRO || typeof ResizeObserver === 'undefined') return;
-    _statRO = new ResizeObserver(entries => {
-        entries.forEach(e => fitStatVal(e.target));
-    });
-    // Observe stat cards (cards that contain a stat-body)
-    document.querySelectorAll('.grid-stack-item-content').forEach(el => {
-        if (el.querySelector('.stat-body')) _statRO.observe(el);
-    });
-    // Auto-observe new stat cards added later (reset / import layout)
+    function observeSections(root) {
+        (root.querySelectorAll ? root : document).querySelectorAll('.stat-head, .stat-body').forEach(el => {
+            _sectionRO.observe(el);
+        });
+    }
+
+    observeSections(document);
+
+    // Auto-observe sections injected later (reset layout / import layout)
     new MutationObserver(muts => {
         muts.forEach(m => m.addedNodes.forEach(n => {
             if (!(n instanceof Element)) return;
-            n.querySelectorAll('.grid-stack-item-content').forEach(el => {
-                if (el.querySelector('.stat-body')) _statRO.observe(el);
-            });
+            observeSections(n);
         }));
     }).observe(document.getElementById('grid') || document.body,
         {childList: true, subtree: true});
@@ -567,7 +602,9 @@ function _sc(sector, sectorId, title, valId, cls, subId, titleId, subtitle) {
     const stEl = subtitle ? `<div class="wsub">${subtitle}</div>` : '';
     const vCls = `stat-val${cls?' '+cls:''}`;
     const sub  = subId ? `<div class="stat-sub" id="${subId}"></div>` : '';
-    return `<div class="whead"><div>${sEl}${tEl}${stEl}</div></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
+    // whead + stat-head: header section (flex:1) — direct children, no inner wrapper
+    // stat-body: body section (flex:5, grows 5× faster)
+    return `<div class="whead stat-head">${sEl}${tEl}${stEl}</div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
 }
 
 const WIDGET_HTML = {
@@ -720,8 +757,8 @@ function initGrid() {
 
     grid.on('change', saveLayout);
 
-    // Boot the stat-value ResizeObserver after widgets are in the DOM
-    setTimeout(initStatResizeObserver, 80);
+    // Boot the section ResizeObserver after widgets are in the DOM
+    setTimeout(initSectionResizeObserver, 80);
 
     // Restore lock state
     if (localStorage.getItem(LS.locked) === 'true') {
@@ -773,7 +810,7 @@ function resetLayout() {
             content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
         });
     });
-    if (rows.length > 0) setTimeout(() => { renderAll(); fitAllStatVals(); }, 80);
+    if (rows.length > 0) setTimeout(() => { renderAll(); }, 80);
     toast('Layout reset to default', false);
 }
 
@@ -901,8 +938,7 @@ function renderAll() {
     renderMonteCarlo();
     renderAssets();
     renderYearly();
-    // Re-fit stat values after content updates (values may have changed length)
-    setTimeout(fitAllStatVals, 0);
+    // ResizeObserver keeps values fitted continuously — no manual refit needed
 }
 
 function renderGlobal() {
