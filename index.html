@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zhodler Dashboard</title>
-    <!-- GridStack v10 via jsdelivr (proven stable) -->
     <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack.min.css" rel="stylesheet">
     <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-extra.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-all.min.js"></script>
@@ -13,16 +12,16 @@
 /* ── THEMES ──────────────────────────────────────────────────────────────── */
 :root {
     --bg:     #000000; --bg2:   #080808;
-    --card:   #060606; --card2: #0d0d0d;
+    --card:   #16181e; --card2: #0d0d0d;
     --border: rgba(255,255,255,0.11);
-    --text:   #ffffff; --text2: #888888;   /* 5.74:1 on #000 — WCAG AA ✓ */
-    --accent: #00ff7f; --green: #00ff7f;   /* 8.48:1 on #000 ✓ */
-    --red:    #ff4d6d; --yellow:#ffcc00;   /* 4.99:1 / 13.08:1 on #000 ✓ */
+    --text:   #ffffff; --text2: #888888;
+    --accent: #00ff7f; --green: #00ff7f;
+    --red:    #ff4d6d; --yellow:#ffcc00;
     --glow:   rgba(0,255,127,0.06);
     --f-port: var(--accent);
-    --f-liq:  #00d4ff;   /* 7.33:1 on #000 ✓ */
-    --f-cryp: #ff9500;   /* 8.24:1 on #000 ✓ */
-    --f-trad: #c084fc;   /* 6.30:1 on #000 ✓ */
+    --f-liq:  #00d4ff;
+    --f-cryp: #ff9500;
+    --f-trad: #c084fc;
 }
 .theme-cyan {
     --bg:#000000; --bg2:#040a0e; --card:#060e14; --card2:#0a141c;
@@ -38,19 +37,14 @@
 }
 .theme-cyber {
     --bg:#000000; --bg2:#04090c; --card:#060e12; --card2:#0a1418;
-    --border:rgba(255,255,255,.10); --text:#ffffff; --text2:#4aaa90;  /* 4.60:1 ✓ */
+    --border:rgba(255,255,255,.10); --text:#ffffff; --text2:#4aaa90;
     --accent:#00e5b0; --green:#00e5b0; --red:#ff6685; --yellow:#fde047;
     --glow:rgba(0,229,176,0.06);
 }
 
-/* ── RESET & ACCESSIBILITY ───────────────────────────────────────────────── */
+/* ── RESET ───────────────────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box;}
-/* WCAG 2.1 SC 2.4.11 — visible focus for all keyboard-navigable elements */
-*:focus-visible{
-    outline:2px solid var(--accent);
-    outline-offset:2px;
-    border-radius:3px;
-}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px;}
 body{
     background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -58,7 +52,7 @@ body{
 }
 body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 
-/* ── HEADER ──────────────────────────────────────────────────────────────── */
+/* ── TOP HEADER ──────────────────────────────────────────────────────────── */
 .header{
     display:flex; align-items:center; justify-content:space-between;
     padding:clamp(8px,1vh,14px) clamp(14px,1.6vw,24px);
@@ -66,10 +60,7 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
     position:sticky; top:0; z-index:200;
     flex-wrap:wrap; gap:6px;
 }
-.brand{
-    font-size:clamp(17px,1.9vw,26px); font-weight:900;
-    color:var(--accent); letter-spacing:-0.5px;
-}
+.brand{font-size:clamp(17px,1.9vw,26px);font-weight:900;color:var(--accent);letter-spacing:-0.5px;}
 .ts{font-size:clamp(9px,0.82vw,11px);color:var(--text2);margin-left:10px;}
 .hright{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .sep{width:1px;height:16px;background:var(--border);margin:0 2px;}
@@ -78,26 +69,13 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
     padding:clamp(4px,0.5vh,7px) clamp(10px,1.1vw,16px); border-radius:4px;
     border:1px solid var(--border); background:transparent; color:var(--text2);
     cursor:pointer; font-size:clamp(10px,0.92vw,12px); font-weight:500;
-    transition:border-color .15s, color .15s; user-select:none; letter-spacing:.3px;
+    transition:border-color .15s,color .15s; user-select:none; letter-spacing:.3px;
 }
 .pill:hover{border-color:var(--accent);color:var(--text);}
-/* Active pills: dark text on vivid bg for max contrast (WCAG AA ✓) */
-.pill[data-filter="portfolio"].active{
-    color:#000; font-weight:700;
-    background:var(--f-port); border-color:var(--f-port);
-}
-.pill[data-filter="liquid"].active{
-    color:#000; font-weight:700;
-    background:var(--f-liq); border-color:var(--f-liq);
-}
-.pill[data-filter="crypto"].active{
-    color:#000; font-weight:700;
-    background:var(--f-cryp); border-color:var(--f-cryp);
-}
-.pill[data-filter="tradfi"].active{
-    color:#000; font-weight:700;
-    background:var(--f-trad); border-color:var(--f-trad);
-}
+.pill[data-filter="portfolio"].active{color:#000;font-weight:700;background:var(--f-port);border-color:var(--f-port);}
+.pill[data-filter="liquid"].active{color:#000;font-weight:700;background:var(--f-liq);border-color:var(--f-liq);}
+.pill[data-filter="crypto"].active{color:#000;font-weight:700;background:var(--f-cryp);border-color:var(--f-cryp);}
+.pill[data-filter="tradfi"].active{color:#000;font-weight:700;background:var(--f-trad);border-color:var(--f-trad);}
 
 .ibtn{
     height:clamp(26px,2.8vh,32px); min-width:clamp(26px,2.8vh,32px);
@@ -105,17 +83,16 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
     border:1px solid var(--border); background:transparent; color:var(--text2);
     cursor:pointer; font-size:clamp(10px,0.9vw,12px); font-weight:500;
     display:flex; align-items:center; gap:4px; white-space:nowrap;
-    transition:border-color .15s, color .15s;
+    transition:border-color .15s,color .15s;
 }
 .ibtn:hover{border-color:var(--accent);color:var(--text);}
 .ibtn.on{border-color:var(--green);color:var(--green);}
 .ibtn.lock-on{border-color:var(--yellow);color:var(--yellow);}
 
-/* Theme dots */
 .tpill{
     width:clamp(13px,1.2vw,17px); height:clamp(13px,1.2vw,17px);
     border-radius:50%; border:2px solid transparent;
-    cursor:pointer; transition:transform .2s, border-color .2s; flex-shrink:0;
+    cursor:pointer; transition:transform .2s,border-color .2s; flex-shrink:0;
 }
 .tpill:hover,.tpill.active{border-color:var(--text);transform:scale(1.3);}
 .tpill[data-t="zhodler"]{background:linear-gradient(135deg,#00ff7f,#00c060);}
@@ -123,118 +100,157 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 .tpill[data-t="neon"]   {background:linear-gradient(135deg,#b060ff,#3adf80);}
 .tpill[data-t="cyber"]  {background:linear-gradient(135deg,#00e5b0,#20b0e0);}
 
-/* ── GRIDSTACK OVERRIDES ─────────────────────────────────────────────────── */
-.grid-stack{background:transparent;padding:clamp(4px,0.5vw,8px);}
+/* ── GRIDSTACK ───────────────────────────────────────────────────────────── */
+.grid-stack{background:transparent;}
+
+/* GridStack item: fully transparent — card styling lives only on the content div.
+   High-specificity selector overrides any GridStack / jQuery UI defaults. */
+.grid-stack > .grid-stack-item,
+.grid-stack > .grid-stack-item.ui-draggable,
+.grid-stack > .grid-stack-item.ui-resizable,
+.grid-stack > .grid-stack-item.ui-draggable-dragging {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CARD SHELL  — exact copy of .card from portfolio-card.html
+   position:absolute fills the GridStack cell; inset:4px creates the visible
+   gap between adjacent cards without using GridStack's margin system (which
+   insets content from the item and makes the item itself look like an outer card).
+   ════════════════════════════════════════════════════════════════════════════ */
 .grid-stack-item-content{
+    position: absolute !important;
+    inset: 4px !important;           /* 4px gap on every edge → 8px gap between cards */
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    /* visual — identical to portfolio-card */
     background:var(--card);
     border:1px solid var(--border);
-    border-radius:10px; overflow:hidden;   /* rounded card, clip at edge only */
-    display:flex; flex-direction:column;
-    inset:0 !important;
+    border-radius:12px;
+    padding:16px 18px 14px;
+    box-shadow:0 4px 24px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04) inset;
     transition:border-color .2s;
-    position:relative;
-    padding: 16px 18px 14px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04) inset;
 }
-.grid-stack-item-content:hover{
-    border-color:rgba(255,255,255,.22);
-}
-body.editing .grid-stack-item-content{
-    border-color:var(--accent); border-style:dashed;
-}
+.grid-stack-item-content:hover{border-color:rgba(255,255,255,.22);}
+body.editing .grid-stack-item-content{border-color:var(--accent);border-style:dashed;}
+
 /* Resize handle */
 .grid-stack-item>.ui-resizable-handle{opacity:.25;transition:opacity .2s;}
 .grid-stack-item:hover>.ui-resizable-handle{opacity:.65;}
 .ui-resizable-se{background:none!important;border:none!important;width:18px!important;height:18px!important;}
 .ui-resizable-se::after{
-    content:''; position:absolute; bottom:5px; right:5px;
-    width:8px; height:8px;
-    border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
+    content:'';position:absolute;bottom:5px;right:5px;
+    width:8px;height:8px;
+    border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);
     border-radius:0 0 2px 0;
 }
 
-/* ── WIDGET INTERNALS ────────────────────────────────────────────────────── */
-/* Header section — flex:1 — grows at rate 1
-   --sh / --sw written by ResizeObserver so child fonts scale to actual size  */
-.whead{
+/* ════════════════════════════════════════════════════════════════════════════
+   CARD HEADER  — exact copy of .card-header from portfolio-card.html
+   flex:1  → grows at rate 1
+   --sh / --sw written by ResizeObserver; fonts scale to actual section size
+   ════════════════════════════════════════════════════════════════════════════ */
+.card-header{
+    flex:1; min-height:70px; overflow:visible;
     display:flex; flex-direction:column;
     align-items:flex-start; justify-content:center;
-    padding:0; cursor:grab;
-    background:transparent;
-    flex:1; min-height:65px; overflow:visible;
-    --sh:65px; --sw:300px;
-    gap: min(calc(var(--sh) * .055), 10px);
+    --sh:70px; --sw:300px;
+    gap:min(calc(var(--sh) * .055), 10px);
+    cursor:grab;
 }
-.whead:active{cursor:grabbing;}
+.card-header:active{cursor:grabbing;}
 
-/* Gradient divider between header and body — matches portfolio-card design */
-.wdivider{
+/* ── Sector label — outlined badge ─────────────────────────────────────── */
+.card-label{
+    display:inline-flex; align-items:center; align-self:flex-start;
+    font-size:min(calc(var(--sh) * .20), calc(var(--sw) * .08));
+    font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--accent); line-height:1.4; white-space:nowrap;
+    border:max(1px, calc(var(--sh) * .022)) solid var(--accent);
+    border-radius:min(calc(var(--sh) * .055), 5px);
+    padding:.22em .55em;
+    transition:color .2s,border-color .2s;
+    background:transparent;
+}
+/* Filter colour overrides (only elements with an id are filter-reactive) */
+body[data-filter="portfolio"] .card-label[id]{color:var(--f-port);border-color:var(--f-port);}
+body[data-filter="liquid"]    .card-label[id]{color:var(--f-liq); border-color:var(--f-liq);}
+body[data-filter="crypto"]    .card-label[id]{color:var(--f-cryp);border-color:var(--f-cryp);}
+body[data-filter="tradfi"]    .card-label[id]{color:var(--f-trad);border-color:var(--f-trad);}
+
+/* ── Card title ─────────────────────────────────────────────────────────── */
+.card-title{
+    font-size:min(calc(var(--sh) * .25), calc(var(--sw) * .09));
+    font-weight:600; color:var(--text); letter-spacing:.01em; line-height:1.2; white-space:nowrap;
+}
+
+/* ── Card subtitle ──────────────────────────────────────────────────────── */
+.card-subtitle{
+    font-size:min(calc(var(--sh) * .18), calc(var(--sw) * .065));
+    font-weight:500; color:var(--text2); letter-spacing:.09em;
+    text-transform:uppercase; white-space:nowrap;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CARD DIVIDER  — exact copy of .card-divider from portfolio-card.html
+   ════════════════════════════════════════════════════════════════════════════ */
+.card-divider{
     height:1px;
     background:linear-gradient(90deg, var(--border) 0%, transparent 100%);
-    flex-shrink:0;
-    margin: 5px 0;
+    margin:5px 0; flex-shrink:0;
 }
 
-/* Proportional fonts for all widget headers — driven by --sh / --sw */
-.whead .wsector{ font-size:max(10px, min(calc(var(--sh) * .17), calc(var(--sw) * .065))); }
-.whead .wtitle { font-size:max(14px, min(calc(var(--sh) * .25), calc(var(--sw) * .09 ))); }
-.whead .wsub   { font-size:max(10px, min(calc(var(--sh) * .17), calc(var(--sw) * .065))); }
-
-/* Sector badge — outlined label pill (matches portfolio-card design) */
-.wsector{
-    display:inline-flex; align-items:center;
-    padding:0.22em 0.55em; border-radius:4px; margin-bottom:0;
-    font-weight:700; letter-spacing:0.11em; text-transform:uppercase;
-    line-height:1.4; white-space:nowrap;
-    transition:color .2s, border-color .2s;
-    color:var(--accent);
-    background:transparent;                  /* no fill — clean outline */
-    border:1.5px solid var(--accent);
-}
-body[data-filter="portfolio"] .wsector[id]{
-    color:var(--f-port); border-color:var(--f-port);
-}
-body[data-filter="liquid"] .wsector[id]{
-    color:var(--f-liq);  border-color:var(--f-liq);
-}
-body[data-filter="crypto"] .wsector[id]{
-    color:var(--f-cryp); border-color:var(--f-cryp);
-}
-body[data-filter="tradfi"] .wsector[id]{
-    color:var(--f-trad); border-color:var(--f-trad);
-}
-/* Base type styles (font-size overridden by .whead .wtitle / .whead .wsub above) */
-.wtitle{ font-weight:700; color:var(--text); letter-spacing:0; }
-.wsub  { color:var(--text2); margin-top:0; font-style:normal; text-transform:uppercase; letter-spacing:.5px; }
-
-/* Body section — flex:5 — grows 5× faster than the header */
-.wbody{
-    padding:0;
-    flex:5; min-height:80px; overflow:auto;
+/* ════════════════════════════════════════════════════════════════════════════
+   CARD BODY  — exact copy of .card-body from portfolio-card.html
+   flex:5  → grows 5× faster than the header
+   --sh / --sw written by ResizeObserver
+   ════════════════════════════════════════════════════════════════════════════ */
+.card-body{
+    flex:5; min-height:55px; overflow:visible;
     display:flex; flex-direction:column; justify-content:center;
-    --sh:80px; --sw:300px;
+    --sh:55px; --sw:300px;
+    gap:min(calc(var(--sh) * .04), 8px);
+}
+/* Chart/table widgets need scroll and column growth instead of centering */
+.card-body.scrollable{overflow:auto; justify-content:flex-start;}
+
+/* ── Main value ─────────────────────────────────────────────────────────── */
+.card-main-value{
+    font-size:min(calc(var(--sh) * .42), calc(var(--sw) * .15));
+    font-weight:700; color:var(--accent); letter-spacing:-.02em; line-height:1; white-space:nowrap;
+}
+.card-main-value.hero{
+    font-size:min(calc(var(--sh) * .52), calc(var(--sw) * .18));
+    letter-spacing:-1.5px;
 }
 
-/* ── KPI ─────────────────────────────────────────────────────────────────── */
+/* ── Secondary value ────────────────────────────────────────────────────── */
+.card-secondary-value{
+    font-size:min(calc(var(--sh) * .18), calc(var(--sw) * .065));
+    color:var(--text2); text-transform:uppercase; letter-spacing:.5px; white-space:nowrap;
+}
+
+/* colour helpers */
+.pos{color:var(--green);} .neg{color:var(--red);} .warn{color:var(--yellow);}
+
+/* ── KPI grid (inside global-metrics card body) ─────────────────────────── */
 .krow{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(90px,9.5vw,130px),1fr));gap:clamp(4px,0.5vw,8px);}
 .kpi{
-    background:var(--card2);
-    border:1px solid var(--border); border-radius:2px;
-    padding:clamp(8px,1vh,13px) clamp(9px,1vw,13px);
-    transition:border-color .2s;
+    background:var(--card2); border:1px solid var(--border); border-radius:2px;
+    padding:clamp(8px,1vh,13px) clamp(9px,1vw,13px); transition:border-color .2s;
     container-type:inline-size;
 }
 .kpi:hover{border-color:rgba(255,255,255,.22);}
 .klbl{font-size:clamp(10px,12cqi,15px);color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;font-weight:600;}
 .kval{font-size:clamp(16px,17cqi,32px);font-weight:800;line-height:1.15;letter-spacing:-.3px;}
 .ksub{font-size:clamp(11px,10cqi,16px);color:var(--text2);margin-top:4px;}
-.pos{color:var(--green);} .neg{color:var(--red);} .warn{color:var(--yellow);}
-
-/* Progress bar */
 .pbar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;}
 .pfill{height:100%;background:var(--accent);border-radius:2px;}
 
-/* ── TABLE ───────────────────────────────────────────────────────────────── */
+/* ── Table ───────────────────────────────────────────────────────────────── */
 .twrap{overflow-x:auto;margin-top:6px;}
 table{width:100%;border-collapse:collapse;font-size:clamp(12px,1.2vw,15px);}
 th{color:var(--text2);text-align:left;padding:clamp(5px,0.6vh,9px) clamp(8px,0.9vw,12px);
@@ -245,10 +261,10 @@ td{padding:clamp(6px,0.7vh,10px) clamp(8px,0.9vw,12px);
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(255,255,255,.03);}
 
-/* ── CHART ───────────────────────────────────────────────────────────────── */
+/* ── Chart wrapper ───────────────────────────────────────────────────────── */
 .chwrap{position:relative;min-height:clamp(100px,14vh,140px);flex:1;}
 
-/* ── MONTE CARLO ─────────────────────────────────────────────────────────── */
+/* ── Monte Carlo ─────────────────────────────────────────────────────────── */
 .mc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(4px,0.5vw,7px);margin-bottom:clamp(5px,0.7vh,9px);}
 .mc-box{text-align:center;padding:clamp(6px,0.8vh,9px) clamp(3px,0.4vw,6px);
         background:var(--card2);border:1px solid var(--border);border-radius:2px;}
@@ -260,38 +276,24 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .mc-scenario-title{font-size:clamp(12px,1.2vw,16px);font-weight:700;margin-bottom:5px;}
 .mc-scenario-val{font-size:clamp(11px,1.1vw,15px);color:var(--text2);}
 
-/* ── MILESTONE ───────────────────────────────────────────────────────────── */
+/* ── Milestone ───────────────────────────────────────────────────────────── */
 .ms-outer{padding:4px 0;}
 .ms-track{position:relative;height:clamp(26px,3.4vh,36px);margin:0 14px;}
 .ms-line{position:absolute;top:50%;left:0;right:0;height:2px;background:rgba(255,255,255,.08);border-radius:1px;transform:translateY(-50%);z-index:0;}
-.ms-fill{position:absolute;top:50%;left:0;height:2px;
-         background:var(--accent);
-         border-radius:1px;transform:translateY(-50%);z-index:1;}
+.ms-fill{position:absolute;top:50%;left:0;height:2px;background:var(--accent);border-radius:1px;transform:translateY(-50%);z-index:1;}
 .ms-dots{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;z-index:2;}
 .ms-circle{width:clamp(20px,2.1vw,28px);height:clamp(20px,2.1vw,28px);border-radius:50%;
            border:2px solid var(--border);background:var(--card);
            display:flex;align-items:center;justify-content:center;
            font-size:clamp(8px,0.9vw,11px);flex-shrink:0;transition:all .25s;}
-.ms-circle.done{
-    background:var(--green);border-color:var(--green);color:#000;font-weight:700;
-}
-.ms-circle.next{
-    border-color:var(--accent);
-    box-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent);
-}
+.ms-circle.done{background:var(--green);border-color:var(--green);color:#000;font-weight:700;}
+.ms-circle.next{border-color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent);}
 .ms-labels{display:flex;justify-content:space-between;margin:5px 0 0 0;}
 .ms-label{display:flex;flex-direction:column;align-items:center;width:clamp(20px,2.1vw,28px);flex-shrink:0;}
 .ms-name{font-size:clamp(6px,0.68vw,9px);color:var(--text2);text-align:center;white-space:nowrap;}
 .ms-eta{font-size:clamp(5px,0.62vw,8px);margin-top:1px;text-align:center;}
-.ms-legend{font-size:clamp(8px,0.82vw,10px);color:var(--text2);
-           margin-bottom:4px;display:flex;align-items:center;gap:6px;}
-.ms-legend-bar{width:24px;height:2px;background:var(--accent);border-radius:1px;flex-shrink:0;}
 
-/* ── VELOCITY ────────────────────────────────────────────────────────────── */
-.vel-hero{text-align:center;padding:clamp(6px,1vh,12px) 0 6px;}
-.vel-hero .kval{font-size:clamp(22px,2.8vw,38px);font-weight:900;letter-spacing:-1px;}
-
-/* ── TOAST ───────────────────────────────────────────────────────────────── */
+/* ── Toast ───────────────────────────────────────────────────────────────── */
 #toast{
     position:fixed;bottom:20px;right:20px;
     background:var(--card2);border:1px solid var(--border);
@@ -302,13 +304,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
 #toast.ok{border-color:var(--green);color:var(--green);}
 #toast.err{border-color:var(--red);color:var(--red);}
 
-/* ── MODAL ───────────────────────────────────────────────────────────────── */
+/* ── Modal ───────────────────────────────────────────────────────────────── */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;align-items:center;justify-content:center;}
 .modal.open{display:flex;}
-.mbox{
-    background:var(--card2);border:1px solid var(--border);
-    border-radius:4px;padding:clamp(18px,2vw,26px);width:480px;max-width:95vw;
-}
+.mbox{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:clamp(18px,2vw,26px);width:480px;max-width:95vw;}
 .mtitle{font-size:clamp(14px,1.4vw,17px);font-weight:700;margin-bottom:18px;}
 .mrow{margin-bottom:14px;}
 .mlabel{font-size:clamp(9px,0.88vw,11px);color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.7px;font-weight:600;}
@@ -320,7 +319,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .mgray{padding:9px 16px;background:var(--card);border:1px solid var(--border);border-radius:3px;color:var(--text);cursor:pointer;font-size:clamp(11px,1.1vw,13px);}
 .mrow-row{display:flex;gap:8px;flex-wrap:wrap;}
 
-/* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
+/* ── Loading overlay ─────────────────────────────────────────────────────── */
 #loadOverlay{
     position:fixed;inset:0;background:var(--bg);
     display:flex;align-items:center;justify-content:center;
@@ -328,75 +327,12 @@ tr:hover td{background:rgba(255,255,255,.03);}
 }
 #loadOverlay .brand{font-size:clamp(32px,4vw,52px);}
 
-/* ── INDIVIDUAL STAT CARDS ──────────────────────────────────────────────────
-   Header (.stat-head): label + title + subtitle  → flex:1  (grows at rate 1)
-   Body   (.stat-body): main value + secondary    → flex:5  (grows at rate 5)
-
-   --sh / --sw are set by ResizeObserver to the section's actual rendered
-   dimensions. All font-size rules use min(calc(var(--sh)*fH),calc(var(--sw)*fW))
-   so text scales proportionally to whichever axis is more constrained.
-   CSS fallbacks cover the instant before the first observer callback fires.
-   overflow:visible on both sections — clipping happens only at the card edge.
-─────────────────────────────────────────────────────────────────────────── */
-
-/* Stat-card header — extends .whead with column layout for the 3 stacked elements.
-   Font scaling inherited from .whead .wsector / .wtitle / .wsub rules above.
-   min-height:70px gives 1.5× the original minimum content sizes. */
-.stat-head {
-    min-height: 70px;
-    --sh: 70px;
-    /* flex-direction:column, justify-content:center, gap all inherited from .whead */
-}
-
-/* Body section — main value + secondary value */
-.stat-body {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 0;
-    flex: 5;             /* grows 5× faster than header */
-    min-height: 55px;
-    overflow: visible;
-    gap: min(calc(var(--sh, 55px) * 0.04), 6px);
-    /* CSS fallbacks — replaced by ResizeObserver */
-    --sh: 55px;
-    --sw: 300px;
-}
-
-/* Body element fonts — all relative to --sh (body section height) */
-.stat-val {
-    font-size: min(calc(var(--sh) * 0.40), calc(var(--sw) * 0.14));
-    font-weight: 900;
-    line-height: 1.0; letter-spacing: -0.5px;
-    white-space: nowrap;
-}
-.stat-val.hero {
-    font-size: min(calc(var(--sh) * 0.52), calc(var(--sw) * 0.18));
-    letter-spacing: -1.5px;
-}
-.stat-sub {
-    font-size: min(calc(var(--sh) * 0.17), calc(var(--sw) * 0.065));
-    color: var(--text2);
-    text-transform: uppercase; letter-spacing: .5px;
-}
-
-/* ── 24-COLUMN GRID SUPPORT (gridstack-extra only ships up to col-11) ────── */
+/* ── 24-col grid support ─────────────────────────────────────────────────── */
 .gs-24>.grid-stack-item{width:4.1667%}.gs-24>.grid-stack-item[gs-x="1"]{left:4.1667%}.gs-24>.grid-stack-item[gs-w="2"]{width:8.3333%}.gs-24>.grid-stack-item[gs-x="2"]{left:8.3333%}.gs-24>.grid-stack-item[gs-w="3"]{width:12.5%}.gs-24>.grid-stack-item[gs-x="3"]{left:12.5%}.gs-24>.grid-stack-item[gs-w="4"]{width:16.6667%}.gs-24>.grid-stack-item[gs-x="4"]{left:16.6667%}.gs-24>.grid-stack-item[gs-w="5"]{width:20.8333%}.gs-24>.grid-stack-item[gs-x="5"]{left:20.8333%}.gs-24>.grid-stack-item[gs-w="6"]{width:25%}.gs-24>.grid-stack-item[gs-x="6"]{left:25%}.gs-24>.grid-stack-item[gs-w="7"]{width:29.1667%}.gs-24>.grid-stack-item[gs-x="7"]{left:29.1667%}.gs-24>.grid-stack-item[gs-w="8"]{width:33.3333%}.gs-24>.grid-stack-item[gs-x="8"]{left:33.3333%}.gs-24>.grid-stack-item[gs-w="9"]{width:37.5%}.gs-24>.grid-stack-item[gs-x="9"]{left:37.5%}.gs-24>.grid-stack-item[gs-w="10"]{width:41.6667%}.gs-24>.grid-stack-item[gs-x="10"]{left:41.6667%}.gs-24>.grid-stack-item[gs-w="11"]{width:45.8333%}.gs-24>.grid-stack-item[gs-x="11"]{left:45.8333%}.gs-24>.grid-stack-item[gs-w="12"]{width:50%}.gs-24>.grid-stack-item[gs-x="12"]{left:50%}.gs-24>.grid-stack-item[gs-w="13"]{width:54.1667%}.gs-24>.grid-stack-item[gs-x="13"]{left:54.1667%}.gs-24>.grid-stack-item[gs-w="14"]{width:58.3333%}.gs-24>.grid-stack-item[gs-x="14"]{left:58.3333%}.gs-24>.grid-stack-item[gs-w="15"]{width:62.5%}.gs-24>.grid-stack-item[gs-x="15"]{left:62.5%}.gs-24>.grid-stack-item[gs-w="16"]{width:66.6667%}.gs-24>.grid-stack-item[gs-x="16"]{left:66.6667%}.gs-24>.grid-stack-item[gs-w="17"]{width:70.8333%}.gs-24>.grid-stack-item[gs-x="17"]{left:70.8333%}.gs-24>.grid-stack-item[gs-w="18"]{width:75%}.gs-24>.grid-stack-item[gs-x="18"]{left:75%}.gs-24>.grid-stack-item[gs-w="19"]{width:79.1667%}.gs-24>.grid-stack-item[gs-x="19"]{left:79.1667%}.gs-24>.grid-stack-item[gs-w="20"]{width:83.3333%}.gs-24>.grid-stack-item[gs-x="20"]{left:83.3333%}.gs-24>.grid-stack-item[gs-w="21"]{width:87.5%}.gs-24>.grid-stack-item[gs-x="21"]{left:87.5%}.gs-24>.grid-stack-item[gs-w="22"]{width:91.6667%}.gs-24>.grid-stack-item[gs-x="22"]{left:91.6667%}.gs-24>.grid-stack-item[gs-w="23"]{width:95.8333%}.gs-24>.grid-stack-item[gs-x="23"]{left:95.8333%}.gs-24>.grid-stack-item[gs-w="24"]{width:100%}
 
-/* ── RESPONSIVE BREAKPOINTS ──────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-    .mc-stats{grid-template-columns:repeat(4,1fr);}
-}
-@media (max-width: 860px) {
-    .mc-stats{grid-template-columns:repeat(2,1fr);}
-    .mc-scenarios{grid-template-columns:repeat(2,1fr);}
-}
-@media (max-width: 600px) {
-    .mc-scenarios{grid-template-columns:1fr;}
-    .krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}
-    .header{gap:4px;}
-    .ibtn{padding:0 5px;}
-}
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:860px){.mc-stats{grid-template-columns:repeat(2,1fr);}.mc-scenarios{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.mc-scenarios{grid-template-columns:1fr;}.krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}.header{gap:4px;}.ibtn{padding:0 5px;}}
     </style>
 </head>
 <body data-filter="portfolio">
@@ -408,21 +344,18 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <span class="ts">Last updated: <span id="ts">--:--</span></span>
     </div>
     <div class="hright">
-        <!-- Filter pills (role=button + tabindex for keyboard nav — WCAG 2.1 SC 2.1.1) -->
         <div class="pill active" role="button" tabindex="0" data-filter="portfolio" onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Total Portfolio</div>
         <div class="pill"        role="button" tabindex="0" data-filter="liquid"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Liquid</div>
         <div class="pill"        role="button" tabindex="0" data-filter="crypto"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Crypto</div>
         <div class="pill"        role="button" tabindex="0" data-filter="tradfi"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">TradFi</div>
-        <div class="sep" role="separator" aria-hidden="true"></div>
-        <!-- Themes (radio-button semantics) -->
+        <div class="sep"></div>
         <div role="radiogroup" aria-label="Dashboard theme" style="display:flex;align-items:center;gap:6px;">
-            <div class="tpill active" role="radio" aria-checked="true"  tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('zhodler')" aria-label="Theme: Zhodler (green)"></div>
+            <div class="tpill active" role="radio" aria-checked="true"  tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('zhodler')" aria-label="Theme: Zhodler"></div>
             <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="cyan"    onclick="setTheme('cyan')"    onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('cyan')"    aria-label="Theme: Cyan"></div>
-            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="neon"    onclick="setTheme('neon')"    onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('neon')"    aria-label="Theme: Neon (purple)"></div>
-            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="cyber"   onclick="setTheme('cyber')"   onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('cyber')"   aria-label="Theme: Cyber (teal)"></div>
+            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="neon"    onclick="setTheme('neon')"    onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('neon')"    aria-label="Theme: Neon"></div>
+            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="cyber"   onclick="setTheme('cyber')"   onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('cyber')"   aria-label="Theme: Cyber"></div>
         </div>
-        <div class="sep" role="separator" aria-hidden="true"></div>
-        <!-- Actions -->
+        <div class="sep"></div>
         <button class="ibtn" id="lockBtn"    onclick="toggleLock()"    aria-label="Toggle layout lock">&#128275; Unlocked</button>
         <button class="ibtn" id="editBtn"    onclick="toggleEdit()"    aria-label="Toggle edit mode">&#9998; Edit Mode</button>
         <button class="ibtn" id="privacyBtn" onclick="togglePrivacy()" aria-label="Toggle privacy blur">&#128065; Privacy</button>
@@ -431,16 +364,13 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </div>
 </div>
 
-<!-- GRIDSTACK CONTAINER -->
 <div class="grid-stack" id="grid"></div>
 
-<!-- LOADING OVERLAY -->
 <div id="loadOverlay">
     <div class="brand">Zhodler</div>
     <div style="color:var(--text2);font-size:13px;" id="loadMsg">Loading data&#8230;</div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
 <!-- SETTINGS MODAL -->
@@ -476,7 +406,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
 const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
 const LS = {
     sheet:   'zh-sheet-id',
-    layout:  'zh-layout-v9',  // bumped: full portfolio-card structure on all widgets
+    layout:  'zh-layout-v10',  // bumped: full card-header/card-body structure
     theme:   'zh-theme',
     locked:  'zh-locked',
     privacy: 'zh-privacy',
@@ -491,41 +421,15 @@ let grid = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROW ACCESSORS
-// Dashboard_Data verified mapping (0-indexed):
-//  0 Days tracking   1 Year % (decimal)
-//  2 Header          3 Total Assets     4 Total Invested
-//  5 NW Year Start   6 Current NW       7 YTD Gain $
-//  8 YTD Gain %      9 Avg Daily YTD   10 Avg Monthly YTD
-// 11 AT Gain $      12 AT Gain %       13 Avg Daily AT   14 Avg Monthly AT
-// 27 Crypto Value   28 DeFi Val        29 CeFi Val
-// 30 Crypto Invest  31 Crypto NW Start 32 Crypto NW Now
-// 33 YTD Gain $     34 YTD %           35 Avg Daily YTD  36 Avg Mo YTD
-// 37 AT Gain $      38 AT %            39 Avg Daily AT   40 Avg Mo AT
-// 41 TradFi Assets  42 TradFi Invest   43 TradFi NW Start 44 TradFi NW Now
-// 45 YTD Gain $     46 YTD %           47 Avg Daily YTD   48 Avg Mo YTD
-// 49 AT Gain $      50 AT %            51 Avg Daily AT    52 Avg Mo AT
-// 54 BTC Holdings   55 BTC Price       56 % Since Start   57 % YTD
-// 59 Total Debt     60 Crypto Debt     61 Crypto Coll
-// 62 DeFi Debt      63 DeFi Coll       64 Compound LTV    65 Liq Price
-// 66 CeFi Debt      67 CeFi Coll       68 Bybit LTV
-// 69 TradFi Debt    70 Bank Debt       71 Andreia Debt
-// 73 Port EOY       74 Port 1Y         75 Port 5Y
-// 76 Crypto EOY     77 Crypto 1Y       78 Crypto 5Y
-// 81-92 Assets: c0=name c1=qty c2=value(str) c3=type c4=platform c5=status
-// 95-98 Years: c0=year c1=NW c2=YoY% c3=TotalAssets c4=BTC
 // ─────────────────────────────────────────────────────────────────────────────
 function V(r,c){c=c===undefined?1:c;if(!rows[r])return null;const x=rows[r].c;if(!x||x[c]==null)return null;return x[c].v!==undefined?x[c].v:null;}
 function N(r,c){const v=V(r,c);if(v===null||v==='')return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[$,%\s]/g,''));return isNaN(n)?0:n;}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION RESIZE OBSERVER
+// RESIZE OBSERVER
 // Writes --sh (section height px) and --sw (section width px) onto every
-// .stat-head and .stat-body element whenever their dimensions change.
-// All font-size rules use min(calc(var(--sh)*fH), calc(var(--sw)*fW)) so
-// content scales proportionally to its own section size — no JS arithmetic.
-// ResizeObserver fires once immediately on observe(), so values are correct
-// before the first paint; the CSS fallbacks on .stat-head / .stat-body are
-// just a safety net for that brief gap.
+// .card-header and .card-body so that CSS min(calc(var(--sh)*f), ...) rules
+// scale fonts proportionally to the actual rendered section dimensions.
 // ─────────────────────────────────────────────────────────────────────────────
 let _sectionRO = null;
 
@@ -541,28 +445,19 @@ function initSectionResizeObserver() {
         }
     });
 
-    // Observe every header and body section across all widget types:
-    //   .whead      — all widget headers (chart, stat, milestone, etc.)
-    //   .wbody      — chart / special widget bodies
-    //   .stat-body  — stat-card value bodies
-    // (.stat-head already carries .whead so it's included automatically)
     function observeSections(root) {
         const q = root.querySelectorAll ? root : document;
-        q.querySelectorAll('.whead, .wbody, .stat-body').forEach(el => {
-            _sectionRO.observe(el);
-        });
+        q.querySelectorAll('.card-header, .card-body').forEach(el => _sectionRO.observe(el));
     }
 
     observeSections(document);
 
-    // Auto-observe sections injected later (reset layout / import layout)
     new MutationObserver(muts => {
         muts.forEach(m => m.addedNodes.forEach(n => {
             if (!(n instanceof Element)) return;
             observeSections(n);
         }));
-    }).observe(document.getElementById('grid') || document.body,
-        {childList: true, subtree: true});
+    }).observe(document.getElementById('grid') || document.body, {childList:true, subtree:true});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -572,10 +467,8 @@ function fd(n){const a=Math.abs(n);const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?
 function fp(n){if(typeof n==='string')return n;const p=(n>-2&&n<2)?n*100:n;return(p>=0?'+':'')+p.toFixed(2)+'%';}
 function fq(n){return n.toLocaleString(undefined,{maximumFractionDigits:6});}
 function cc(n){return n>0?'pos':n<0?'neg':'';}
-function lc(v){return v<0.5?'pos':v<0.75?'warn':'neg';}
 function kpi(label,val,sub,cls){return`<div class="kpi"><div class="klbl">${label}</div><div class="kval ${cls||''} sensitive">${val}</div>${sub?`<div class="ksub">${sub}</div>`:''}</div>`;}
 function gi(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
-// sv — set a stat-card value element; optionally update its color class
 function sv(id,val,colorCls){
     const el=document.getElementById(id); if(!el)return;
     el.textContent=val;
@@ -588,24 +481,43 @@ function sv(id,val,colorCls){
 // ─────────────────────────────────────────────────────────────────────────────
 // WIDGET DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: build a stat card template
+// Stat card builder — produces the EXACT portfolio-card structure:
+//   .card-header (flex:1)  ← label + title + subtitle, direct children
+//   .card-divider          ← gradient 1px line
+//   .card-body   (flex:5)  ← main value + secondary value, centred
 function _sc(sector, sectorId, title, valId, cls, subId, titleId, subtitle) {
-    const sEl = sectorId ? `<div class="wsector" id="${sectorId}">${sector}</div>` : `<div class="wsector">${sector}</div>`;
-    const tEl = titleId  ? `<div class="wtitle" id="${titleId}">${title}</div>` : `<div class="wtitle">${title}</div>`;
-    const stEl = subtitle ? `<div class="wsub">${subtitle}</div>` : '';
-    const vCls = `stat-val${cls?' '+cls:''}`;
-    const sub  = subId ? `<div class="stat-sub" id="${subId}"></div>` : '';
-    // whead + stat-head: header section (flex:1) — direct children, no inner wrapper
-    // .wdivider: gradient line between header and body
-    // stat-body: body section (flex:5, grows 5× faster)
-    return `<div class="whead stat-head">${sEl}${tEl}${stEl}</div><div class="wdivider"></div><div class="stat-body"><div class="${vCls}" id="${valId}">--</div>${sub}</div>`;
+    const label = sectorId
+        ? `<span class="card-label" id="${sectorId}">${sector}</span>`
+        : `<span class="card-label">${sector}</span>`;
+    const titleEl = titleId
+        ? `<span class="card-title" id="${titleId}">${title}</span>`
+        : `<span class="card-title">${title}</span>`;
+    const subtitleEl = subtitle ? `<span class="card-subtitle">${subtitle}</span>` : '';
+    const valCls = `card-main-value${cls ? ' ' + cls : ''}`;
+    const sub = subId ? `<span class="card-secondary-value" id="${subId}"></span>` : '';
+    return (
+        `<div class="card-header">${label}${titleEl}${subtitleEl}</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body" style="align-items:center;text-align:center;">` +
+            `<span class="${valCls}" id="${valId}">--</span>${sub}` +
+        `</div>`
+    );
 }
 
 const WIDGET_HTML = {
-    // ── GLOBAL (kept as grouped KPI card) ────────────────────────────────────
-    'w-global': `<div class="whead"><div class="wsector">Portfolio</div><div class="wtitle">Global Metrics</div><div class="wsub">Days tracked · Year %</div></div><div class="wdivider"></div><div class="wbody"><div class="krow" id="globalKpis"></div></div>`,
+    // ── GLOBAL (grouped KPI card) ─────────────────────────────────────────────
+    'w-global':
+        `<div class="card-header">` +
+            `<span class="card-label">Portfolio</span>` +
+            `<span class="card-title">Global Metrics</span>` +
+            `<span class="card-subtitle">Days tracked · Year %</span>` +
+        `</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body scrollable">` +
+            `<div class="krow" id="globalKpis"></div>` +
+        `</div>`,
 
-    // ── SUMMARY — individual cards ───────────────────────────────────────────
+    // ── SUMMARY ───────────────────────────────────────────────────────────────
     'w-c-nw':          _sc('Portfolio','s-sec-nw',        'Net Worth',         'c-nw',          'hero sensitive', null,          null,               'Current balance'),
     'w-c-assets':      _sc('Portfolio','s-sec-assets',    'Total Assets',      'c-assets',      'sensitive',      null,          null,               'All holdings'),
     'w-c-invested':    _sc('Portfolio','s-sec-invested',  'Total Invested',    'c-invested',    'sensitive',      null,          null,               'Capital deployed'),
@@ -616,66 +528,89 @@ const WIDGET_HTML = {
     'w-c-monthly-at':  _sc('Portfolio','s-sec-mat',       'Monthly Avg',       'c-monthly-at',  'sensitive',      null,          null,               'All-time average'),
     'w-c-daily-at':    _sc('Portfolio','s-sec-dat',       'Daily Avg',         'c-daily-at',    'sensitive',      null,          null,               'All-time average'),
 
-    // ── VELOCITY — unique cards only (monthly/daily/nw removed — duplicates of Summary) ──
-    'w-c-vel-annual':  _sc('Portfolio','vel-sec-annual',  'Annual Rate',       'c-vel-annual',  'hero sensitive', null,          null,               'YTD × 12 months'),
-    'w-c-vel-momentum':_sc('Portfolio','vel-sec-mom',     'Momentum',          'c-vel-momentum','',               null,          null,               'vs all-time avg'),
+    // ── VELOCITY ──────────────────────────────────────────────────────────────
+    'w-c-vel-annual':   _sc('Portfolio','vel-sec-annual', 'Annual Rate',       'c-vel-annual',  'hero sensitive', null,          null,               'YTD × 12 months'),
+    'w-c-vel-momentum': _sc('Portfolio','vel-sec-mom',    'Momentum',          'c-vel-momentum','',               null,          null,               'vs all-time avg'),
 
-    // ── PROJECTIONS — individual cards ───────────────────────────────────────
+    // ── PROJECTIONS ───────────────────────────────────────────────────────────
     'w-c-eoy': _sc('Portfolio','proj-sec-eoy','End of Year', 'c-proj-eoy','sensitive','c-proj-eoy-sub',null,'Dec 31 estimate'),
     'w-c-1y':  _sc('Portfolio','proj-sec-1y', '1-Year',      'c-proj-1y', 'sensitive','c-proj-1y-sub', null,'12 months ahead'),
     'w-c-5y':  _sc('Portfolio','proj-sec-5y', '5-Year',      'c-proj-5y', 'sensitive','c-proj-5y-sub', null,'60 months ahead'),
 
-    // ── DEBT — individual cards ───────────────────────────────────────────────
-    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',        'c-debt-total',  'sensitive', null,'c-debt-total-lbl', 'All categories'),
-    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',       'c-debt-crypto', 'sensitive', null,'c-debt-crypto-lbl','DeFi + CeFi'),
-    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',       'c-debt-tradfi', 'sensitive', null,'c-debt-tradfi-lbl','Bank + personal'),
+    // ── DEBT ──────────────────────────────────────────────────────────────────
+    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',   'c-debt-total',  'sensitive', null,'c-debt-total-lbl', 'All categories'),
+    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',  'c-debt-crypto', 'sensitive', null,'c-debt-crypto-lbl','DeFi + CeFi'),
+    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',  'c-debt-tradfi', 'sensitive', null,'c-debt-tradfi-lbl','Bank + personal'),
 
-    // ── BTC — individual cards ────────────────────────────────────────────────
+    // ── BTC ───────────────────────────────────────────────────────────────────
     'w-c-btc-value':    _sc('Market', null,'BTC Value',    'c-btc-value',    'sensitive',null,null,'At spot price'),
     'w-c-btc-price':    _sc('Market', null,'BTC Price',    'c-btc-price',    '',         null,null,'USD spot'),
     'w-c-btc-holdings': _sc('Market', null,'BTC Holdings', 'c-btc-holdings', '',         null,null,'Total in portfolio'),
     'w-c-btc-since':    _sc('Market', null,'% Since Start','c-btc-since',    '',         null,null,'vs entry price'),
     'w-c-btc-ytd':      _sc('Market', null,'BTC YTD',      'c-btc-ytd',      '',         null,null,'Year-to-date'),
-    'w-milestone':`<div class="whead"><div class="wsector" id="milestoneFilter">Portfolio</div><div class="wtitle">Net Worth Milestones</div></div><div class="wdivider"></div>
-        <div class="wbody">
-            <div class="ms-outer">
-                <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:5px;text-align:center">Tracking <strong style="color:var(--text1)">Net Worth</strong> toward $1M &mdash; bar fills between reached milestone dots</div>
-                <div class="ms-track">
-                    <div class="ms-line"></div>
-                    <div class="ms-fill" id="ms-fill"></div>
-                    <div class="ms-dots" id="ms-dots"></div>
-                </div>
-                <div class="ms-labels" id="ms-labels"></div>
-            </div>
-            <div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>
-        </div>`,
-    'w-monte':`<div class="whead"><div class="wsector" id="monteFilter">Portfolio</div><div class="wtitle">Monte Carlo FIRE Simulation</div><div class="wsub" id="mc-params"></div></div><div class="wdivider"></div>
-        <div class="wbody">
-            <div class="mc-stats" id="mc-stats"></div>
-            <div class="mc-scenarios" id="mc-scenarios"></div>
-            <div class="chwrap" style="min-height:140px;"><canvas id="mcChart"></canvas></div>
-            <div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>
-        </div>`,
-    'w-assets':`<div class="whead"><div class="wsector">Portfolio</div><div class="wtitle">Assets Distribution</div></div><div class="wdivider"></div>
-        <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
-            <div class="chwrap" style="min-height:220px;flex:2;"><canvas id="assetsChart"></canvas></div>
-            <div class="twrap" id="assetsTable" style="flex:1;"></div>
-        </div>`,
-    'w-yearly':`<div class="whead"><div class="wsector" id="yearlyFilter">Portfolio</div><div class="wtitle">Yearly Performance</div></div><div class="wdivider"></div>
-        <div class="wbody" style="display:flex;flex-direction:column;gap:0;">
-            <div class="chwrap"><canvas id="yearChart"></canvas></div>
-            <div class="twrap" id="yearTable"></div>
-        </div>`,
+
+    // ── MILESTONE ─────────────────────────────────────────────────────────────
+    'w-milestone':
+        `<div class="card-header">` +
+            `<span class="card-label" id="milestoneFilter">Portfolio</span>` +
+            `<span class="card-title">Net Worth Milestones</span>` +
+        `</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body scrollable">` +
+            `<div class="ms-outer">` +
+                `<div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:5px;text-align:center">Tracking <strong>Net Worth</strong> toward $1M &mdash; bar fills between reached dots</div>` +
+                `<div class="ms-track"><div class="ms-line"></div><div class="ms-fill" id="ms-fill"></div><div class="ms-dots" id="ms-dots"></div></div>` +
+                `<div class="ms-labels" id="ms-labels"></div>` +
+            `</div>` +
+            `<div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>` +
+        `</div>`,
+
+    // ── MONTE CARLO ───────────────────────────────────────────────────────────
+    'w-monte':
+        `<div class="card-header">` +
+            `<span class="card-label" id="monteFilter">Portfolio</span>` +
+            `<span class="card-title">Monte Carlo FIRE Simulation</span>` +
+            `<span class="card-subtitle" id="mc-params"></span>` +
+        `</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body scrollable">` +
+            `<div class="mc-stats"   id="mc-stats"></div>` +
+            `<div class="mc-scenarios" id="mc-scenarios"></div>` +
+            `<div class="chwrap" style="min-height:140px;"><canvas id="mcChart"></canvas></div>` +
+            `<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>` +
+        `</div>`,
+
+    // ── ASSETS ────────────────────────────────────────────────────────────────
+    'w-assets':
+        `<div class="card-header">` +
+            `<span class="card-label">Portfolio</span>` +
+            `<span class="card-title">Assets Distribution</span>` +
+        `</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body scrollable" style="gap:0;">` +
+            `<div class="chwrap" style="min-height:220px;flex:2;"><canvas id="assetsChart"></canvas></div>` +
+            `<div class="twrap" id="assetsTable" style="flex:1;"></div>` +
+        `</div>`,
+
+    // ── YEARLY PERFORMANCE ────────────────────────────────────────────────────
+    'w-yearly':
+        `<div class="card-header">` +
+            `<span class="card-label" id="yearlyFilter">Portfolio</span>` +
+            `<span class="card-title">Yearly Performance</span>` +
+        `</div>` +
+        `<div class="card-divider"></div>` +
+        `<div class="card-body scrollable" style="gap:0;">` +
+            `<div class="chwrap"><canvas id="yearChart"></canvas></div>` +
+            `<div class="twrap" id="yearTable"></div>` +
+        `</div>`,
 };
 
 const DEFAULT_LAYOUT = [
-    // ── Row 0 — Hero metrics (h=4, 24-col grid) ─────────────────────────────
     {id:'w-c-nw',           x:0,  y:0,  w:6,  h:4},
     {id:'w-c-vel-annual',   x:6,  y:0,  w:6,  h:4},
     {id:'w-c-assets',       x:12, y:0,  w:6,  h:4},
     {id:'w-c-invested',     x:18, y:0,  w:6,  h:4},
 
-    // ── Row 4 — YTD / AT metrics (h=3) ─────────────────────────────────────
     {id:'w-c-ytd',          x:0,  y:4,  w:4,  h:3},
     {id:'w-c-atgain',       x:4,  y:4,  w:4,  h:3},
     {id:'w-c-monthly-ytd',  x:8,  y:4,  w:4,  h:3},
@@ -683,11 +618,9 @@ const DEFAULT_LAYOUT = [
     {id:'w-c-monthly-at',   x:16, y:4,  w:4,  h:3},
     {id:'w-c-daily-at',     x:20, y:4,  w:4,  h:3},
 
-    // ── Row 7 — Velocity unique + Global (monthly/daily/nw removed — duplicates) ──
     {id:'w-c-vel-momentum', x:0,  y:7,  w:6,  h:3},
     {id:'w-global',         x:6,  y:7,  w:18, h:3},
 
-    // ── Row 10 — Projections + BTC (h=3) ────────────────────────────────────
     {id:'w-c-eoy',          x:0,  y:10, w:4,  h:3},
     {id:'w-c-1y',           x:4,  y:10, w:4,  h:3},
     {id:'w-c-5y',           x:8,  y:10, w:4,  h:3},
@@ -695,14 +628,12 @@ const DEFAULT_LAYOUT = [
     {id:'w-c-btc-price',    x:16, y:10, w:4,  h:3},
     {id:'w-c-btc-holdings', x:20, y:10, w:4,  h:3},
 
-    // ── Row 13 — Debt + BTC misc (h=3) ──────────────────────────────────────
     {id:'w-c-debt-total',   x:0,  y:13, w:4,  h:3},
     {id:'w-c-debt-crypto',  x:4,  y:13, w:4,  h:3},
     {id:'w-c-debt-tradfi',  x:8,  y:13, w:4,  h:3},
     {id:'w-c-btc-since',    x:12, y:13, w:4,  h:3},
     {id:'w-c-btc-ytd',      x:16, y:13, w:4,  h:3},
 
-    // ── Row 16+ — Chart widgets ──────────────────────────────────────────────
     {id:'w-milestone',      x:0,  y:16, w:24, h:4},
     {id:'w-assets',         x:0,  y:20, w:14, h:7},
     {id:'w-yearly',         x:14, y:20, w:10, h:7},
@@ -710,37 +641,29 @@ const DEFAULT_LAYOUT = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GRIDSTACK INIT  (called once on first successful data load)
+// GRIDSTACK INIT
 // ─────────────────────────────────────────────────────────────────────────────
-// ── RESPONSIVE CELL HEIGHT ────────────────────────────────────────────────────
-// Smaller cells = finer vertical granularity; 24 columns = finer horizontal granularity
 function calcCellHeight() {
     return Math.max(36, Math.min(62, Math.round(window.innerHeight / 20)));
 }
 
 function initGrid() {
     if (grid) return;
-
-    if (typeof GridStack === 'undefined') {
-        throw new Error('GridStack library failed to load. Check your internet connection.');
-    }
+    if (typeof GridStack === 'undefined') throw new Error('GridStack library failed to load.');
 
     grid = GridStack.init({
-        column: 24,  // 24 columns for fine horizontal granularity
+        column: 24,
         cellHeight: calcCellHeight(),
         margin: 0,
-        float: true,          // widgets are fully independent — no forced reflow
+        float: true,
         animate: true,
-        disableDrag: false,   // always draggable (lock controls it)
-        disableResize: false, // always resizable (lock controls it)
+        disableDrag: false,
+        disableResize: false,
         resizable: {handles: 'se,s,e,sw,w'},
-        draggable: {handle: '.whead'},
+        draggable: {handle: '.card-header'},
     }, '#grid');
 
-    // Load saved or default layout
-    const savedLayout = loadLayout();
-    const layout = savedLayout || DEFAULT_LAYOUT;
-
+    const layout = loadLayout() || DEFAULT_LAYOUT;
     layout.forEach(item => {
         if (!WIDGET_HTML[item.id]) return;
         grid.addWidget({
@@ -750,22 +673,14 @@ function initGrid() {
     });
 
     grid.on('change', saveLayout);
-
-    // Boot the section ResizeObserver after widgets are in the DOM
     setTimeout(initSectionResizeObserver, 80);
 
-    // Restore lock state
-    if (localStorage.getItem(LS.locked) === 'true') {
-        applyLock(true, false);
-    }
+    if (localStorage.getItem(LS.locked) === 'true') applyLock(true, false);
 
-    // Update cell height whenever the window is resized
     let _rhTimer;
     window.addEventListener('resize', () => {
         clearTimeout(_rhTimer);
-        _rhTimer = setTimeout(() => {
-            if (grid) grid.cellHeight(calcCellHeight());
-        }, 150);
+        _rhTimer = setTimeout(() => { if (grid) grid.cellHeight(calcCellHeight()); }, 150);
     });
 }
 
@@ -783,7 +698,6 @@ function loadLayout() {
         const s = localStorage.getItem(LS.layout);
         if (!s) return null;
         const parsed = JSON.parse(s);
-        // Validate all widget IDs are still valid; add missing ones
         const validIds = Object.keys(WIDGET_HTML);
         const filtered = parsed.filter(i => validIds.includes(i.id));
         const savedIds = filtered.map(i => i.id);
@@ -804,7 +718,7 @@ function resetLayout() {
             content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
         });
     });
-    if (rows.length > 0) setTimeout(() => { renderAll(); }, 80);
+    if (rows.length > 0) setTimeout(() => renderAll(), 80);
     toast('Layout reset to default', false);
 }
 
@@ -814,12 +728,10 @@ function exportLayout() {
         const n = el.gridstackNode;
         return {id: n.id, x: n.x, y: n.y, w: n.w, h: n.h};
     });
-    const data = {
-        version: '4', date: new Date().toISOString(),
+    const data = {version:'5', date:new Date().toISOString(),
         theme: document.body.className.replace('privacy','').trim() || 'zhodler',
-        locked: isLocked, layout: items,
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        locked: isLocked, layout: items};
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const a = Object.assign(document.createElement('a'), {
         href: URL.createObjectURL(blob),
         download: `zhodler-layout-${new Date().toISOString().slice(0,10)}.json`,
@@ -829,8 +741,7 @@ function exportLayout() {
 }
 
 function importLayout(input) {
-    const file = input.files[0];
-    if (!file) return;
+    const file = input.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = e => {
         try {
@@ -862,17 +773,15 @@ function importLayout(input) {
 async function loadData() {
     const id  = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
     const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`;
-
     const isFirstLoad = !grid;
+
     if (isFirstLoad) {
         document.getElementById('loadMsg').textContent = 'Loading data\u2026';
         document.getElementById('loadOverlay').style.display = 'flex';
     } else {
-        // On refresh, show a subtle spinner in the timestamp instead of blanking the dashboard
         document.getElementById('ts').textContent = '⟳ refreshing…';
     }
 
-    // ── Fetch data ───────────────────────────────────────────────────────────
     let fetchErr = null;
     try {
         const resp = await fetch(url);
@@ -881,19 +790,11 @@ async function loadData() {
         const s = text.indexOf('{'), e = text.lastIndexOf('}');
         if (s === -1) throw new Error('Bad response from Google Sheets');
         rows = JSON.parse(text.slice(s, e + 1)).table.rows;
-    } catch(err) {
-        fetchErr = err;
-    }
+    } catch(err) { fetchErr = err; }
 
-    // ── Init GridStack (only on first load — skips if grid already exists) ────
     let gridErr = null;
-    try {
-        initGrid();
-    } catch(err) {
-        gridErr = err;
-    }
+    try { initGrid(); } catch(err) { gridErr = err; }
 
-    // ── Handle errors ────────────────────────────────────────────────────────
     if (gridErr) {
         document.getElementById('loadMsg').innerHTML =
             `<span style="color:var(--red)">&#10005; ${gridErr.message}</span>`;
@@ -907,12 +808,9 @@ async function loadData() {
         return;
     }
 
-    // ── Success ───────────────────────────────────────────────────────────────
     const now = new Date();
     document.getElementById('ts').textContent =
-        String(now.getHours()).padStart(2,'0') + ':' +
-        String(now.getMinutes()).padStart(2,'0');
-
+        String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     try { renderAll(); } catch(err) { console.error('renderAll error:', err); }
     if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
     toast('Data refreshed', false);
@@ -922,17 +820,9 @@ async function loadData() {
 // RENDER
 // ─────────────────────────────────────────────────────────────────────────────
 function renderAll() {
-    renderGlobal();
-    renderBtc();
-    renderSummary();
-    renderDebt();
-    renderProjections();
-    renderVelocity();
-    renderMilestone();
-    renderMonteCarlo();
-    renderAssets();
-    renderYearly();
-    // ResizeObserver keeps values fitted continuously — no manual refit needed
+    renderGlobal(); renderBtc(); renderSummary(); renderDebt();
+    renderProjections(); renderVelocity(); renderMilestone();
+    renderMonteCarlo(); renderAssets(); renderYearly();
 }
 
 function renderGlobal() {
@@ -954,19 +844,17 @@ function renderBtc() {
     sv('c-btc-ytd',      fp(cy), cc(cy));
 }
 
-// ── FILTER-AWARE DATA ACCESSORS ───────────────────────────────────────────────
-// Liquid = Crypto NW + TradFi NW (sheet pre-computes both; no exclusion logic needed)
 function getFilterNW() {
     if (activeFilter === 'crypto')  return N(32);
     if (activeFilter === 'tradfi')  return N(44);
     if (activeFilter === 'liquid')  return N(32) + N(44);
-    return N(6); // portfolio
+    return N(6);
 }
 function getFilterMonthly() {
     if (activeFilter === 'crypto')  return N(36);
     if (activeFilter === 'tradfi')  return N(48);
     if (activeFilter === 'liquid')  return N(36) + N(48);
-    return N(10); // portfolio
+    return N(10);
 }
 function getFilterDaily() {
     if (activeFilter === 'crypto')  return N(35);
@@ -984,12 +872,11 @@ function getFilterAtPct() {
     if (activeFilter === 'crypto')  return N(38);
     if (activeFilter === 'tradfi')  return N(50);
     if (activeFilter === 'liquid') {
-        const ci = N(30), ti = N(42), total = ci + ti;
-        return total > 0 ? (N(38) * ci + N(50) * ti) / total : N(12);
+        const ci=N(30), ti=N(42), total=ci+ti;
+        return total > 0 ? (N(38)*ci + N(50)*ti) / total : N(12);
     }
     return N(12);
 }
-
 function getSectorLabel() {
     if (activeFilter === 'crypto')  return 'Crypto';
     if (activeFilter === 'tradfi')  return 'TradFi';
@@ -999,16 +886,11 @@ function getSectorLabel() {
 function updateSectorHeaders() {
     const lbl = getSectorLabel();
     [
-        // summary cards
         's-sec-nw','s-sec-assets','s-sec-invested','s-sec-ytd','s-sec-atgain',
         's-sec-myt','s-sec-dyt','s-sec-mat','s-sec-dat',
-        // velocity cards
-        'vel-sec-annual','vel-sec-monthly','vel-sec-daily','vel-sec-nw','vel-sec-mom',
-        // projection cards
+        'vel-sec-annual','vel-sec-mom',
         'proj-sec-eoy','proj-sec-1y','proj-sec-5y',
-        // debt cards
         'debt-sec-total','debt-sec-crypto','debt-sec-tradfi',
-        // chart widgets
         'milestoneFilter','monteFilter','yearlyFilter',
     ].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=lbl; });
 }
@@ -1017,39 +899,38 @@ function renderSummary() {
     updateSectorHeaders();
     let d;
     if (activeFilter === 'liquid') {
-        d = { a:N(27)+N(41), inv:N(30)+N(42), nw:N(32)+N(44),
-              yd:N(33)+N(45), yp:(N(30)+N(42))>0?(N(33)+N(45))/(N(30)+N(42)):0,
-              dd:N(35)+N(47), dm:N(36)+N(48),
-              ad:N(37)+N(49), ap:getFilterAtPct(), ald:N(39)+N(51), alm:N(40)+N(52) };
+        d={a:N(27)+N(41),inv:N(30)+N(42),nw:N(32)+N(44),
+           yd:N(33)+N(45),yp:(N(30)+N(42))>0?(N(33)+N(45))/(N(30)+N(42)):0,
+           dd:N(35)+N(47),dm:N(36)+N(48),ad:N(37)+N(49),ap:getFilterAtPct(),ald:N(39)+N(51),alm:N(40)+N(52)};
     } else if (activeFilter === 'portfolio') {
-        d = {a:N(3),inv:N(4),nw:N(6),yd:N(7),yp:N(8),dd:N(9),dm:N(10),ad:N(11),ap:N(12),ald:N(13),alm:N(14)};
+        d={a:N(3),inv:N(4),nw:N(6),yd:N(7),yp:N(8),dd:N(9),dm:N(10),ad:N(11),ap:N(12),ald:N(13),alm:N(14)};
     } else if (activeFilter === 'crypto') {
-        d = {a:N(27),inv:N(30),nw:N(32),yd:N(33),yp:N(34),dd:N(35),dm:N(36),ad:N(37),ap:N(38),ald:N(39),alm:N(40)};
-    } else { // tradfi
-        d = {a:N(41),inv:N(42),nw:N(44),yd:N(45),yp:N(46),dd:N(47),dm:N(48),ad:N(49),ap:N(50),ald:N(51),alm:N(52)};
+        d={a:N(27),inv:N(30),nw:N(32),yd:N(33),yp:N(34),dd:N(35),dm:N(36),ad:N(37),ap:N(38),ald:N(39),alm:N(40)};
+    } else {
+        d={a:N(41),inv:N(42),nw:N(44),yd:N(45),yp:N(46),dd:N(47),dm:N(48),ad:N(49),ap:N(50),ald:N(51),alm:N(52)};
     }
     sv('c-nw',          fd(d.nw));
     sv('c-assets',      fd(d.a));
     sv('c-invested',    fd(d.inv));
-    sv('c-ytd',         fd(d.yd),         cc(d.yd));  gi('c-ytd-sub',    fp(d.yp));
-    sv('c-atgain',      fd(d.ad),         cc(d.ad));  gi('c-atgain-sub', fp(d.ap));
-    sv('c-monthly-ytd', fd(d.dm)+'/mo',   cc(d.dm));
-    sv('c-daily-ytd',   fd(d.dd)+'/day',  cc(d.dd));
-    sv('c-monthly-at',  fd(d.alm)+'/mo',  cc(d.alm));
-    sv('c-daily-at',    fd(d.ald)+'/day', cc(d.ald));
+    sv('c-ytd',         fd(d.yd),        cc(d.yd));  gi('c-ytd-sub',    fp(d.yp));
+    sv('c-atgain',      fd(d.ad),        cc(d.ad));  gi('c-atgain-sub', fp(d.ap));
+    sv('c-monthly-ytd', fd(d.dm)+'/mo',  cc(d.dm));
+    sv('c-daily-ytd',   fd(d.dd)+'/day', cc(d.dd));
+    sv('c-monthly-at',  fd(d.alm)+'/mo', cc(d.alm));
+    sv('c-daily-at',    fd(d.ald)+'/day',cc(d.ald));
 }
 
 function renderDebt() {
     updateSectorHeaders();
     let total, lbl1, val1, lbl2, val2;
     if (activeFilter === 'portfolio') {
-        total=N(59);      lbl1='Crypto Debt';    val1=N(60); lbl2='TradFi Debt';    val2=N(69);
+        total=N(59); lbl1='Crypto Debt'; val1=N(60); lbl2='TradFi Debt'; val2=N(69);
     } else if (activeFilter === 'liquid') {
-        total=N(60)+N(69);lbl1='Crypto Debt';    val1=N(60); lbl2='TradFi Debt';    val2=N(69);
+        total=N(60)+N(69); lbl1='Crypto Debt'; val1=N(60); lbl2='TradFi Debt'; val2=N(69);
     } else if (activeFilter === 'crypto') {
-        total=N(60);      lbl1='DeFi Debt';      val1=N(62); lbl2='CeFi Debt';      val2=N(66);
-    } else { // tradfi
-        total=N(69);      lbl1='Bank Debt';       val1=N(70); lbl2='Andreia Debt';   val2=N(71);
+        total=N(60); lbl1='DeFi Debt'; val1=N(62); lbl2='CeFi Debt'; val2=N(66);
+    } else {
+        total=N(69); lbl1='Bank Debt'; val1=N(70); lbl2='Andreia Debt'; val2=N(71);
     }
     sv('c-debt-total',  fd(total), 'neg');
     sv('c-debt-crypto', fd(val1));
@@ -1071,7 +952,7 @@ function renderProjections() {
         eoy=N(73); yr1=N(74); v5=N(75);
     } else if (activeFilter === 'crypto') {
         eoy=N(76); yr1=N(77); v5=N(78);
-    } else { // liquid — estimated
+    } else {
         const lnw=getFilterNW(), dm=getFilterMonthly(), yr=N(1);
         const moLeft=Math.round((1-yr)*12);
         eoy=lnw+dm*moLeft; yr1=lnw+dm*12;
@@ -1084,20 +965,12 @@ function renderProjections() {
     sv('c-proj-5y',  fd(v5),  cc(v5));  gi('c-proj-5y-sub',  sub);
 }
 
-// ── NET WORTH VELOCITY ────────────────────────────────────────────────────────
 function renderVelocity() {
     updateSectorHeaders();
-    const monthly   = getFilterMonthly();
-    const daily     = getFilterDaily();
-    const nw        = getFilterNW();
-    const annual    = monthly * 12;
-    const momentum  = monthly - getFilterAtMonthly();
-
-    sv('c-vel-annual',  fd(annual)+'/yr',  cc(annual));
-    sv('c-vel-monthly', fd(monthly)+'/mo', cc(monthly));
-    sv('c-vel-daily',   fd(daily)+'/day',  cc(daily));
-    sv('c-vel-nw',      fd(nw));
-
+    const monthly  = getFilterMonthly();
+    const annual   = monthly * 12;
+    const momentum = monthly - getFilterAtMonthly();
+    sv('c-vel-annual', fd(annual)+'/yr', cc(annual));
     const momEl = document.getElementById('c-vel-momentum');
     if (momEl) {
         momEl.innerHTML = momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating';
@@ -1106,12 +979,9 @@ function renderVelocity() {
     }
 }
 
-// ── MILESTONE TIMELINE ────────────────────────────────────────────────────────
 function renderMilestone() {
-    const currentNW     = getFilterNW();
-    const monthlyGrowth = getFilterMonthly();
-
-    const milestones = [
+    const currentNW=getFilterNW(), monthlyGrowth=getFilterMonthly();
+    const milestones=[
         {name:'$50K', target:50000,  icon:'🎯'},
         {name:'$100K',target:100000, icon:'💯'},
         {name:'$150K',target:150000, icon:'🚀'},
@@ -1120,258 +990,126 @@ function renderMilestone() {
         {name:'$750K',target:750000, icon:'👑'},
         {name:'$1M',  target:1000000,icon:'🏆'},
     ];
-
-    // Find the next milestone first (used for dots AND fill)
     const nextIdx = milestones.findIndex(m => currentNW < m.target);
-
-    // Compute visual fill % aligned with evenly-spaced dot positions.
-    // Dots are spaced 1/(n-1) apart visually but milestones are NOT evenly
-    // distributed in $ value — so we interpolate within the current segment.
     const n = milestones.length;
     let visualPct;
     if (nextIdx === -1) {
-        visualPct = 100; // past all milestones
+        visualPct = 100;
     } else if (nextIdx === 0) {
-        // Before the first milestone: scale from 0 to the 1st dot position
-        visualPct = Math.max(0, (currentNW / milestones[0].target) * (100 / (n - 1)));
+        visualPct = Math.max(0, (currentNW / milestones[0].target) * (100 / (n-1)));
     } else {
-        const prevM = milestones[nextIdx - 1];
-        const nextM = milestones[nextIdx];
-        const segFrac = (currentNW - prevM.target) / (nextM.target - prevM.target);
-        visualPct = ((nextIdx - 1 + segFrac) / (n - 1)) * 100;
+        const prevM=milestones[nextIdx-1], nextM=milestones[nextIdx];
+        const segFrac=(currentNW-prevM.target)/(nextM.target-prevM.target);
+        visualPct=((nextIdx-1+segFrac)/(n-1))*100;
     }
-
-    const fill = document.getElementById('ms-fill');
-    if (fill) fill.style.width = visualPct + '%';
-
-    const dots = milestones.map((m, i) => {
-        const done = currentNW >= m.target;
-        const isNext = i === nextIdx;
-        let cls = done ? ' done' : (isNext ? ' next' : '');
-        return `<div class="ms-circle${cls}" title="${m.name}">${done ? '✓' : m.icon}</div>`;
-    }).join('');
-
-    const labels = milestones.map(m => {
-        const done = currentNW >= m.target;
-        const months = (!done && monthlyGrowth > 0) ? Math.ceil((m.target - currentNW) / monthlyGrowth) : 0;
-        const eta = done ? '' : (months > 0 ? months + 'mo' : '∞');
-        const etaColor = done ? 'var(--green)' : (months > 0 && months < 24 ? 'var(--yellow)' : 'var(--text2)');
-        return `<div class="ms-label">
-            <div class="ms-name">${m.name}</div>
-            <div class="ms-eta" style="color:${etaColor}">${eta}</div>
-        </div>`;
-    }).join('');
-
-    gi('ms-dots', dots);
-    gi('ms-labels', labels);
-
-    const next = nextIdx >= 0 ? milestones[nextIdx] : null;
-    const remainToNext = next ? next.target - currentNW : 0;
-    const moToNext = (next && monthlyGrowth > 0) ? Math.ceil(remainToNext / monthlyGrowth) : 0;
-    const nextStr = next
-        ? ` &bull; Next: ${next.name} in ${moToNext > 0 ? moToNext + 'mo' : '∞'}`
-        : ' &bull; 🏆 All milestones reached!';
-
-    const actualPct = Math.min(100, (currentNW / 1000000) * 100);
-    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${actualPct.toFixed(1)}% of $1M goal${nextStr}`);
+    const fill=document.getElementById('ms-fill');
+    if (fill) fill.style.width = visualPct+'%';
+    gi('ms-dots', milestones.map((m,i)=>{
+        const done=currentNW>=m.target, isNext=i===nextIdx;
+        return `<div class="ms-circle${done?' done':isNext?' next':''}" title="${m.name}">${done?'✓':m.icon}</div>`;
+    }).join(''));
+    gi('ms-labels', milestones.map(m=>{
+        const done=currentNW>=m.target;
+        const months=(!done&&monthlyGrowth>0)?Math.ceil((m.target-currentNW)/monthlyGrowth):0;
+        const eta=done?'':(months>0?months+'mo':'∞');
+        const etaColor=done?'var(--green)':(months>0&&months<24?'var(--yellow)':'var(--text2)');
+        return `<div class="ms-label"><div class="ms-name">${m.name}</div><div class="ms-eta" style="color:${etaColor}">${eta}</div></div>`;
+    }).join(''));
+    const next=nextIdx>=0?milestones[nextIdx]:null;
+    const remainToNext=next?next.target-currentNW:0;
+    const moToNext=(next&&monthlyGrowth>0)?Math.ceil(remainToNext/monthlyGrowth):0;
+    const nextStr=next?` &bull; Next: ${next.name} in ${moToNext>0?moToNext+'mo':'∞'}`:' &bull; 🏆 All milestones reached!';
+    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${Math.min(100,(currentNW/1000000)*100).toFixed(1)}% of $1M goal${nextStr}`);
 }
 
-// ── MONTE CARLO FIRE ──────────────────────────────────────────────────────────
 function renderMonteCarlo() {
-    const statsEl = document.getElementById('mc-stats');
-    if (!statsEl) return;
-
-    const currentNW   = getFilterNW();
-    const monthly     = getFilterMonthly();
-    const atPct       = getFilterAtPct();
-    const FIRE_TARGET = 1000000;
-    const SIMS        = 800;
-    const YEARS       = 15;
-
-    if (currentNW <= 0) {
-        gi('mc-stats', `<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data for simulation</div>`);
-        gi('mc-scenarios', '');
-        return;
+    const statsEl=document.getElementById('mc-stats'); if(!statsEl) return;
+    const currentNW=getFilterNW(), monthly=getFilterMonthly(), atPct=getFilterAtPct();
+    const FIRE_TARGET=1000000, SIMS=800, YEARS=15;
+    if (currentNW<=0) {
+        gi('mc-stats',`<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data</div>`);
+        gi('mc-scenarios',''); return;
     }
-
-    // Annual return: use AT return clamped sensibly
-    const annualReturn = Math.max(0.04, Math.min(0.5, Math.abs(atPct > 0 ? atPct : 0.08)));
-    const meanMonthly  = annualReturn / 12;
-    const vol          = 0.045;  // 4.5% monthly volatility (crypto-heavy)
-
-    // Run simulations, tracking yearly snapshots
-    const tracks   = [];  // [sim][year 0..YEARS]
-    const fireYrs  = [];
-    for (let sim = 0; sim < SIMS; sim++) {
-        let value  = currentNW;
-        let fireYr = null;
-        const track = [value];
-        for (let mo = 0; mo < YEARS * 12; mo++) {
-            const u1 = Math.random(), u2 = Math.random();
-            const z  = Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
-            value = value * (1 + meanMonthly + z * vol) + monthly;
-            if ((mo + 1) % 12 === 0) track.push(Math.max(0, value));
-            if (value >= FIRE_TARGET && fireYr === null) fireYr = (mo + 1) / 12;
+    const annualReturn=Math.max(0.04,Math.min(0.5,Math.abs(atPct>0?atPct:0.08)));
+    const meanMonthly=annualReturn/12, vol=0.045;
+    const tracks=[], fireYrs=[];
+    for (let sim=0;sim<SIMS;sim++) {
+        let value=currentNW, fireYr=null;
+        const track=[value];
+        for (let mo=0;mo<YEARS*12;mo++) {
+            const u1=Math.random(), u2=Math.random();
+            const z=Math.sqrt(-2*Math.log(u1||1e-10))*Math.cos(2*Math.PI*u2);
+            value=value*(1+meanMonthly+z*vol)+monthly;
+            if((mo+1)%12===0) track.push(Math.max(0,value));
+            if(value>=FIRE_TARGET&&fireYr===null) fireYr=(mo+1)/12;
         }
         tracks.push(track);
-        if (fireYr !== null) fireYrs.push(fireYr);
+        if(fireYr!==null) fireYrs.push(fireYr);
     }
-
-    // Percentile helper
-    function pct(arr, p) {
-        const s = [...arr].sort((a, b) => a - b);
-        return s[Math.floor(s.length * p)];
-    }
-
-    // Final values at YEARS
-    const finals = tracks.map(t => t[YEARS]);
-    const p10 = pct(finals, 0.10), p25 = pct(finals, 0.25);
-    const p50 = pct(finals, 0.50), p75 = pct(finals, 0.75);
-    const p90 = pct(finals, 0.90);
-    const fireProb   = (fireYrs.length / SIMS * 100).toFixed(0);
-    const medianFire = fireYrs.length > 0 ? pct(fireYrs, 0.5).toFixed(1) : '--';
-    const bestFire   = fireYrs.length > 0 ? Math.min(...fireYrs).toFixed(1) : '--';
-
-    // Stats boxes (8-box grid, 4 cols × 2 rows)
-    gi('mc-stats', `
+    function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*p)];}
+    const finals=tracks.map(t=>t[YEARS]);
+    const p10=pct(finals,.10),p25=pct(finals,.25),p50=pct(finals,.50),p75=pct(finals,.75),p90=pct(finals,.90);
+    const fireProb=(fireYrs.length/SIMS*100).toFixed(0);
+    const medianFire=fireYrs.length>0?pct(fireYrs,.5).toFixed(1):'--';
+    const bestFire=fireYrs.length>0?Math.min(...fireYrs).toFixed(1):'--';
+    gi('mc-stats',`
         <div class="mc-box"><div class="klbl">Bear (P10)</div><div class="kval neg">${fd(p10)}</div></div>
         <div class="mc-box"><div class="klbl">Cautious (P25)</div><div class="kval warn">${fd(p25)}</div></div>
         <div class="mc-box"><div class="klbl">Median (P50)</div><div class="kval pos">${fd(p50)}</div></div>
         <div class="mc-box"><div class="klbl">Bull (P90)</div><div class="kval" style="color:var(--accent)">${fd(p90)}</div></div>
         <div class="mc-box"><div class="klbl">FIRE Probability</div><div class="kval ${parseFloat(fireProb)>50?'pos':'warn'}">${fireProb}%</div></div>
-        <div class="mc-box"><div class="klbl">Median FIRE</div><div class="kval">${medianFire === '--' ? '—' : medianFire + ' yrs'}</div></div>
-        <div class="mc-box"><div class="klbl">Best-Case FIRE</div><div class="kval pos">${bestFire === '--' ? '—' : bestFire + ' yrs'}</div></div>
+        <div class="mc-box"><div class="klbl">Median FIRE</div><div class="kval">${medianFire==='--'?'—':medianFire+' yrs'}</div></div>
+        <div class="mc-box"><div class="klbl">Best-Case FIRE</div><div class="kval pos">${bestFire==='--'?'—':bestFire+' yrs'}</div></div>
         <div class="mc-box"><div class="klbl">Simulations</div><div class="kval">${SIMS.toLocaleString()}</div></div>
     `);
-
-    // Scenarios panel
-    const bearAnnual = Math.max(0.01, annualReturn * 0.4);
-    const bullAnnual = Math.min(0.6,  annualReturn * 1.8);
-    function projFinal(ar) {
-        let v = currentNW;
-        const mm = ar / 12;
-        for (let mo = 0; mo < YEARS * 12; mo++) v = v * (1 + mm) + monthly;
-        return v;
-    }
-    gi('mc-scenarios', `
-        <div class="mc-scenario">
-            <div class="mc-scenario-title" style="color:var(--red)">🐻 Bear (${(bearAnnual*100).toFixed(0)}%/yr)</div>
-            <div class="mc-scenario-val">Final: <b>${fd(projFinal(bearAnnual))}</b></div>
-        </div>
-        <div class="mc-scenario">
-            <div class="mc-scenario-title" style="color:var(--green)">📈 Base (${(annualReturn*100).toFixed(0)}%/yr)</div>
-            <div class="mc-scenario-val">Final: <b>${fd(projFinal(annualReturn))}</b></div>
-        </div>
-        <div class="mc-scenario">
-            <div class="mc-scenario-title" style="color:var(--accent)">🚀 Bull (${(bullAnnual*100).toFixed(0)}%/yr)</div>
-            <div class="mc-scenario-val">Final: <b>${fd(projFinal(bullAnnual))}</b></div>
-        </div>
+    const bearAnnual=Math.max(0.01,annualReturn*0.4), bullAnnual=Math.min(0.6,annualReturn*1.8);
+    function projFinal(ar){let v=currentNW;const mm=ar/12;for(let mo=0;mo<YEARS*12;mo++)v=v*(1+mm)+monthly;return v;}
+    gi('mc-scenarios',`
+        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--red)">🐻 Bear (${(bearAnnual*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(bearAnnual))}</b></div></div>
+        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--green)">📈 Base (${(annualReturn*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(annualReturn))}</b></div></div>
+        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--accent)">🚀 Bull (${(bullAnnual*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(bullAnnual))}</b></div></div>
     `);
-
-    gi('mc-footer', `${YEARS}-yr horizon &bull; Monthly contrib: ${fd(monthly)} &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
-    gi('mc-params', `Target $1M`);
-
-    // Fan chart: percentile bands over years
-    const yearLabels = Array.from({length: YEARS + 1}, (_, i) => i === 0 ? 'Now' : `Y${i}`);
-    const p10s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.10));
-    const p50s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.50));
-    const p90s = yearLabels.map((_, yi) => pct(tracks.map(t => t[yi]), 0.90));
-    const fireTargetLine = yearLabels.map(() => FIRE_TARGET);
-
-    if (charts.monte) charts.monte.destroy();
-    const ctx = document.getElementById('mcChart');
-    if (ctx) {
-        charts.monte = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: yearLabels,
-                datasets: [
-                    {
-                        label: 'P90 (Bull)',
-                        data: p90s,
-                        borderColor: 'rgba(124,111,239,.8)',
-                        backgroundColor: 'rgba(124,111,239,.12)',
-                        fill: '+1',
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        tension: 0.4,
-                    },
-                    {
-                        label: 'P50 (Median)',
-                        data: p50s,
-                        borderColor: '#00c896',
-                        backgroundColor: 'rgba(0,200,150,.08)',
-                        fill: '+1',
-                        borderWidth: 2.5,
-                        pointRadius: 0,
-                        tension: 0.4,
-                    },
-                    {
-                        label: 'P10 (Bear)',
-                        data: p10s,
-                        borderColor: 'rgba(255,77,109,.7)',
-                        backgroundColor: 'transparent',
-                        fill: false,
-                        borderWidth: 1.5,
-                        borderDash: [4, 3],
-                        pointRadius: 0,
-                        tension: 0.4,
-                    },
-                    {
-                        label: '$1M FIRE Target',
-                        data: fireTargetLine,
-                        borderColor: 'rgba(255,184,77,.6)',
-                        backgroundColor: 'transparent',
-                        fill: false,
-                        borderWidth: 1,
-                        borderDash: [6, 4],
-                        pointRadius: 0,
-                    },
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: { color: '#7b82a0', font: { size: 10 }, boxWidth: 12, padding: 8 }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ` ${ctx.dataset.label}: ${fd(ctx.raw)}`
-                        }
-                    }
+    gi('mc-footer',`${YEARS}-yr horizon &bull; Monthly contrib: ${fd(monthly)} &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
+    gi('mc-params',`Target $1M`);
+    const yearLabels=Array.from({length:YEARS+1},(_,i)=>i===0?'Now':`Y${i}`);
+    const p10s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.10));
+    const p50s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.50));
+    const p90s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.90));
+    const fireTargetLine=yearLabels.map(()=>FIRE_TARGET);
+    if(charts.monte) charts.monte.destroy();
+    const ctx=document.getElementById('mcChart');
+    if(ctx) {
+        charts.monte=new Chart(ctx,{
+            type:'line',
+            data:{labels:yearLabels,datasets:[
+                {label:'P90 (Bull)',data:p90s,borderColor:'rgba(124,111,239,.8)',backgroundColor:'rgba(124,111,239,.12)',fill:'+1',borderWidth:1.5,pointRadius:0,tension:0.4},
+                {label:'P50 (Median)',data:p50s,borderColor:'#00c896',backgroundColor:'rgba(0,200,150,.08)',fill:'+1',borderWidth:2.5,pointRadius:0,tension:0.4},
+                {label:'P10 (Bear)',data:p10s,borderColor:'rgba(255,77,109,.7)',backgroundColor:'transparent',fill:false,borderWidth:1.5,borderDash:[4,3],pointRadius:0,tension:0.4},
+                {label:'$1M FIRE Target',data:fireTargetLine,borderColor:'rgba(255,184,77,.6)',backgroundColor:'transparent',fill:false,borderWidth:1,borderDash:[6,4],pointRadius:0},
+            ]},
+            options:{
+                responsive:true,maintainAspectRatio:false,
+                interaction:{mode:'index',intersect:false},
+                plugins:{
+                    legend:{display:true,position:'bottom',labels:{color:'#7b82a0',font:{size:10},boxWidth:12,padding:8}},
+                    tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}
                 },
-                scales: {
-                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
-                    y: {
-                        ticks: {
-                            color: '#7b82a0',
-                            maxTicksLimit: 5,
-                            callback: v => v >= 1e6 ? '$' + (v/1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v/1e3).toFixed(0) + 'k' : '$' + v
-                        },
-                        grid: { color: 'rgba(255,255,255,.05)' }
-                    }
+                scales:{
+                    x:{ticks:{color:'#7b82a0',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+                    y:{ticks:{color:'#7b82a0',maxTicksLimit:5,callback:v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'k':'$'+v},grid:{color:'rgba(255,255,255,.05)'}}
                 }
             }
         });
     }
 }
 
-// ── ASSETS ────────────────────────────────────────────────────────────────────
 function renderAssets() {
     const assets=[];
-    for(let i=81;i<=92;i++){
-        const name=V(i,0); if(!name)continue;
-        assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});
-    }
+    for(let i=81;i<=92;i++){const name=V(i,0);if(!name)continue;assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});}
     const COLORS=['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
-    if(charts.assets)charts.assets.destroy();
+    if(charts.assets) charts.assets.destroy();
     const ctx=document.getElementById('assetsChart');
-    if(ctx){
+    if(ctx) {
         charts.assets=new Chart(ctx,{
             type:'doughnut',
             data:{labels:assets.map(a=>`${a.name} (${a.plat})`),datasets:[{data:assets.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
@@ -1382,17 +1120,22 @@ function renderAssets() {
     gi('assetsTable',`<table><thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody>${tbody}</tbody></table>`);
 }
 
-// ── YEARLY PERFORMANCE ────────────────────────────────────────────────────────
 function renderYearly() {
     const years=[];
     for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4)});}
-    if(charts.year)charts.year.destroy();
+    if(charts.year) charts.year.destroy();
     const ctx=document.getElementById('yearChart');
-    if(ctx){
+    if(ctx) {
         charts.year=new Chart(ctx,{
             type:'bar',
-            data:{labels:years.map(y=>y.yr),datasets:[{label:'Net Worth',data:years.map(y=>y.nw),backgroundColor:'#7c6fef',borderRadius:4},{label:'Total Assets',data:years.map(y=>y.ta),backgroundColor:'rgba(0,212,255,.35)',borderColor:'#00d4ff',borderWidth:1,borderRadius:4}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7b82a0',font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}},scales:{x:{ticks:{color:'#7b82a0'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#7b82a0',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'rgba(255,255,255,.05)'}}}}
+            data:{labels:years.map(y=>y.yr),datasets:[
+                {label:'Net Worth',data:years.map(y=>y.nw),backgroundColor:'#7c6fef',borderRadius:4},
+                {label:'Total Assets',data:years.map(y=>y.ta),backgroundColor:'rgba(0,212,255,.35)',borderColor:'#00d4ff',borderWidth:1,borderRadius:4}
+            ]},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{labels:{color:'#7b82a0',font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}},
+                scales:{x:{ticks:{color:'#7b82a0'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#7b82a0',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'rgba(255,255,255,.05)'}}}
+            }
         });
     }
     const tbody=years.map(y=>`<tr><td><b>${y.yr}</b></td><td class="sensitive">${fd(y.nw)}</td><td>${typeof y.yoy==='number'?(y.yoy===0?'—':fp(y.yoy)):y.yoy}</td><td class="sensitive">${fd(y.ta)}</td><td>${fq(y.btc)} &#x20bf;</td></tr>`).join('');
@@ -1406,7 +1149,7 @@ function setFilter(el) {
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     activeFilter = el.dataset.filter;
-    document.body.dataset.filter = activeFilter; // drives CSS filter-colour rules
+    document.body.dataset.filter = activeFilter;
     if (rows.length > 0) {
         updateSectorHeaders();
         renderSummary(); renderDebt(); renderProjections();
@@ -1414,26 +1157,19 @@ function setFilter(el) {
     }
 }
 
-function doRefresh() {
-    // Do NOT null-out grid — that triggers re-creation and widget duplication.
-    // Just clear cached rows and re-fetch; initGrid() skips if grid exists.
-    rows = [];
-    loadData();
-}
+function doRefresh() { rows=[]; loadData(); }
 
 function applyLock(lock, save) {
     isLocked = lock;
     const btn = document.getElementById('lockBtn');
     if (lock) {
-        // Lock: disable all movement and save layout
         if (grid) { grid.enableMove(false); grid.enableResize(false); }
-        if (editMode) { editMode = false; document.body.classList.remove('editing'); const eb = document.getElementById('editBtn'); if(eb) eb.classList.remove('on'); }
-        if (btn) { btn.textContent = '\uD83D\uDD12 Locked'; btn.classList.add('lock-on'); }
+        if (editMode) { editMode=false; document.body.classList.remove('editing'); const eb=document.getElementById('editBtn'); if(eb) eb.classList.remove('on'); }
+        if (btn) { btn.textContent='\uD83D\uDD12 Locked'; btn.classList.add('lock-on'); }
         saveLayout();
     } else {
-        // Unlock: re-enable movement
         if (grid) { grid.enableMove(true); grid.enableResize(true); }
-        if (btn) { btn.textContent = '\uD83D\uDD13 Unlocked'; btn.classList.remove('lock-on'); }
+        if (btn) { btn.textContent='\uD83D\uDD13 Unlocked'; btn.classList.remove('lock-on'); }
     }
     if (save) localStorage.setItem(LS.locked, lock ? 'true' : 'false');
 }
@@ -1477,9 +1213,7 @@ function saveAndReload() {
     if (!raw) return;
     const m = raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
     localStorage.setItem(LS.sheet, m ? m[1] : raw);
-    closeSettings();
-    rows = [];
-    loadData();
+    closeSettings(); rows=[]; loadData();
 }
 document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal'))closeSettings(); });
 
