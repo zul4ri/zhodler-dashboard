@@ -329,8 +329,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     text-align:center;
     padding:0;
     flex:1; min-height:0; overflow:hidden; gap:4px;
-    /* inline-size is reliable in flex; cqi scales font with card width */
-    container-type:inline-size;
+    /* No container-type — ResizeObserver measures the card directly */
 }
 /* Fluid stat value — scales with card width */
 .stat-val{
@@ -487,21 +486,24 @@ function N(r,c){const v=V(r,c);if(v===null||v==='')return 0;if(typeof v==='numbe
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STAT VALUE AUTO-FIT  (scales with both widget width AND height)
+// Observes the card element so offsetHeight is always reliable — no dependency
+// on flex-child sizing which can report 0 with container-type applied.
 // ─────────────────────────────────────────────────────────────────────────────
 let _statRO = null;
 
-function fitStatVal(body) {
-    const val = body.querySelector('.stat-val');
+function fitStatVal(card) {
+    const body = card.querySelector('.stat-body');
+    const val  = body && body.querySelector('.stat-val');
     if (!val) return;
-    const sub = body.querySelector('.stat-sub');
-    const w = body.offsetWidth;
-    const h = body.offsetHeight;
-    if (!w || !h) return;
+    const sub  = body.querySelector('.stat-sub');
+    const head = card.querySelector('.whead');
+    const w = card.offsetWidth;
+    const h = card.offsetHeight - (head ? head.offsetHeight : 0);
+    if (!w || h <= 0) return;
     const hero = val.classList.contains('hero');
-    // Scale to the smaller of 38% of width or 55% of height so the value
-    // fills whichever dimension is more constrained without ever overflowing.
+    // Fill the body area: constrained by whichever dimension is smaller
     const size = Math.max(14, Math.min(120,
-        Math.min(w * (hero ? 0.44 : 0.38), h * (hero ? 0.60 : 0.55))
+        Math.min(w * (hero ? 0.44 : 0.38), h * (hero ? 0.62 : 0.58))
     ));
     val.style.fontSize = size + 'px';
     val.style.letterSpacing = size > 48 ? '-0.04em' : '-0.02em';
@@ -509,7 +511,9 @@ function fitStatVal(body) {
 }
 
 function fitAllStatVals() {
-    document.querySelectorAll('.stat-body').forEach(fitStatVal);
+    document.querySelectorAll('.grid-stack-item-content').forEach(card => {
+        if (card.querySelector('.stat-body')) fitStatVal(card);
+    });
 }
 
 function initStatResizeObserver() {
@@ -517,14 +521,17 @@ function initStatResizeObserver() {
     _statRO = new ResizeObserver(entries => {
         entries.forEach(e => fitStatVal(e.target));
     });
-    // Observe existing stat-bodies
-    document.querySelectorAll('.stat-body').forEach(el => _statRO.observe(el));
-    // Auto-observe any stat-bodies added later (reset / import layout)
+    // Observe stat cards (cards that contain a stat-body)
+    document.querySelectorAll('.grid-stack-item-content').forEach(el => {
+        if (el.querySelector('.stat-body')) _statRO.observe(el);
+    });
+    // Auto-observe new stat cards added later (reset / import layout)
     new MutationObserver(muts => {
         muts.forEach(m => m.addedNodes.forEach(n => {
             if (!(n instanceof Element)) return;
-            n.querySelectorAll('.stat-body').forEach(el => _statRO.observe(el));
-            if (n.classList && n.classList.contains('stat-body')) _statRO.observe(n);
+            n.querySelectorAll('.grid-stack-item-content').forEach(el => {
+                if (el.querySelector('.stat-body')) _statRO.observe(el);
+            });
         }));
     }).observe(document.getElementById('grid') || document.body,
         {childList: true, subtree: true});
