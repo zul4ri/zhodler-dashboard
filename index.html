@@ -1027,8 +1027,14 @@ function renderMilestone() {
 
 function renderMonteCarlo() {
     const statsEl=document.getElementById('mc-stats'); if(!statsEl) return;
-    const currentNW=getFilterNW(), monthly=getFilterMonthly(), atPct=getFilterAtPct();
+    // Always use liquid assets only (crypto + tradfi), excluding real estate & illiquid assets
+    const currentNW = N(32) + N(44);
+    const monthly = 0; // No monthly additions in Monte Carlo
+    const ci=N(30), ti=N(42), total=ci+ti;
+    const atPct = total > 0 ? (N(38)*ci + N(50)*ti) / total : N(12);
     const FIRE_TARGET=1000000, SIMS=800, YEARS=15;
+    // Always label as "Liquid" since we always use liquid assets here
+    const lbl=document.getElementById('monteFilter'); if(lbl) lbl.textContent='Liquid';
     if (currentNW<=0) {
         gi('mc-stats',`<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data</div>`);
         gi('mc-scenarios',''); return;
@@ -1072,7 +1078,7 @@ function renderMonteCarlo() {
         <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--green)">📈 Base (${(annualReturn*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(annualReturn))}</b></div></div>
         <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--accent)">🚀 Bull (${(bullAnnual*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(bullAnnual))}</b></div></div>
     `);
-    gi('mc-footer',`${YEARS}-yr horizon &bull; Monthly contrib: ${fd(monthly)} &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
+    gi('mc-footer',`${YEARS}-yr horizon &bull; Liquid assets only &bull; No monthly additions &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
     gi('mc-params',`Target $1M`);
     const yearLabels=Array.from({length:YEARS+1},(_,i)=>i===0?'Now':`Y${i}`);
     const p10s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.10));
@@ -1094,7 +1100,7 @@ function renderMonteCarlo() {
                 responsive:true,maintainAspectRatio:false,
                 interaction:{mode:'index',intersect:false},
                 plugins:{
-                    legend:{display:true,position:'bottom',labels:{color:'#7b82a0',font:{size:10},boxWidth:12,padding:8}},
+                    legend:{display:true,position:'bottom',labels:{color:'#b0b7d0',font:{size:13},boxWidth:16,padding:12}},
                     tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}
                 },
                 scales:{
