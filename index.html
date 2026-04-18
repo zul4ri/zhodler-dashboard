@@ -1035,7 +1035,9 @@ function renderMonteCarlo() {
     const FIRE_TARGET=1000000, SIMS=800, YEARS=15;
     // Always label as "Liquid" since we always use liquid assets here
     const lbl=document.getElementById('monteFilter'); if(lbl) lbl.textContent='Liquid';
-    if (currentNW<=0) {
+    // Check liquid *assets* (not NW) — liquid NW can be negative when debt > assets
+    const liquidAssets = N(27) + N(41);
+    if (liquidAssets <= 0) {
         gi('mc-stats',`<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data</div>`);
         gi('mc-scenarios',''); return;
     }
