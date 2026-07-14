@@ -62,6 +62,11 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 }
 .brand{font-size:clamp(17px,1.9vw,26px);font-weight:900;color:var(--accent);letter-spacing:-0.5px;}
 .ts{font-size:clamp(9px,0.82vw,11px);color:var(--text2);margin-left:10px;}
+.stale-badge{display:none;font-size:clamp(9px,0.8vw,11px);padding:2px 9px;border-radius:10px;border:1px solid var(--border);margin-left:8px;letter-spacing:.3px;white-space:nowrap;}
+.stale-badge.on{display:inline-flex;align-items:center;gap:4px;}
+.stale-badge.stale-green{color:var(--green);border-color:var(--green);}
+.stale-badge.stale-amber{color:var(--yellow);border-color:var(--yellow);}
+.stale-badge.stale-red{color:var(--red);border-color:var(--red);}
 .hright{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .sep{width:1px;height:16px;background:var(--border);margin:0 2px;}
 
@@ -345,6 +350,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div style="display:flex;align-items:center;">
         <span class="brand">Zhodler</span>
         <span class="ts">Last updated: <span id="ts">--:--</span></span>
+        <span class="stale-badge" id="staleBadge"></span>
     </div>
     <div class="hright">
         <div class="pill active" role="button" tabindex="0" data-filter="portfolio" onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Total Portfolio</div>
@@ -381,6 +387,18 @@ tr:hover td{background:rgba(255,255,255,.03);}
     <div class="mbox">
         <div class="mtitle">Settings</div>
         <div class="mrow">
+            <label class="mlabel">Data Source</label>
+            <div class="mrow-row">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:clamp(11px,1.1vw,13px);color:var(--text);">
+                    <input type="radio" name="sourceMode" id="sourceSheets" value="sheets"> Google Sheets
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:clamp(11px,1.1vw,13px);color:var(--text);">
+                    <input type="radio" name="sourceMode" id="sourceSupabase" value="supabase"> Supabase (beta)
+                </label>
+            </div>
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-top:6px;">Supabase currently powers Net Worth, Total Debt, and DeFi Positions. Everything else keeps showing $0 until later phases.</div>
+        </div>
+        <div class="mrow">
             <label class="mlabel">Google Sheet URL or ID</label>
             <input class="minput" id="sheetInput" placeholder="Paste URL or Sheet ID">
         </div>
@@ -413,7 +431,14 @@ const LS = {
     theme:   'zh-theme',
     locked:  'zh-locked',
     privacy: 'zh-privacy',
+    source:  'zh-source',      // 'sheets' (default) | 'supabase'
 };
+
+// Supabase (Phase 1 backend). Anon key is read-only + RLS-locked — safe to
+// embed client-side. Writes require the service_role key, which lives only
+// on the VPS collector and is never shipped here.
+const SUPABASE_URL      = 'https://lvyyewyaatuiwawxjtmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXlld3lhYXR1aXdhd3hqdG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTcwNjQsImV4cCI6MjA5OTUzMzA2NH0._HoBCWSOemshCeKSG-qbTv39fu23AnFGz3C_K__eg4A';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -421,6 +446,12 @@ const LS = {
 let rows = [], activeFilter = 'portfolio', charts = {};
 let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
+let dbData = null; // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
+
+function usingSupabase() {
+    return (localStorage.getItem(LS.source) || 'sheets') === 'supabase' && !!dbData;
+}
+function scopeForFilter(f) { return f === 'portfolio' ? 'total' : f; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROW ACCESSORS
@@ -587,7 +618,7 @@ const WIDGET_HTML = {
     'w-assets':
         `<div class="card-header">` +
             `<span class="card-label">Portfolio</span>` +
-            `<span class="card-title">Assets Distribution</span>` +
+            `<span class="card-title" id="assetsTitle">Assets Distribution</span>` +
         `</div>` +
         `<div class="card-divider"></div>` +
         `<div class="card-body scrollable" style="gap:0;">` +
@@ -774,8 +805,7 @@ function importLayout(input) {
 // DATA FETCH
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadData() {
-    const id  = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
-    const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`;
+    const source = localStorage.getItem(LS.source) || 'sheets';
     const isFirstLoad = !grid;
 
     if (isFirstLoad) {
@@ -786,14 +816,38 @@ async function loadData() {
     }
 
     let fetchErr = null;
-    try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const text = await resp.text();
-        const s = text.indexOf('{'), e = text.lastIndexOf('}');
-        if (s === -1) throw new Error('Bad response from Google Sheets');
-        rows = JSON.parse(text.slice(s, e + 1)).table.rows;
-    } catch(err) { fetchErr = err; }
+    if (source === 'supabase') {
+        dbData = null;
+        try {
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/dashboard_bootstrap`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: '{}',
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            dbData = await resp.json();
+            // Sheet-only widgets (Global Metrics, BTC, Projections, Velocity,
+            // Milestone, Monte Carlo, Yearly) have no Supabase data yet in this
+            // phase — leave rows empty so they degrade to $0 via the existing
+            // V()/N() accessors instead of erroring.
+            rows = [];
+        } catch(err) { fetchErr = err; dbData = null; }
+    } else {
+        const id  = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
+        const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`;
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const text = await resp.text();
+            const s = text.indexOf('{'), e = text.lastIndexOf('}');
+            if (s === -1) throw new Error('Bad response from Google Sheets');
+            rows = JSON.parse(text.slice(s, e + 1)).table.rows;
+        } catch(err) { fetchErr = err; }
+    }
 
     let gridErr = null;
     try { initGrid(); } catch(err) { gridErr = err; }
@@ -804,6 +858,9 @@ async function loadData() {
         toast(gridErr.message, true);
         return;
     }
+
+    updateStalenessBadge();
+
     if (fetchErr) {
         if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
         document.getElementById('ts').textContent = 'error';
@@ -817,6 +874,70 @@ async function loadData() {
     try { renderAll(); } catch(err) { console.error('renderAll error:', err); }
     if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
     toast('Data refreshed', false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STALENESS BADGE (Supabase mode only)
+// Green = fresh, amber = "as of Xh ago", red = beyond threshold / no data.
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtAgo(h) {
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + 'm';
+    if (h < 48) return h.toFixed(1) + 'h';
+    return Math.round(h / 24) + 'd';
+}
+function computeStaleness(data) {
+    if (!data || !data.staleness || !Object.keys(data.staleness).length) {
+        return {level: 'red', text: 'no data'};
+    }
+    let anyStale = false, anyNull = false, worstHours = 0;
+    Object.values(data.staleness).forEach(info => {
+        if (!info || !info.last_success) { anyNull = true; return; }
+        const hrs = (Date.now() - new Date(info.last_success).getTime()) / 3.6e6;
+        worstHours = Math.max(worstHours, hrs);
+        if (info.is_stale) anyStale = true;
+    });
+    if (anyNull) return {level: 'red', text: 'no successful sync'};
+    if (worstHours > 24) return {level: 'red', text: `stale · ${fmtAgo(worstHours)} ago`};
+    if (anyStale)        return {level: 'amber', text: `as of ${fmtAgo(worstHours)} ago`};
+    return {level: 'green', text: `live · ${fmtAgo(worstHours)} ago`};
+}
+function updateStalenessBadge() {
+    const el = document.getElementById('staleBadge');
+    if (!el) return;
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    if (source !== 'supabase') { el.className = 'stale-badge'; el.textContent = ''; return; }
+    const info = computeStaleness(dbData);
+    el.className = 'stale-badge on stale-' + info.level;
+    el.textContent = '● ' + info.text;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPABASE → WIDGET MAPPING
+// Reads the scoped snapshot for the active filter and the holdings list.
+// ─────────────────────────────────────────────────────────────────────────────
+function dbScope() {
+    if (!dbData || !dbData.scopes) return null;
+    return dbData.scopes[scopeForFilter(activeFilter)] || null;
+}
+// Aggregate holdings into named asset lines for the Assets Distribution widget.
+// Each supply/token is positive; borrows are shown separately (negative usd_value).
+function dbAssetRows() {
+    if (!dbData || !Array.isArray(dbData.holdings)) return [];
+    const scopeClass = activeFilter === 'tradfi' ? 'tradfi' : 'crypto';
+    return dbData.holdings
+        .filter(h => activeFilter === 'portfolio' || activeFilter === 'liquid'
+            ? true
+            : (h.scope_class === scopeClass))
+        .filter(h => activeFilter !== 'liquid' || h.is_liquid)
+        .map(h => ({
+            name:  h.asset,
+            qty:   Number(h.quantity) || 0,
+            val:   Number(h.usd_value) || 0,
+            type:  h.position_type || '',
+            plat:  h.protocol || '',
+            status: h.is_stale ? 'stale' : 'live',
+        }))
+        .sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -900,6 +1021,7 @@ function updateSectorHeaders() {
 
 function renderSummary() {
     updateSectorHeaders();
+    if (usingSupabase()) { renderSummarySupabase(); return; }
     let d;
     if (activeFilter === 'liquid') {
         d={a:N(27)+N(41),inv:N(30)+N(42),nw:N(32)+N(44),
@@ -923,8 +1045,31 @@ function renderSummary() {
     sv('c-daily-at',    fd(d.ald)+'/day',cc(d.ald));
 }
 
+// Supabase net-worth / debt figures. Metrics without Supabase data yet
+// (invested, YTD, all-time, daily/monthly averages) degrade to $0 rather
+// than error, per Phase 1 scope.
+function renderSummarySupabase() {
+    const s = dbScope();
+    if (!s) {
+        ['c-nw','c-assets','c-invested','c-ytd','c-atgain',
+         'c-monthly-ytd','c-daily-ytd','c-monthly-at','c-daily-at'].forEach(id => sv(id, '$0.00'));
+        return;
+    }
+    const nw = Number(s.net_worth) || 0, ta = Number(s.total_assets) || 0;
+    sv('c-nw',          fd(nw));
+    sv('c-assets',      fd(ta));
+    sv('c-invested',    '—');
+    sv('c-ytd',         fd(0), '');   gi('c-ytd-sub',    'no data yet');
+    sv('c-atgain',      fd(0), '');   gi('c-atgain-sub', 'no data yet');
+    sv('c-monthly-ytd', '—');
+    sv('c-daily-ytd',   '—');
+    sv('c-monthly-at',  '—');
+    sv('c-daily-at',    '—');
+}
+
 function renderDebt() {
     updateSectorHeaders();
+    if (usingSupabase()) { renderDebtSupabase(); return; }
     let total, lbl1, val1, lbl2, val2;
     if (activeFilter === 'portfolio') {
         total=N(59); lbl1='Crypto Debt'; val1=N(60); lbl2='TradFi Debt'; val2=N(69);
@@ -940,6 +1085,18 @@ function renderDebt() {
     sv('c-debt-tradfi', fd(val2));
     gi('c-debt-crypto-lbl', lbl1);
     gi('c-debt-tradfi-lbl', lbl2);
+}
+
+// Supabase debt: total_debt is the aggregate; DeFi/CeFi split isn't broken
+// out per-scope yet, so sub-figures show the same total under a single label.
+function renderDebtSupabase() {
+    const s = dbScope();
+    const total = s ? (Number(s.total_debt) || 0) : 0;
+    sv('c-debt-total',  fd(total), total ? 'neg' : '');
+    sv('c-debt-crypto', fd(activeFilter === 'tradfi' ? 0 : total));
+    sv('c-debt-tradfi', '—');
+    gi('c-debt-crypto-lbl', 'DeFi Debt');
+    gi('c-debt-tradfi-lbl', 'no data yet');
 }
 
 function renderProjections() {
@@ -1115,15 +1272,24 @@ function renderMonteCarlo() {
 }
 
 function renderAssets() {
-    const assets=[];
-    for(let i=81;i<=92;i++){const name=V(i,0);if(!name)continue;assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});}
+    let assets=[];
+    const titleEl=document.getElementById('assetsTitle');
+    if (usingSupabase()) {
+        assets=dbAssetRows();
+        if (titleEl) titleEl.textContent='DeFi Positions';
+    } else {
+        if (titleEl) titleEl.textContent='Assets Distribution';
+        for(let i=81;i<=92;i++){const name=V(i,0);if(!name)continue;assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});}
+    }
+    // Doughnut only charts positive-value holdings (borrows are negative).
+    const chartAssets = assets.filter(a => a.val > 0);
     const COLORS=['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
     if(charts.assets) charts.assets.destroy();
     const ctx=document.getElementById('assetsChart');
     if(ctx) {
         charts.assets=new Chart(ctx,{
             type:'doughnut',
-            data:{labels:assets.map(a=>`${a.name} (${a.plat})`),datasets:[{data:assets.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
+            data:{labels:chartAssets.map(a=>`${a.name} (${a.plat})`),datasets:[{data:chartAssets.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
             options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:10},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
         });
     }
@@ -1161,10 +1327,11 @@ function setFilter(el) {
     el.classList.add('active');
     activeFilter = el.dataset.filter;
     document.body.dataset.filter = activeFilter;
-    if (rows.length > 0) {
+    if (rows.length > 0 || usingSupabase()) {
         updateSectorHeaders();
         renderSummary(); renderDebt(); renderProjections();
         renderVelocity(); renderMilestone(); renderMonteCarlo(); renderYearly();
+        renderAssets();
     }
 }
 
@@ -1216,15 +1383,23 @@ function setTheme(t) {
 
 function openSettings() {
     document.getElementById('sheetInput').value = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    document.getElementById('sourceSheets').checked   = (source === 'sheets');
+    document.getElementById('sourceSupabase').checked = (source === 'supabase');
     document.getElementById('modal').classList.add('open');
 }
 function closeSettings() { document.getElementById('modal').classList.remove('open'); }
 function saveAndReload() {
+    // Data source (default sheets — rollback-safe).
+    const source = document.getElementById('sourceSupabase').checked ? 'supabase' : 'sheets';
+    localStorage.setItem(LS.source, source);
+    // Sheet ID is optional so switching to Supabase doesn't require it.
     const raw = document.getElementById('sheetInput').value.trim();
-    if (!raw) return;
-    const m = raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    localStorage.setItem(LS.sheet, m ? m[1] : raw);
-    closeSettings(); rows=[]; loadData();
+    if (raw) {
+        const m = raw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        localStorage.setItem(LS.sheet, m ? m[1] : raw);
+    }
+    closeSettings(); rows=[]; dbData=null; loadData();
 }
 document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal'))closeSettings(); });
 
