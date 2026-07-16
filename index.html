@@ -446,7 +446,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let rows = [], activeFilter = 'portfolio', charts = {};
 let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
-let dbData = null; // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
+let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
+let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
+
+// Thin PostgREST RPC helper (anon key is read-only + RLS-locked).
+async function rpc(name, args) {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(args || {}),
+    });
+    if (!resp.ok) throw new Error(`${name}: HTTP ${resp.status}`);
+    return resp.json();
+}
 
 function usingSupabase() {
     return (localStorage.getItem(LS.source) || 'sheets') === 'supabase' && !!dbData;
@@ -817,25 +833,21 @@ async function loadData() {
 
     let fetchErr = null;
     if (source === 'supabase') {
-        dbData = null;
+        dbData = null; dbYearly = {};
         try {
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/dashboard_bootstrap`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'Content-Type': 'application/json',
-                },
-                body: '{}',
-            });
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            dbData = await resp.json();
-            // Sheet-only widgets (Global Metrics, BTC, Projections, Velocity,
-            // Milestone, Monte Carlo, Yearly) have no Supabase data yet in this
-            // phase — leave rows empty so they degrade to $0 via the existing
-            // V()/N() accessors instead of erroring.
-            rows = [];
-        } catch(err) { fetchErr = err; dbData = null; }
+            // One bootstrap call + the yearly series per filter pill, in
+            // parallel, so switching pills never needs a re-fetch.
+            const SCOPES = ['total','crypto','tradfi','liquid'];
+            const [boot, ...yearlies] = await Promise.all([
+                rpc('dashboard_bootstrap'),
+                ...SCOPES.map(s => rpc('yearly', {p_scope: s}).catch(() => [])),
+            ]);
+            dbData = boot;
+            SCOPES.forEach((s, i) => { dbYearly[s] = Array.isArray(yearlies[i]) ? yearlies[i] : []; });
+            // The shim: reshape the bootstrap into the sheet's rows[] layout so
+            // the existing V()/N() widget logic keeps working untouched.
+            rows = buildRows(dbData);
+        } catch(err) { fetchErr = err; dbData = null; rows = []; }
     } else {
         const id  = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
         const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Dashboard_Data&_t=${Date.now()}`;
@@ -913,30 +925,154 @@ function updateStalenessBadge() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUPABASE → WIDGET MAPPING
-// Reads the scoped snapshot for the active filter and the holdings list.
 // ─────────────────────────────────────────────────────────────────────────────
-function dbScope() {
+function dbScope(f) {
     if (!dbData || !dbData.scopes) return null;
-    return dbData.scopes[scopeForFilter(activeFilter)] || null;
+    return dbData.scopes[scopeForFilter(f || activeFilter)] || null;
+}
+function dbGains(f) {
+    if (!dbData || !dbData.gains) return null;
+    return dbData.gains[scopeForFilter(f || activeFilter)] || null;
+}
+function dbInvested(f) {
+    if (!dbData || !dbData.invested) return 0;
+    return num(dbData.invested[scopeForFilter(f || activeFilter)]);
+}
+// null-safe number coercion — ytd_*/alltime_* may legitimately be null.
+function num(v) { return (v === null || v === undefined || isNaN(Number(v))) ? 0 : Number(v); }
+function has(v) { return v !== null && v !== undefined && !isNaN(Number(v)); }
+
+// Elapsed-time denominators for turning absolute gains into averages.
+function dbElapsed() {
+    const m = (dbData && dbData.metrics) || {};
+    const daysTracked = num(m.days_tracked) || 1;
+    const yearFrac    = num(m.year_progress_pct) / 100;
+    return {
+        daysTracked,
+        monthsTracked: Math.max(daysTracked / 30.4375, 1 / 30.4375),
+        ytdDays:       Math.max(365 * yearFrac, 1),
+        ytdMonths:     Math.max(12 * yearFrac, 1 / 30.4375),
+        yearFrac,
+    };
+}
+
+// ── buildRows(json) — the REARCHITECTURE_PLAN compatibility shim ─────────────
+// Reshapes the Supabase bootstrap into the exact sparse rows[] structure the
+// existing V()/N() accessors expect, so widgets keep their logic unchanged.
+// Percentages are stored as FRACTIONS (api_pct / 100) to match the old sheet's
+// percent-formatted cells, which fp() renders correctly.
+// Row map (per README): 0-1 metrics · 3-14 total · 27-40 crypto · 41-52 tradfi
+//                       54-57 BTC · 59-71 debt · 95-98 yearly
+function buildRows(json) {
+    const out = [];
+    const set = (r, c, v) => {
+        if (!out[r]) out[r] = {c: []};
+        out[r].c[c] = {v: v};
+    };
+    const cell = (r, v) => set(r, 1, v);   // widgets read column 1 by default
+    if (!json) return out;
+
+    const e   = dbElapsed();
+    const met = json.metrics || {};
+
+    // 0-1 — Global Metrics
+    cell(0, num(met.days_tracked));
+    cell(1, num(met.year_progress_pct) / 100);
+
+    // Per-scope block writer. NOTE: the sheet's crypto block does NOT share the
+    // total/tradfi offsets (invested sits at +3 not +1, net worth at +5 not +3),
+    // so each scope carries an explicit row map rather than a base+offset guess.
+    const SCOPE_ROWS = {
+        total:  {assets:3,  invested:4,  nw:6,  ytdAbs:7,  ytdPct:8,  dailyYtd:9,  monthlyYtd:10, atAbs:11, atPct:12, atDaily:13, atMonthly:14},
+        crypto: {assets:27, invested:30, nw:32, ytdAbs:33, ytdPct:34, dailyYtd:35, monthlyYtd:36, atAbs:37, atPct:38, atDaily:39, atMonthly:40},
+        tradfi: {assets:41, invested:42, nw:44, ytdAbs:45, ytdPct:46, dailyYtd:47, monthlyYtd:48, atAbs:49, atPct:50, atDaily:51, atMonthly:52},
+    };
+    function writeScope(scopeKey) {
+        const m = SCOPE_ROWS[scopeKey];
+        const s = (json.scopes || {})[scopeKey] || {};
+        const g = (json.gains  || {})[scopeKey] || {};
+        const ytdAbs = num(g.ytd_abs), atAbs = num(g.alltime_abs);
+        cell(m.assets,     num(s.total_assets));
+        cell(m.invested,   num((json.invested || {})[scopeKey]));
+        cell(m.nw,         num(s.net_worth));
+        cell(m.ytdAbs,     ytdAbs);
+        cell(m.ytdPct,     has(g.ytd_pct) ? num(g.ytd_pct) / 100 : 0);
+        cell(m.dailyYtd,   ytdAbs / e.ytdDays);
+        cell(m.monthlyYtd, ytdAbs / e.ytdMonths);
+        cell(m.atAbs,      atAbs);
+        cell(m.atPct,      has(g.alltime_pct) ? num(g.alltime_pct) / 100 : 0);
+        cell(m.atDaily,    atAbs / e.daysTracked);
+        cell(m.atMonthly,  atAbs / e.monthsTracked);
+    }
+    ['total','crypto','tradfi'].forEach(writeScope);
+
+    // 54-57 — BTC Overview
+    const b = json.btc || {};
+    cell(54, num(b.holdings));
+    cell(55, num(b.price_usd));
+    cell(56, has(b.alltime_pct) ? num(b.alltime_pct) / 100 : 0);
+    cell(57, has(b.ytd_pct)     ? num(b.ytd_pct)     / 100 : 0);
+
+    // 59-71 — Debt
+    const sc = (json.scopes || {});
+    cell(59, num((sc.total  || {}).total_debt));
+    cell(60, num((sc.crypto || {}).total_debt));
+    cell(62, num((sc.crypto || {}).total_debt));  // all crypto debt is DeFi today
+    cell(66, 0);                                  // no CeFi debt yet
+    cell(69, num((sc.tradfi || {}).total_debt));
+    const td = dbTradfiDebtParts(json);
+    cell(70, td.bank);
+    cell(71, td.other);
+
+    // 95-98 — Yearly Performance (filled by renderYearly from the yearly() RPC)
+    return out;
+}
+
+// Split TradFi debt into its real components straight from the manual holdings,
+// so the debt widget labels come from the data instead of hardcoded names.
+function dbTradfiDebtParts(json) {
+    const hs = (json && json.holdings) || [];
+    const borrows = hs.filter(h => h.scope_class === 'tradfi' && h.position_type === 'borrow');
+    let bank = 0, other = 0, otherLabel = '';
+    borrows.forEach(h => {
+        const v = Math.abs(num(h.usd_value));
+        if (/bank|mortgage|house loan/i.test(h.account_label || '')) bank += v;
+        else { other += v; if (!otherLabel) otherLabel = h.account_label || 'Other Debt'; }
+    });
+    return {bank, other, otherLabel: otherLabel || 'Other Debt'};
 }
 // Aggregate holdings into named asset lines for the Assets Distribution widget.
-// Each supply/token is positive; borrows are shown separately (negative usd_value).
+// Supplies/tokens are positive; borrows keep their negative usd_value so loans
+// read as debt. Manual (TradFi) items are grouped separately from DeFi ones.
+const ACCT_TYPE_LABEL = {
+    bank:'Bank', real_estate:'Real Estate', motorbike:'Vehicle',
+    manual_asset:'Manual', cex:'Exchange', defi_wallet:'Wallet',
+};
 function dbAssetRows() {
     if (!dbData || !Array.isArray(dbData.holdings)) return [];
     const scopeClass = activeFilter === 'tradfi' ? 'tradfi' : 'crypto';
     return dbData.holdings
-        .filter(h => activeFilter === 'portfolio' || activeFilter === 'liquid'
+        .filter(h => (activeFilter === 'portfolio' || activeFilter === 'liquid')
             ? true
             : (h.scope_class === scopeClass))
         .filter(h => activeFilter !== 'liquid' || h.is_liquid)
-        .map(h => ({
-            name:  h.asset,
-            qty:   Number(h.quantity) || 0,
-            val:   Number(h.usd_value) || 0,
-            type:  h.position_type || '',
-            plat:  h.protocol || '',
-            status: h.is_stale ? 'stale' : 'live',
-        }))
+        .map(h => {
+            const isManual = h.protocol === 'manual';
+            return {
+                // Manual items carry their meaning in the account label, not the ticker.
+                name:  isManual ? (h.account_label || h.asset) : h.asset,
+                // quantity is a meaningless "1" for manual valuations — blank it.
+                qty:   isManual ? null : num(h.quantity),
+                val:   num(h.usd_value),
+                // 'token' is crypto vocabulary — manual valuations read as 'asset'.
+                type:  h.position_type === 'borrow' ? 'loan'
+                     : (isManual && h.position_type === 'token') ? 'asset'
+                     : (h.position_type || ''),
+                plat:  isManual ? (ACCT_TYPE_LABEL[h.account_type] || 'Manual') : (h.protocol || ''),
+                status: h.is_stale ? 'stale' : 'live',
+                group: isManual ? 'TradFi / Manual' : 'Crypto / DeFi',
+            };
+        })
         .sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
 }
 
@@ -968,31 +1104,40 @@ function renderBtc() {
     sv('c-btc-ytd',      fp(cy), cc(cy));
 }
 
+// In Supabase mode every scope — including 'liquid' — is a first-class snapshot,
+// so these read it directly. The sheet-mode fallbacks below approximate 'liquid'
+// as crypto + tradfi, which is NOT equivalent (tradfi includes the house), hence
+// the override rather than reusing the row arithmetic.
 function getFilterNW() {
+    if (usingSupabase()) { const s = dbScope(); return s ? num(s.net_worth) : 0; }
     if (activeFilter === 'crypto')  return N(32);
     if (activeFilter === 'tradfi')  return N(44);
     if (activeFilter === 'liquid')  return N(32) + N(44);
     return N(6);
 }
 function getFilterMonthly() {
+    if (usingSupabase()) { const g = dbGains(); return g ? num(g.ytd_abs) / dbElapsed().ytdMonths : 0; }
     if (activeFilter === 'crypto')  return N(36);
     if (activeFilter === 'tradfi')  return N(48);
     if (activeFilter === 'liquid')  return N(36) + N(48);
     return N(10);
 }
 function getFilterDaily() {
+    if (usingSupabase()) { const g = dbGains(); return g ? num(g.ytd_abs) / dbElapsed().ytdDays : 0; }
     if (activeFilter === 'crypto')  return N(35);
     if (activeFilter === 'tradfi')  return N(47);
     if (activeFilter === 'liquid')  return N(35) + N(47);
     return N(9);
 }
 function getFilterAtMonthly() {
+    if (usingSupabase()) { const g = dbGains(); return g ? num(g.alltime_abs) / dbElapsed().monthsTracked : 0; }
     if (activeFilter === 'crypto')  return N(40);
     if (activeFilter === 'tradfi')  return N(52);
     if (activeFilter === 'liquid')  return N(40) + N(52);
     return N(14);
 }
 function getFilterAtPct() {
+    if (usingSupabase()) { const g = dbGains(); return (g && has(g.alltime_pct)) ? num(g.alltime_pct) / 100 : 0; }
     if (activeFilter === 'crypto')  return N(38);
     if (activeFilter === 'tradfi')  return N(50);
     if (activeFilter === 'liquid') {
@@ -1045,26 +1190,44 @@ function renderSummary() {
     sv('c-daily-at',    fd(d.ald)+'/day',cc(d.ald));
 }
 
-// Supabase net-worth / debt figures. Metrics without Supabase data yet
-// (invested, YTD, all-time, daily/monthly averages) degrade to $0 rather
-// than error, per Phase 1 scope.
+// Supabase summary — reads the scoped snapshot + gains/invested directly so the
+// 'liquid' pill uses its real scope rather than the sheet's crypto+tradfi proxy.
+// ytd_*/alltime_* may be null; those cards show "—" rather than a fake $0.00.
 function renderSummarySupabase() {
-    const s = dbScope();
+    const s = dbScope(), g = dbGains(), e = dbElapsed();
     if (!s) {
         ['c-nw','c-assets','c-invested','c-ytd','c-atgain',
-         'c-monthly-ytd','c-daily-ytd','c-monthly-at','c-daily-at'].forEach(id => sv(id, '$0.00'));
+         'c-monthly-ytd','c-daily-ytd','c-monthly-at','c-daily-at'].forEach(id => sv(id, '—'));
         return;
     }
-    const nw = Number(s.net_worth) || 0, ta = Number(s.total_assets) || 0;
-    sv('c-nw',          fd(nw));
-    sv('c-assets',      fd(ta));
-    sv('c-invested',    '—');
-    sv('c-ytd',         fd(0), '');   gi('c-ytd-sub',    'no data yet');
-    sv('c-atgain',      fd(0), '');   gi('c-atgain-sub', 'no data yet');
-    sv('c-monthly-ytd', '—');
-    sv('c-daily-ytd',   '—');
-    sv('c-monthly-at',  '—');
-    sv('c-daily-at',    '—');
+    sv('c-nw',       fd(num(s.net_worth)));
+    sv('c-assets',   fd(num(s.total_assets)));
+    sv('c-invested', fd(dbInvested()));
+
+    const ytdOk = g && has(g.ytd_abs), atOk = g && has(g.alltime_abs);
+    const ytdAbs = ytdOk ? num(g.ytd_abs) : null;
+    const atAbs  = atOk  ? num(g.alltime_abs) : null;
+
+    if (ytdOk) {
+        sv('c-ytd', fd(ytdAbs), cc(ytdAbs));
+        gi('c-ytd-sub', has(g.ytd_pct) ? fp(num(g.ytd_pct) / 100) : '');
+        sv('c-monthly-ytd', fd(ytdAbs / e.ytdMonths) + '/mo',  cc(ytdAbs));
+        sv('c-daily-ytd',   fd(ytdAbs / e.ytdDays)   + '/day', cc(ytdAbs));
+    } else {
+        sv('c-ytd', '—', ''); gi('c-ytd-sub', 'no data');
+        sv('c-monthly-ytd', '—', ''); sv('c-daily-ytd', '—', '');
+    }
+    if (atOk) {
+        // All-time is legitimately deeply negative (capital sunk into the house);
+        // display it faithfully rather than flooring at zero.
+        sv('c-atgain', fd(atAbs), cc(atAbs));
+        gi('c-atgain-sub', has(g.alltime_pct) ? fp(num(g.alltime_pct) / 100) : '');
+        sv('c-monthly-at', fd(atAbs / e.monthsTracked) + '/mo',  cc(atAbs));
+        sv('c-daily-at',   fd(atAbs / e.daysTracked)   + '/day', cc(atAbs));
+    } else {
+        sv('c-atgain', '—', ''); gi('c-atgain-sub', 'no data');
+        sv('c-monthly-at', '—', ''); sv('c-daily-at', '—', '');
+    }
 }
 
 function renderDebt() {
@@ -1087,28 +1250,58 @@ function renderDebt() {
     gi('c-debt-tradfi-lbl', lbl2);
 }
 
-// Supabase debt: total_debt is the aggregate; DeFi/CeFi split isn't broken
-// out per-scope yet, so sub-figures show the same total under a single label.
+// Supabase debt. Sub-labels come from the real data (the TradFi loans are named
+// by their own account labels) instead of the sheet's hardcoded names.
 function renderDebtSupabase() {
-    const s = dbScope();
-    const total = s ? (Number(s.total_debt) || 0) : 0;
+    const sc = (dbData && dbData.scopes) || {};
+    const td = dbTradfiDebtParts(dbData);
+    const cryptoDebt = num((sc.crypto || {}).total_debt);
+    const tradfiDebt = num((sc.tradfi || {}).total_debt);
+    let total, lbl1, val1, lbl2, val2;
+    if (activeFilter === 'crypto') {
+        total = cryptoDebt;
+        lbl1 = 'DeFi Debt';  val1 = cryptoDebt;   // all crypto debt is DeFi today
+        lbl2 = 'CeFi Debt';  val2 = 0;
+    } else if (activeFilter === 'tradfi') {
+        total = tradfiDebt;
+        lbl1 = 'Bank Debt';  val1 = td.bank;
+        lbl2 = td.otherLabel; val2 = td.other;
+    } else if (activeFilter === 'liquid') {
+        total = num((sc.liquid || {}).total_debt);
+        lbl1 = 'Crypto Debt'; val1 = cryptoDebt;
+        lbl2 = 'TradFi Debt'; val2 = Math.max(0, total - cryptoDebt);
+    } else {
+        total = num((sc.total || {}).total_debt);
+        lbl1 = 'Crypto Debt'; val1 = cryptoDebt;
+        lbl2 = 'TradFi Debt'; val2 = tradfiDebt;
+    }
     sv('c-debt-total',  fd(total), total ? 'neg' : '');
-    sv('c-debt-crypto', fd(activeFilter === 'tradfi' ? 0 : total));
-    sv('c-debt-tradfi', '—');
-    gi('c-debt-crypto-lbl', 'DeFi Debt');
-    gi('c-debt-tradfi-lbl', 'no data yet');
+    sv('c-debt-crypto', fd(val1));
+    sv('c-debt-tradfi', fd(val2));
+    gi('c-debt-crypto-lbl', lbl1);
+    gi('c-debt-tradfi-lbl', lbl2);
 }
 
 function renderProjections() {
     updateSectorHeaders();
-    if (activeFilter === 'tradfi') {
+    // Sheets mode had no TradFi projections; Supabase gives every scope the
+    // gains it needs, so TradFi is only "N/A" on the sheet path.
+    if (activeFilter === 'tradfi' && !usingSupabase()) {
         sv('c-proj-eoy','N/A'); gi('c-proj-eoy-sub','no data');
         sv('c-proj-1y', 'N/A'); gi('c-proj-1y-sub', 'no data');
         sv('c-proj-5y', 'N/A'); gi('c-proj-5y-sub', 'no data');
         return;
     }
     let eoy, yr1, v5, sub='';
-    if (activeFilter === 'portfolio') {
+    // Supabase stores no precomputed projections — always derive them.
+    if (usingSupabase()) {
+        const lnw=getFilterNW(), dm=getFilterMonthly(), yr=N(1);
+        const moLeft=Math.round((1-yr)*12);
+        eoy=lnw+dm*moLeft; yr1=lnw+dm*12;
+        const ar=Math.max(0.04,Math.min(0.5,Math.abs(getFilterAtPct())));
+        v5=lnw; for(let m=0;m<60;m++) v5=v5*(1+ar/12)+dm;
+        sub='est.';
+    } else if (activeFilter === 'portfolio') {
         eoy=N(73); yr1=N(74); v5=N(75);
     } else if (activeFilter === 'crypto') {
         eoy=N(76); yr1=N(77); v5=N(78);
@@ -1184,16 +1377,24 @@ function renderMilestone() {
 
 function renderMonteCarlo() {
     const statsEl=document.getElementById('mc-stats'); if(!statsEl) return;
-    // Always use liquid assets only (crypto + tradfi), excluding real estate & illiquid assets
-    const currentNW = N(32) + N(44);
+    // Always use liquid assets only, excluding real estate & illiquid assets.
+    // Supabase has a real 'liquid' scope; the sheet only had crypto+tradfi as a proxy.
+    const sbLiquid = usingSupabase() ? ((dbData.scopes||{}).liquid || null) : null;
+    const currentNW = sbLiquid ? num(sbLiquid.net_worth) : N(32) + N(44);
     const monthly = 0; // No monthly additions in Monte Carlo
-    const ci=N(30), ti=N(42), total=ci+ti;
-    const atPct = total > 0 ? (N(38)*ci + N(50)*ti) / total : N(12);
+    let atPct;
+    if (sbLiquid) {
+        const gl = (dbData.gains || {}).liquid || {};
+        atPct = has(gl.alltime_pct) ? num(gl.alltime_pct) / 100 : 0;
+    } else {
+        const ci=N(30), ti=N(42), total=ci+ti;
+        atPct = total > 0 ? (N(38)*ci + N(50)*ti) / total : N(12);
+    }
     const FIRE_TARGET=1000000, SIMS=800, YEARS=15;
     // Always label as "Liquid" since we always use liquid assets here
     const lbl=document.getElementById('monteFilter'); if(lbl) lbl.textContent='Liquid';
     // Check liquid *assets* (not NW) — liquid NW can be negative when debt > assets
-    const liquidAssets = N(27) + N(41);
+    const liquidAssets = sbLiquid ? num(sbLiquid.total_assets) : N(27) + N(41);
     if (liquidAssets <= 0) {
         gi('mc-stats',`<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data</div>`);
         gi('mc-scenarios',''); return;
@@ -1275,8 +1476,9 @@ function renderAssets() {
     let assets=[];
     const titleEl=document.getElementById('assetsTitle');
     if (usingSupabase()) {
+        // Now covers DeFi + manual/TradFi holdings, so it's the full distribution again.
         assets=dbAssetRows();
-        if (titleEl) titleEl.textContent='DeFi Positions';
+        if (titleEl) titleEl.textContent='Assets Distribution';
     } else {
         if (titleEl) titleEl.textContent='Assets Distribution';
         for(let i=81;i<=92;i++){const name=V(i,0);if(!name)continue;assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});}
@@ -1293,13 +1495,49 @@ function renderAssets() {
             options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:10},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
         });
     }
-    const tbody=assets.map(a=>`<tr><td><b>${a.name}</b></td><td>${fq(a.qty)}</td><td class="sensitive">${fd(a.val)}</td><td>${a.type}</td><td>${a.plat}</td><td>${a.status}</td></tr>`).join('');
+    const row=a=>`<tr><td><b>${a.name}</b></td><td>${a.qty===null||a.qty===undefined?'—':fq(a.qty)}</td>`+
+        `<td class="sensitive ${a.val<0?'neg':''}">${fd(a.val)}</td><td>${a.type}</td><td>${a.plat}</td><td>${a.status}</td></tr>`;
+    let tbody;
+    if (usingSupabase()) {
+        // Group DeFi and manual/TradFi holdings under their own headings.
+        const groups=['Crypto / DeFi','TradFi / Manual'];
+        tbody=groups.map(g=>{
+            const items=assets.filter(a=>a.group===g);
+            if(!items.length) return '';
+            const sum=items.reduce((t,a)=>t+a.val,0);
+            return `<tr><td colspan="5" style="background:var(--card2);font-size:.85em;letter-spacing:.08em;`+
+                   `text-transform:uppercase;color:var(--text2);font-weight:700;">${g}</td>`+
+                   `<td style="background:var(--card2);font-weight:700;" class="sensitive ${cc(sum)}">${fd(sum)}</td></tr>`+
+                   items.map(row).join('');
+        }).join('');
+    } else {
+        tbody=assets.map(row).join('');
+    }
     gi('assetsTable',`<table><thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody>${tbody}</tbody></table>`);
 }
 
 function renderYearly() {
     const years=[];
-    for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4)});}
+    if (usingSupabase()) {
+        // yearly() RPC: 2023-25 backfilled, current year live. YoY isn't stored,
+        // so derive it; the first year has no prior to compare against (0 → '—').
+        const src = dbYearly[scopeForFilter(activeFilter)] || [];
+        const byYear = (dbData.btc || {}).yearly_holdings || {};
+        src.forEach((r, i) => {
+            const nw = num(r.net_worth), prev = i > 0 ? num(src[i-1].net_worth) : 0;
+            years.push({
+                yr:  String(r.year),
+                nw:  nw,
+                yoy: (i > 0 && prev !== 0) ? (nw - prev) / Math.abs(prev) : 0,
+                ta:  num(r.total_assets),
+                // per-scope btc_holdings is null pre-2026; fall back to the
+                // portfolio-wide yearly BTC accumulation from the bootstrap.
+                btc: has(r.btc_holdings) ? num(r.btc_holdings) : num(byYear[String(r.year)]),
+            });
+        });
+    } else {
+        for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4)});}
+    }
     if(charts.year) charts.year.destroy();
     const ctx=document.getElementById('yearChart');
     if(ctx) {
