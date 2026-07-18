@@ -455,7 +455,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
             <div class="twrap" id="eaListWrap" style="max-height:260px;overflow:auto;"></div>
             <div class="card-divider" style="margin:16px 0;"></div>
             <label class="mlabel">Add New</label>
-            <div class="mrow-row" style="margin-top:6px;">
+            <div id="eaRateCaption" style="font-size:10px;color:var(--text2);margin:-2px 0 8px;" title="">&nbsp;</div>
+            <div class="mrow-row" style="margin-top:6px;align-items:flex-start;">
                 <input class="minput" id="eaNewLabel" placeholder="Label (e.g. Savings Account)" style="flex:2;min-width:140px;">
                 <select class="minput" id="eaNewType" style="flex:1;min-width:120px;">
                     <option value="bank">Bank</option>
@@ -464,7 +465,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
                     <option value="manual_asset">Manual Asset</option>
                     <option value="loan">Loan</option>
                 </select>
-                <input class="minput" id="eaNewValue" type="number" step="0.01" min="0" placeholder="Value ($)" style="flex:1;min-width:100px;">
+                <div style="flex:1;min-width:100px;">
+                    <input class="minput" id="eaNewValue" type="number" step="0.01" min="0" placeholder="Value (€)" style="width:100%;" oninput="eaNewValuePreview()">
+                    <div id="eaNewValuePreview" style="font-size:10px;color:var(--text2);margin-top:3px;min-height:12px;"></div>
+                </div>
             </div>
             <div class="mactions">
                 <button class="mcancel" onclick="closeEditAssets()">Close</button>
@@ -510,6 +514,10 @@ let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when S
 let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
 let authToken = null; // Edit Assets: Supabase access_token once signed in, else null
 let _eaItems = [];    // Edit Assets: cache of manual_assets_list() rows for save/remove by index
+let eurUsdRate = null;      // Edit Assets: cached EUR->USD rate, fetched once per session
+let eurRatePromise = null;  // Edit Assets: in-flight rate fetch (avoids duplicate calls)
+let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback rate
+const EUR_USD_FALLBACK_RATE = 1.08; // approximate — only used if the live fetch fails
 
 // Thin PostgREST RPC helper (anon key is read-only + RLS-locked).
 async function rpc(name, args) {
@@ -1752,7 +1760,70 @@ function openEditAssets() {
         if (saved) authToken = saved;
     }
     document.getElementById('eaModal').classList.add('open');
+    ensureEurUsdRate();
     updateEditAssetsView();
+}
+
+// ── EUR -> USD rate (fetched once, cached for the session) ────────────────
+async function ensureEurUsdRate() {
+    if (eurUsdRate !== null) return eurUsdRate;
+    if (eurRatePromise) return eurRatePromise;
+    eurRatePromise = (async () => {
+        try {
+            const resp = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
+            if (!resp.ok) throw new Error('rate fetch failed');
+            const data = await resp.json();
+            const rate = data && data.rates && data.rates.USD;
+            if (typeof rate !== 'number' || !isFinite(rate) || rate <= 0) throw new Error('bad rate payload');
+            eurUsdRate = rate;
+            eurRateIsStale = false;
+        } catch (err) {
+            eurUsdRate = EUR_USD_FALLBACK_RATE;
+            eurRateIsStale = true;
+        }
+        updateEurRateCaption();
+        refreshEurPreviews();
+        return eurUsdRate;
+    })();
+    return eurRatePromise;
+}
+
+function updateEurRateCaption() {
+    const el = document.getElementById('eaRateCaption');
+    if (!el || eurUsdRate === null) return;
+    if (eurRateIsStale) {
+        el.textContent = `Rate unavailable — using approximate 1 EUR ≈ ${eurUsdRate.toFixed(4)} USD`;
+        el.style.color = 'var(--red)';
+        el.title = 'Live EUR/USD rate fetch failed; using a fallback approximate rate. You can still add/edit items.';
+    } else {
+        el.textContent = `1 EUR = ${eurUsdRate.toFixed(4)} USD`;
+        el.style.color = 'var(--text2)';
+        el.title = 'Live ECB rate via frankfurter.app, fetched once per session.';
+    }
+}
+
+// Recompute all visible "≈ $" previews once the rate resolves (or changes).
+function refreshEurPreviews() {
+    eaNewValuePreview();
+    _eaItems.forEach((it, i) => { if (it.currency === 'EUR') eaEditPreview(i); });
+}
+
+function eaNewValuePreview() {
+    const preview = document.getElementById('eaNewValuePreview');
+    if (!preview) return;
+    const amt = parseFloat(document.getElementById('eaNewValue').value);
+    if (isNaN(amt) || amt < 0 || eurUsdRate === null) { preview.textContent = ''; return; }
+    preview.textContent = `≈ $${(amt * eurUsdRate).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+
+function eaEditPreview(i) {
+    const input = document.getElementById(`eaVal-${i}`);
+    const preview = document.getElementById(`eaValPreview-${i}`);
+    if (!input || !preview) return;
+    if (input.dataset.currency !== 'EUR') { preview.textContent = ''; return; }
+    const amt = parseFloat(input.value);
+    if (isNaN(amt) || amt < 0 || eurUsdRate === null) { preview.textContent = ''; return; }
+    preview.textContent = `≈ $${(amt * eurUsdRate).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 }
 
 function closeEditAssets() {
@@ -1845,38 +1916,59 @@ function renderEditAssetsTable(items) {
     const rowsHtml = items.map((it, i) => {
         const kindLbl = it.kind === 'loan' ? 'Loan' : (it.type || 'asset');
         const liq = it.is_liquid ? 'Liquid' : 'Illiquid';
-        const val = Math.abs(Number(it.value) || 0);
+        const isEur = it.currency === 'EUR' && it.original_value !== null && it.original_value !== undefined;
+        const displayVal = isEur ? Math.abs(Number(it.original_value) || 0) : Math.abs(Number(it.value) || 0);
+        const ccySym = isEur ? '€' : '$';
         return `<tr>
             <td><b>${escapeHtml(it.label)}</b></td>
             <td>${escapeHtml(kindLbl)}</td>
             <td>${liq}</td>
-            <td><input class="minput" style="padding:5px 8px;width:110px;" type="number" step="0.01" min="0" id="eaVal-${i}" value="${val}"></td>
+            <td>
+                <div style="display:flex;align-items:center;gap:4px;" title="${isEur ? 'Editing in EUR' : 'Editing in USD'}">
+                    <span style="font-size:11px;color:var(--text2);width:9px;">${ccySym}</span>
+                    <input class="minput" style="padding:5px 8px;width:90px;" type="number" step="0.01" min="0" id="eaVal-${i}" value="${displayVal}" data-currency="${isEur ? 'EUR' : 'USD'}" oninput="eaEditPreview(${i})">
+                </div>
+                <div id="eaValPreview-${i}" style="font-size:10px;color:var(--text2);margin-top:2px;min-height:12px;"></div>
+            </td>
             <td style="white-space:nowrap;">
                 <button class="mgray" style="padding:5px 10px;" onclick="saveEditAsset(${i})">Save</button>
                 <button class="mgray" style="padding:5px 10px;color:var(--red);" onclick="removeEditAsset(${i})">Remove</button>
             </td>
         </tr>`;
     }).join('');
-    wrap.innerHTML = `<table><thead><tr><th>Label</th><th>Type</th><th>Liquid</th><th>Value</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    wrap.innerHTML = `<table><thead><tr><th>Label</th><th>Type</th><th>Liquid</th><th>Value ($/€)</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    refreshEurPreviews();
 }
 
 async function saveEditAsset(i) {
     const it = _eaItems[i];
     if (!it) return;
     const input = document.getElementById(`eaVal-${i}`);
-    const val = parseFloat(input.value);
-    if (isNaN(val) || val < 0) { eaStatus('Enter a valid non-negative number.', true); return; }
+    const inputVal = parseFloat(input.value);
+    if (isNaN(inputVal) || inputVal < 0) { eaStatus('Enter a valid non-negative number.', true); return; }
+    const isEur = input.dataset.currency === 'EUR';
+    let usdVal, currencyArgs;
+    if (isEur) {
+        const rate = await ensureEurUsdRate();
+        usdVal = inputVal * rate;
+        currencyArgs = { p_currency: 'EUR', p_original_value: inputVal };
+    } else {
+        usdVal = inputVal;
+        currencyArgs = {};
+    }
     eaStatus('Saving…', false);
     try {
         if (it.kind === 'loan') {
             await rpcAuth('manual_loan_upsert', {
-                p_label: it.label, p_value: val,
+                p_label: it.label, p_value: usdVal,
                 p_is_liquid: !!it.is_liquid, p_scope_class: it.scope_class || 'tradfi',
+                ...currencyArgs,
             });
         } else {
             await rpcAuth('manual_asset_upsert', {
-                p_label: it.label, p_type: it.type, p_value: val,
+                p_label: it.label, p_type: it.type, p_value: usdVal,
                 p_is_liquid: it.is_liquid, p_scope_class: it.scope_class,
+                ...currencyArgs,
             });
         }
         eaStatus('Saved.', false);
@@ -1903,20 +1995,23 @@ async function removeEditAsset(i) {
 }
 
 async function addEditAsset() {
-    const label = document.getElementById('eaNewLabel').value.trim();
-    const type  = document.getElementById('eaNewType').value;
-    const val   = parseFloat(document.getElementById('eaNewValue').value);
+    const label  = document.getElementById('eaNewLabel').value.trim();
+    const type   = document.getElementById('eaNewType').value;
+    const eurAmt = parseFloat(document.getElementById('eaNewValue').value);
     if (!label) { eaStatus('Enter a label.', true); return; }
-    if (isNaN(val) || val < 0) { eaStatus('Enter a valid non-negative value.', true); return; }
+    if (isNaN(eurAmt) || eurAmt < 0) { eaStatus('Enter a valid non-negative value.', true); return; }
+    const rate = await ensureEurUsdRate();
+    const usdVal = eurAmt * rate;
     eaStatus('Adding…', false);
     try {
         if (type === 'loan') {
-            await rpcAuth('manual_loan_upsert', { p_label: label, p_value: val, p_is_liquid: false, p_scope_class: 'tradfi' });
+            await rpcAuth('manual_loan_upsert', { p_label: label, p_value: usdVal, p_is_liquid: false, p_scope_class: 'tradfi', p_currency: 'EUR', p_original_value: eurAmt });
         } else {
-            await rpcAuth('manual_asset_upsert', { p_label: label, p_type: type, p_value: val, p_is_liquid: null, p_scope_class: null });
+            await rpcAuth('manual_asset_upsert', { p_label: label, p_type: type, p_value: usdVal, p_is_liquid: null, p_scope_class: null, p_currency: 'EUR', p_original_value: eurAmt });
         }
         document.getElementById('eaNewLabel').value = '';
         document.getElementById('eaNewValue').value = '';
+        document.getElementById('eaNewValuePreview').textContent = '';
         eaStatus('Added.', false);
         await loadEditAssetsList();
         await loadData();
