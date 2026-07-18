@@ -370,6 +370,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <button class="ibtn" id="privacyBtn" onclick="togglePrivacy()" aria-label="Toggle privacy blur">&#128065; Privacy</button>
         <button class="ibtn"                 onclick="doRefresh()"     aria-label="Refresh data">&#8635; Refresh</button>
         <a class="ibtn" href="https://bot-dashboard-weld.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open bot performance dashboard" style="text-decoration:none;display:inline-flex;align-items:center;">&#129302; Bots</a>
+        <button class="ibtn" id="editAssetsBtn" onclick="openEditAssets()" aria-label="Edit manual assets">&#128273; Edit Assets</button>
         <button class="ibtn"                 onclick="openSettings()"  aria-label="Open settings">&#9881; Settings</button>
     </div>
 </div>
@@ -421,6 +422,58 @@ tr:hover td{background:rgba(255,255,255,.03);}
     </div>
 </div>
 
+<!-- EDIT ASSETS MODAL (Supabase mode only) -->
+<div class="modal" id="eaModal">
+    <div class="mbox" style="width:620px;">
+        <div class="mtitle">Edit Assets</div>
+
+        <!-- Login form — shown until signed in -->
+        <div id="eaLoginBox">
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to add, edit, or remove manual TradFi assets and loans (bank accounts, real estate, vehicles, personal loans).</div>
+            <div class="mrow">
+                <label class="mlabel">Email</label>
+                <input class="minput" id="eaEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('eaPassword').focus()">
+            </div>
+            <div class="mrow">
+                <label class="mlabel">Password</label>
+                <input class="minput" id="eaPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEditAssets()">
+            </div>
+            <div id="eaLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
+            <div class="mactions">
+                <button class="mcancel"  onclick="closeEditAssets()">Cancel</button>
+                <button class="mprimary" id="eaLoginBtn" onclick="loginEditAssets()">Sign In</button>
+            </div>
+        </div>
+
+        <!-- Edit panel — shown once signed in -->
+        <div id="eaPanel" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);" id="eaSignedInAs"></div>
+                <button class="mgray" style="padding:6px 12px;" onclick="logoutEditAssets()">Sign Out</button>
+            </div>
+            <div id="eaStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
+            <div class="twrap" id="eaListWrap" style="max-height:260px;overflow:auto;"></div>
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Add New</label>
+            <div class="mrow-row" style="margin-top:6px;">
+                <input class="minput" id="eaNewLabel" placeholder="Label (e.g. Savings Account)" style="flex:2;min-width:140px;">
+                <select class="minput" id="eaNewType" style="flex:1;min-width:120px;">
+                    <option value="bank">Bank</option>
+                    <option value="real_estate">Real Estate</option>
+                    <option value="motorbike">Vehicle</option>
+                    <option value="manual_asset">Manual Asset</option>
+                    <option value="loan">Loan</option>
+                </select>
+                <input class="minput" id="eaNewValue" type="number" step="0.01" min="0" placeholder="Value ($)" style="flex:1;min-width:100px;">
+            </div>
+            <div class="mactions">
+                <button class="mcancel" onclick="closeEditAssets()">Close</button>
+                <button class="mprimary" onclick="addEditAsset()">+ Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG
@@ -441,6 +494,12 @@ const LS = {
 const SUPABASE_URL      = 'https://lvyyewyaatuiwawxjtmv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXlld3lhYXR1aXdhd3hqdG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTcwNjQsImV4cCI6MjA5OTUzMzA2NH0._HoBCWSOemshCeKSG-qbTv39fu23AnFGz3C_K__eg4A';
 
+// Edit Assets auth — access_token lives in memory + sessionStorage only (never
+// localStorage, never embedded in code). Cleared on sign-out or a failed/expired
+// authenticated call. Writes always go through rpcAuth(), never the anon rpc().
+const SS_TOKEN_KEY = 'zh-ea-token';
+const SS_EMAIL_KEY = 'zh-ea-email';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -449,6 +508,8 @@ let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
 let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
 let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
+let authToken = null; // Edit Assets: Supabase access_token once signed in, else null
+let _eaItems = [];    // Edit Assets: cache of manual_assets_list() rows for save/remove by index
 
 // Thin PostgREST RPC helper (anon key is read-only + RLS-locked).
 async function rpc(name, args) {
@@ -463,6 +524,33 @@ async function rpc(name, args) {
     });
     if (!resp.ok) throw new Error(`${name}: HTTP ${resp.status}`);
     return resp.json();
+}
+
+// Authenticated RPC helper for Edit Assets writes — same shape as rpc() but
+// signs with the owner's access_token instead of the anon key. Writes are
+// impossible without a valid token (RLS-enforced server-side too).
+async function rpcAuth(name, args) {
+    if (!authToken) throw new Error('Not signed in');
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(args || {}),
+    });
+    if (resp.status === 401 || resp.status === 403) {
+        logoutEditAssets();
+        throw new Error('Session expired — please sign in again.');
+    }
+    if (!resp.ok) {
+        let detail = '';
+        try { const j = await resp.json(); detail = j.message || j.error_description || j.msg || ''; } catch {}
+        throw new Error(`${name} failed${detail ? ': ' + detail : ` (HTTP ${resp.status})`}`);
+    }
+    const text = await resp.text();
+    return text ? JSON.parse(text) : null;
 }
 
 function usingSupabase() {
@@ -1641,6 +1729,203 @@ function saveAndReload() {
     closeSettings(); rows=[]; dbData=null; loadData();
 }
 document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal'))closeSettings(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDIT ASSETS (Supabase mode only) — login-gated CRUD over manual TradFi
+// accounts (bank / real_estate / motorbike / manual_asset / loans). Backend
+// contract: manual_assets_list / manual_asset_upsert / manual_loan_upsert /
+// manual_asset_remove, all under {SUPABASE_URL}/rest/v1/rpc/. See project docs.
+// ─────────────────────────────────────────────────────────────────────────────
+function escapeHtml(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function openEditAssets() {
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    if (source !== 'supabase') {
+        toast('Edit Assets requires Supabase mode — switch it on in Settings first.', true);
+        return;
+    }
+    if (!authToken) {
+        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
+        if (saved) authToken = saved;
+    }
+    document.getElementById('eaModal').classList.add('open');
+    updateEditAssetsView();
+}
+
+function closeEditAssets() {
+    document.getElementById('eaModal').classList.remove('open');
+    const err = document.getElementById('eaLoginErr'); if (err) err.textContent = '';
+}
+
+function updateEditAssetsView() {
+    const loginBox = document.getElementById('eaLoginBox');
+    const panel    = document.getElementById('eaPanel');
+    if (authToken) {
+        loginBox.style.display = 'none';
+        panel.style.display = 'block';
+        const email = sessionStorage.getItem(SS_EMAIL_KEY) || '';
+        document.getElementById('eaSignedInAs').textContent = email ? `Signed in as ${email}` : 'Signed in';
+        eaStatus('', false);
+        loadEditAssetsList();
+    } else {
+        loginBox.style.display = 'block';
+        panel.style.display = 'none';
+    }
+}
+
+async function loginEditAssets() {
+    const email    = document.getElementById('eaEmail').value.trim();
+    const password = document.getElementById('eaPassword').value;
+    const errEl    = document.getElementById('eaLoginErr');
+    const btn      = document.getElementById('eaLoginBtn');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token) {
+            // No info leakage beyond "invalid credentials" — the Supabase error
+            // (wrong password, unknown user, unconfirmed email) is never shown.
+            errEl.textContent = 'Invalid credentials.';
+            return;
+        }
+        authToken = data.access_token;
+        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
+        sessionStorage.setItem(SS_EMAIL_KEY, email);
+        document.getElementById('eaPassword').value = '';
+        errEl.textContent = '';
+        updateEditAssetsView();
+    } catch (err) {
+        errEl.textContent = 'Sign-in failed — check your connection and try again.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
+
+function logoutEditAssets() {
+    authToken = null;
+    sessionStorage.removeItem(SS_TOKEN_KEY);
+    sessionStorage.removeItem(SS_EMAIL_KEY);
+    updateEditAssetsView();
+}
+
+function eaStatus(msg, isErr) {
+    const el = document.getElementById('eaStatusMsg');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isErr ? 'var(--red)' : 'var(--green)';
+}
+
+async function loadEditAssetsList() {
+    const wrap = document.getElementById('eaListWrap');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    try {
+        const items = await rpc('manual_assets_list');
+        renderEditAssetsTable(Array.isArray(items) ? items : []);
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderEditAssetsTable(items) {
+    _eaItems = items;
+    const wrap = document.getElementById('eaListWrap');
+    if (!items.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No manual assets yet — add one below.</div>';
+        return;
+    }
+    const rowsHtml = items.map((it, i) => {
+        const kindLbl = it.kind === 'loan' ? 'Loan' : (it.type || 'asset');
+        const liq = it.is_liquid ? 'Liquid' : 'Illiquid';
+        const val = Math.abs(Number(it.value) || 0);
+        return `<tr>
+            <td><b>${escapeHtml(it.label)}</b></td>
+            <td>${escapeHtml(kindLbl)}</td>
+            <td>${liq}</td>
+            <td><input class="minput" style="padding:5px 8px;width:110px;" type="number" step="0.01" min="0" id="eaVal-${i}" value="${val}"></td>
+            <td style="white-space:nowrap;">
+                <button class="mgray" style="padding:5px 10px;" onclick="saveEditAsset(${i})">Save</button>
+                <button class="mgray" style="padding:5px 10px;color:var(--red);" onclick="removeEditAsset(${i})">Remove</button>
+            </td>
+        </tr>`;
+    }).join('');
+    wrap.innerHTML = `<table><thead><tr><th>Label</th><th>Type</th><th>Liquid</th><th>Value</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+async function saveEditAsset(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const input = document.getElementById(`eaVal-${i}`);
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0) { eaStatus('Enter a valid non-negative number.', true); return; }
+    eaStatus('Saving…', false);
+    try {
+        if (it.kind === 'loan') {
+            await rpcAuth('manual_loan_upsert', {
+                p_label: it.label, p_value: val,
+                p_is_liquid: !!it.is_liquid, p_scope_class: it.scope_class || 'tradfi',
+            });
+        } else {
+            await rpcAuth('manual_asset_upsert', {
+                p_label: it.label, p_type: it.type, p_value: val,
+                p_is_liquid: it.is_liquid, p_scope_class: it.scope_class,
+            });
+        }
+        eaStatus('Saved.', false);
+        await loadEditAssetsList();
+        await loadData();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function removeEditAsset(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    if (!confirm(`Remove "${it.label}"? This cannot be undone.`)) return;
+    eaStatus('Removing…', false);
+    try {
+        await rpcAuth('manual_asset_remove', { p_label: it.label });
+        eaStatus('Removed.', false);
+        await loadEditAssetsList();
+        await loadData();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function addEditAsset() {
+    const label = document.getElementById('eaNewLabel').value.trim();
+    const type  = document.getElementById('eaNewType').value;
+    const val   = parseFloat(document.getElementById('eaNewValue').value);
+    if (!label) { eaStatus('Enter a label.', true); return; }
+    if (isNaN(val) || val < 0) { eaStatus('Enter a valid non-negative value.', true); return; }
+    eaStatus('Adding…', false);
+    try {
+        if (type === 'loan') {
+            await rpcAuth('manual_loan_upsert', { p_label: label, p_value: val, p_is_liquid: false, p_scope_class: 'tradfi' });
+        } else {
+            await rpcAuth('manual_asset_upsert', { p_label: label, p_type: type, p_value: val, p_is_liquid: null, p_scope_class: null });
+        }
+        document.getElementById('eaNewLabel').value = '';
+        document.getElementById('eaNewValue').value = '';
+        eaStatus('Added.', false);
+        await loadEditAssetsList();
+        await loadData();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+document.getElementById('eaModal').addEventListener('click', e => { if (e.target === document.getElementById('eaModal')) closeEditAssets(); });
 
 function toast(msg, isErr) {
     const t = document.getElementById('toast');
