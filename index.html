@@ -424,12 +424,12 @@ tr:hover td{background:rgba(255,255,255,.03);}
 
 <!-- EDIT ASSETS MODAL (Supabase mode only) -->
 <div class="modal" id="eaModal">
-    <div class="mbox" style="width:620px;">
+    <div class="mbox" style="width:720px;">
         <div class="mtitle">Edit Assets</div>
 
         <!-- Login form — shown until signed in -->
         <div id="eaLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to add, edit, or remove manual TradFi assets and loans (bank accounts, real estate, vehicles, personal loans).</div>
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to add, edit, or remove manual TradFi assets and loans (bank accounts, real estate, vehicles, personal loans) — plus bank subtype, loan details, vehicle purchase info, and auto-revaluation settings.</div>
             <div class="mrow">
                 <label class="mlabel">Email</label>
                 <input class="minput" id="eaEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('eaPassword').focus()">
@@ -452,16 +452,17 @@ tr:hover td{background:rgba(255,255,255,.03);}
                 <button class="mgray" style="padding:6px 12px;" onclick="logoutEditAssets()">Sign Out</button>
             </div>
             <div id="eaStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
-            <div class="twrap" id="eaListWrap" style="max-height:260px;overflow:auto;"></div>
+            <div class="twrap" id="eaListWrap" style="max-height:420px;overflow:auto;"></div>
             <div class="card-divider" style="margin:16px 0;"></div>
             <label class="mlabel">Add New</label>
             <div id="eaRateCaption" style="font-size:10px;color:var(--text2);margin:-2px 0 8px;" title="">&nbsp;</div>
             <div class="mrow-row" style="margin-top:6px;align-items:flex-start;">
                 <input class="minput" id="eaNewLabel" placeholder="Label (e.g. Savings Account)" style="flex:2;min-width:140px;">
-                <select class="minput" id="eaNewType" style="flex:1;min-width:120px;">
+                <select class="minput" id="eaNewType" style="flex:1;min-width:120px;" onchange="eaNewTypeChanged()">
                     <option value="bank">Bank</option>
                     <option value="real_estate">Real Estate</option>
-                    <option value="motorbike">Vehicle</option>
+                    <option value="motorbike">Vehicle (Motorbike)</option>
+                    <option value="vehicle">Vehicle (Car/Other)</option>
                     <option value="manual_asset">Manual Asset</option>
                     <option value="loan">Loan</option>
                 </select>
@@ -470,9 +471,63 @@ tr:hover td{background:rgba(255,255,255,.03);}
                     <div id="eaNewValuePreview" style="font-size:10px;color:var(--text2);margin-top:3px;min-height:12px;"></div>
                 </div>
             </div>
+            <div class="mrow-row" id="eaNewSubtypeRow" style="display:none;margin-top:8px;">
+                <select class="minput" id="eaNewSubtype" style="flex:1;min-width:140px;">
+                    <option value="">Account subtype (optional)</option>
+                    <option value="checking">Checking</option>
+                    <option value="savings">Savings</option>
+                    <option value="joint">Joint</option>
+                    <option value="cash">Cash</option>
+                    <option value="meal_card">Meal Card</option>
+                </select>
+            </div>
+            <div style="font-size:10px;color:var(--text2);margin-top:8px;">Loan details, vehicle purchase info, and auto-revaluation settings can be filled in via each item's <b>Details</b> button below, once it has been added here.</div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Portfolios <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— brokerage-style investment holdings, tracked separately from the assets above</span></label>
+            <div style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">A portfolio's positions/cash update here immediately from the transaction ledger, but its dollar value only feeds Net Worth once the price-refresh collector next runs.</div>
+            <div class="twrap" id="eaPortfoliosWrap" style="max-height:220px;overflow:auto;"></div>
+            <div style="margin-top:10px;">
+                <button class="mgray" style="padding:6px 12px;font-size:11px;" id="eaPfTxToggleBtn" onclick="togglePortfolioTxForm()">+ Add Transaction</button>
+            </div>
+            <div id="eaPfTxForm" style="display:none;margin-top:10px;">
+                <div class="mrow-row">
+                    <input class="minput" id="eaPfName" list="eaPfNameList" placeholder="Portfolio name (existing or new)" style="flex:2;min-width:160px;">
+                    <datalist id="eaPfNameList"></datalist>
+                    <select class="minput" id="eaPfTxType" style="flex:1;min-width:120px;" onchange="portfolioTxTypeChanged()">
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                        <option value="dividend">Dividend</option>
+                        <option value="deposit">Deposit</option>
+                        <option value="withdrawal">Withdrawal</option>
+                        <option value="fee">Fee</option>
+                    </select>
+                    <input class="minput" id="eaPfDate" type="date" style="flex:1;min-width:130px;">
+                </div>
+                <div class="mrow-row" id="eaPfAssetRow" style="margin-top:8px;">
+                    <input class="minput" id="eaPfAsset" placeholder="Asset (e.g. AAPL) — optional for dividend" style="flex:1;min-width:110px;">
+                    <input class="minput" id="eaPfQty" type="number" step="0.000001" min="0" placeholder="Quantity" style="flex:1;min-width:100px;" oninput="autofillPortfolioAmount()">
+                    <input class="minput" id="eaPfPrice" type="number" step="0.01" min="0" placeholder="Price per unit" style="flex:1;min-width:100px;" oninput="autofillPortfolioAmount()">
+                </div>
+                <div class="mrow-row" style="margin-top:8px;">
+                    <input class="minput" id="eaPfAmount" type="number" step="0.01" min="0" placeholder="Total amount (in portfolio's currency)" style="flex:1;min-width:130px;">
+                    <input class="minput" id="eaPfFee" type="number" step="0.01" min="0" placeholder="Fee (optional, default 0)" style="flex:1;min-width:110px;">
+                </div>
+                <div class="mrow-row" style="margin-top:8px;" id="eaPfNewOnlyRow">
+                    <select class="minput" id="eaPfBaseCcy" style="flex:1;min-width:90px;" title="Only used the first time a new portfolio is created">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                    <input class="minput" id="eaPfBroker" placeholder="Broker (optional)" style="flex:2;min-width:130px;" title="Only used the first time a new portfolio is created">
+                </div>
+                <div style="font-size:10px;color:var(--text2);margin-top:5px;">Currency/broker above only apply the very first time a new portfolio name is used — they can't be changed afterwards.</div>
+                <input class="minput" id="eaPfNote" placeholder="Note (optional)" style="margin-top:8px;">
+                <div style="margin-top:8px;"><button class="mgray" onclick="addPortfolioTransaction()">Save Transaction</button></div>
+            </div>
+
             <div class="mactions">
                 <button class="mcancel" onclick="closeEditAssets()">Close</button>
-                <button class="mprimary" onclick="addEditAsset()">+ Add</button>
+                <button class="mprimary" onclick="addEditAsset()">+ Add Asset</button>
             </div>
         </div>
     </div>
@@ -514,6 +569,13 @@ let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when S
 let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
 let authToken = null; // Edit Assets: Supabase access_token once signed in, else null
 let _eaItems = [];    // Edit Assets: cache of manual_assets_list() rows for save/remove by index
+let _eaLoanDetails = {};    // Edit Assets: label(lowercase) -> loan_details_list() row
+let _eaVehicleDetails = {}; // Edit Assets: label(lowercase) -> vehicle_details_list() row
+let _eaRevalSettings = {};  // Edit Assets: label(lowercase) -> asset_revaluation_settings_list() row
+let _eaExpanded = new Set();// Edit Assets: labels (lowercase) whose Details panel is currently open
+let _eaPortfolios = [];     // Edit Assets: cache of portfolios_list() rows
+let _eaPfTxExpanded = new Set(); // Edit Assets: portfolio_ids whose transaction list is currently open
+let _eaPfTransactions = {};      // Edit Assets: portfolio_id -> cached portfolio_transactions_list() rows
 let eurUsdRate = null;      // Edit Assets: cached EUR->USD rate, fetched once per session
 let eurRatePromise = null;  // Edit Assets: in-flight rate fetch (avoids duplicate calls)
 let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback rate
@@ -1740,9 +1802,15 @@ document.getElementById('modal').addEventListener('click', e => { if(e.target===
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EDIT ASSETS (Supabase mode only) — login-gated CRUD over manual TradFi
-// accounts (bank / real_estate / motorbike / manual_asset / loans). Backend
-// contract: manual_assets_list / manual_asset_upsert / manual_loan_upsert /
-// manual_asset_remove, all under {SUPABASE_URL}/rest/v1/rpc/. See project docs.
+// accounts (bank / real_estate / motorbike / vehicle / manual_asset / loans),
+// plus per-item Details sub-panels: cash account subtype (folded into the main
+// Save), loan details, vehicle purchase details, and auto-revaluation
+// overrides, with an optional value-history viewer. Backend contract:
+// manual_assets_list / manual_asset_upsert / manual_loan_upsert /
+// manual_asset_remove / loan_details_list / loan_details_upsert /
+// vehicle_details_list / vehicle_details_upsert /
+// asset_revaluation_settings_list / asset_revaluation_settings_upsert /
+// manual_asset_value_history_list, all under {SUPABASE_URL}/rest/v1/rpc/.
 // ─────────────────────────────────────────────────────────────────────────────
 function escapeHtml(s) {
     return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c =>
@@ -1841,6 +1909,7 @@ function updateEditAssetsView() {
         document.getElementById('eaSignedInAs').textContent = email ? `Signed in as ${email}` : 'Signed in';
         eaStatus('', false);
         loadEditAssetsList();
+        loadPortfolios();
     } else {
         loginBox.style.display = 'block';
         panel.style.display = 'none';
@@ -1899,11 +1968,35 @@ async function loadEditAssetsList() {
     const wrap = document.getElementById('eaListWrap');
     wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
     try {
-        const items = await rpc('manual_assets_list');
+        const [items, loans, vehicles, revals] = await Promise.all([
+            rpc('manual_assets_list'),
+            rpc('loan_details_list').catch(() => []),
+            rpc('vehicle_details_list').catch(() => []),
+            rpc('asset_revaluation_settings_list').catch(() => []),
+        ]);
+        _eaLoanDetails = {};
+        (loans || []).forEach(r => { _eaLoanDetails[String(r.label).toLowerCase()] = r; });
+        _eaVehicleDetails = {};
+        (vehicles || []).forEach(r => { _eaVehicleDetails[String(r.label).toLowerCase()] = r; });
+        _eaRevalSettings = {};
+        (revals || []).forEach(r => { _eaRevalSettings[String(r.label).toLowerCase()] = r; });
         renderEditAssetsTable(Array.isArray(items) ? items : []);
     } catch (err) {
         wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
     }
+}
+
+// Types that get a "Vehicle Details" sub-form (purchase price/date/year —
+// required before the vehicle-depreciation collector can compute anything).
+const EA_VEHICLE_TYPES = ['motorbike', 'vehicle'];
+// Types that get an "Auto-Revaluation" sub-form (real estate index + vehicle
+// depreciation collectors both read asset_revaluation_settings).
+const EA_REVAL_TYPES = ['real_estate', 'motorbike', 'vehicle'];
+
+function subtypeOptionsHtml(selected) {
+    const opts = [['', 'No subtype'], ['checking', 'Checking'], ['savings', 'Savings'],
+                  ['joint', 'Joint'], ['cash', 'Cash'], ['meal_card', 'Meal Card']];
+    return opts.map(([v, l]) => `<option value="${v}" ${(selected || '') === v ? 'selected' : ''}>${l}</option>`).join('');
 }
 
 function renderEditAssetsTable(items) {
@@ -1919,7 +2012,11 @@ function renderEditAssetsTable(items) {
         const isEur = it.currency === 'EUR' && it.original_value !== null && it.original_value !== undefined;
         const displayVal = isEur ? Math.abs(Number(it.original_value) || 0) : Math.abs(Number(it.value) || 0);
         const ccySym = isEur ? '€' : '$';
-        return `<tr>
+        const hasDetails = it.kind === 'loan' || EA_VEHICLE_TYPES.includes(it.type) || EA_REVAL_TYPES.includes(it.type);
+        const subtypeHtml = (it.kind !== 'loan' && it.type === 'bank')
+            ? `<select class="minput" id="eaSubtype-${i}" style="margin-top:5px;padding:4px 6px;font-size:10px;" title="Account subtype">${subtypeOptionsHtml(it.account_subtype)}</select>`
+            : '';
+        const mainRow = `<tr>
             <td><b>${escapeHtml(it.label)}</b></td>
             <td>${escapeHtml(kindLbl)}</td>
             <td>${liq}</td>
@@ -1929,15 +2026,510 @@ function renderEditAssetsTable(items) {
                     <input class="minput" style="padding:5px 8px;width:90px;" type="number" step="0.01" min="0" id="eaVal-${i}" value="${displayVal}" data-currency="${isEur ? 'EUR' : 'USD'}" oninput="eaEditPreview(${i})">
                 </div>
                 <div id="eaValPreview-${i}" style="font-size:10px;color:var(--text2);margin-top:2px;min-height:12px;"></div>
+                ${subtypeHtml}
             </td>
             <td style="white-space:nowrap;">
-                <button class="mgray" style="padding:5px 10px;" onclick="saveEditAsset(${i})">Save</button>
-                <button class="mgray" style="padding:5px 10px;color:var(--red);" onclick="removeEditAsset(${i})">Remove</button>
+                <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;">
+                    <div>
+                        <button class="mgray" style="padding:5px 10px;" onclick="saveEditAsset(${i})">Save</button>
+                        <button class="mgray" style="padding:5px 10px;color:var(--red);" onclick="removeEditAsset(${i})">Remove</button>
+                    </div>
+                    ${hasDetails ? `<button class="mgray" style="padding:4px 9px;font-size:10px;" id="eaDetailsBtn-${i}" onclick="toggleEaDetails(${i})">Details &#9662;</button>` : ''}
+                </div>
             </td>
         </tr>`;
+        const detailsRow = hasDetails
+            ? `<tr id="eaDetails-${i}" style="display:none;"><td colspan="5" style="background:var(--card);padding:14px;border-top:1px dashed var(--border);">${buildDetailsPanel(it, i)}</td></tr>`
+            : '';
+        return mainRow + detailsRow;
     }).join('');
     wrap.innerHTML = `<table><thead><tr><th>Label</th><th>Type</th><th>Liquid</th><th>Value ($/€)</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     refreshEurPreviews();
+    // Reapply whichever Details panels were open before this reload.
+    items.forEach((it, i) => {
+        if (!_eaExpanded.has(String(it.label).toLowerCase())) return;
+        const row = document.getElementById(`eaDetails-${i}`);
+        const btn = document.getElementById(`eaDetailsBtn-${i}`);
+        if (row) row.style.display = 'table-row';
+        if (btn) btn.innerHTML = 'Details &#9652;';
+    });
+}
+
+function toggleEaDetails(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const row = document.getElementById(`eaDetails-${i}`);
+    const btn = document.getElementById(`eaDetailsBtn-${i}`);
+    if (!row) return;
+    const willShow = row.style.display === 'none' || !row.style.display;
+    row.style.display = willShow ? 'table-row' : 'none';
+    if (btn) btn.innerHTML = willShow ? 'Details &#9652;' : 'Details &#9662;';
+    const key = String(it.label).toLowerCase();
+    if (willShow) _eaExpanded.add(key); else _eaExpanded.delete(key);
+}
+
+// ── Details panel builder — assembles whichever sub-forms apply to this item ──
+function buildDetailsPanel(it, i) {
+    let html = '';
+    if (it.kind === 'loan') html += buildLoanDetailsForm(it, i);
+    if (EA_VEHICLE_TYPES.includes(it.type)) html += buildVehicleDetailsForm(it, i);
+    if (EA_REVAL_TYPES.includes(it.type)) html += buildRevalSettingsForm(it, i);
+    if (EA_REVAL_TYPES.includes(it.type)) html += buildValueHistorySection(it, i);
+    return html;
+}
+
+// ── Loan details (Phase 10) — informational only, doesn't touch the balance ──
+function buildLoanDetailsForm(it, i) {
+    const ld = _eaLoanDetails[String(it.label).toLowerCase()] || {};
+    return `
+    <div class="mrow" style="margin-bottom:14px;">
+        <label class="mlabel">Loan Details <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— informational only, does not change the balance above</span></label>
+        <div class="mrow-row">
+            <input class="minput" type="number" step="0.01" id="eaLoanRate-${i}" placeholder="Interest rate %" value="${ld.interest_rate_pct ?? ''}" style="flex:1;min-width:100px;">
+            <input class="minput" type="number" step="1" id="eaLoanTerm-${i}" placeholder="Term (months)" value="${ld.term_months ?? ''}" style="flex:1;min-width:100px;">
+            <input class="minput" type="number" step="1" id="eaLoanRemaining-${i}" placeholder="Remaining (months)" value="${ld.remaining_months ?? ''}" style="flex:1;min-width:100px;">
+        </div>
+        <div class="mrow-row" style="margin-top:8px;">
+            <input class="minput" type="number" step="0.01" id="eaLoanPayment-${i}" placeholder="Monthly payment" value="${ld.monthly_payment ?? ''}" style="flex:1;min-width:110px;">
+            <input class="minput" type="date" id="eaLoanStart-${i}" value="${ld.start_date || ''}" title="Start date" style="flex:1;min-width:130px;">
+            <input class="minput" type="text" id="eaLoanType-${i}" placeholder="Loan type (e.g. mortgage)" value="${escapeHtml(ld.loan_type || '')}" style="flex:1;min-width:130px;">
+        </div>
+        <input class="minput" type="text" id="eaLoanNote-${i}" placeholder="Note (optional)" value="${escapeHtml(ld.note || '')}" style="margin-top:8px;">
+        <div style="margin-top:8px;"><button class="mgray" style="padding:6px 12px;" onclick="saveLoanDetails(${i})">Save Loan Details</button></div>
+    </div>`;
+}
+
+async function saveLoanDetails(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const rate      = parseFloat(document.getElementById(`eaLoanRate-${i}`).value);
+    const term      = parseInt(document.getElementById(`eaLoanTerm-${i}`).value, 10);
+    const remaining = parseInt(document.getElementById(`eaLoanRemaining-${i}`).value, 10);
+    const payment   = parseFloat(document.getElementById(`eaLoanPayment-${i}`).value);
+    const start     = document.getElementById(`eaLoanStart-${i}`).value;
+    const loanType  = document.getElementById(`eaLoanType-${i}`).value.trim();
+    const note      = document.getElementById(`eaLoanNote-${i}`).value.trim();
+    eaStatus('Saving loan details…', false);
+    try {
+        await rpcAuth('loan_details_upsert', {
+            p_label: it.label,
+            p_interest_rate_pct: isNaN(rate) ? null : rate,
+            p_term_months: isNaN(term) ? null : term,
+            p_remaining_months: isNaN(remaining) ? null : remaining,
+            p_monthly_payment: isNaN(payment) ? null : payment,
+            p_start_date: start || null,
+            p_loan_type: loanType || null,
+            p_note: note || null,
+        });
+        eaStatus('Loan details saved.', false);
+        await loadEditAssetsList();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+// ── Vehicle details (Phase 13) — required before the depreciation collector
+// can compute anything (purchase_price + purchase_date + manufacture_year) ──
+function buildVehicleDetailsForm(it, i) {
+    const vd = _eaVehicleDetails[String(it.label).toLowerCase()] || {};
+    const isEurStored = vd.currency === 'EUR';
+    const displayPrice = isEurStored && vd.original_purchase_price != null ? vd.original_purchase_price : (vd.purchase_price_usd ?? '');
+    return `
+    <div class="mrow" style="margin-bottom:14px;">
+        <label class="mlabel">Vehicle Details <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— required for automatic depreciation tracking</span></label>
+        <div class="mrow-row">
+            <input class="minput" type="number" step="1" id="eaVehYear-${i}" placeholder="Manufacture year" value="${vd.manufacture_year ?? ''}" style="flex:1;min-width:110px;">
+            <input class="minput" type="number" step="0.01" min="0" id="eaVehPrice-${i}" placeholder="Purchase price" value="${displayPrice}" style="flex:1;min-width:110px;">
+            <select class="minput" id="eaVehCurrency-${i}" style="flex:0 0 80px;">
+                <option value="USD" ${!isEurStored ? 'selected' : ''}>USD</option>
+                <option value="EUR" ${isEurStored ? 'selected' : ''}>EUR</option>
+            </select>
+            <input class="minput" type="date" id="eaVehDate-${i}" value="${vd.purchase_date || ''}" title="Purchase date" style="flex:1;min-width:130px;">
+        </div>
+        <input class="minput" type="text" id="eaVehNote-${i}" placeholder="Note (optional)" value="${escapeHtml(vd.note || '')}" style="margin-top:8px;">
+        <div style="margin-top:8px;"><button class="mgray" style="padding:6px 12px;" onclick="saveVehicleDetails(${i})">Save Vehicle Details</button></div>
+    </div>`;
+}
+
+async function saveVehicleDetails(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const year     = parseInt(document.getElementById(`eaVehYear-${i}`).value, 10);
+    const priceRaw = parseFloat(document.getElementById(`eaVehPrice-${i}`).value);
+    const currency = document.getElementById(`eaVehCurrency-${i}`).value;
+    const date     = document.getElementById(`eaVehDate-${i}`).value;
+    const note     = document.getElementById(`eaVehNote-${i}`).value.trim();
+    if (isNaN(year) || isNaN(priceRaw) || priceRaw < 0 || !date) {
+        eaStatus('Vehicle details need a manufacture year, purchase price, and purchase date.', true);
+        return;
+    }
+    let usdPrice, origPrice;
+    if (currency === 'EUR') {
+        const rate = await ensureEurUsdRate();
+        usdPrice = priceRaw * rate;
+        origPrice = priceRaw;
+    } else {
+        usdPrice = priceRaw;
+        origPrice = null;
+    }
+    eaStatus('Saving vehicle details…', false);
+    try {
+        await rpcAuth('vehicle_details_upsert', {
+            p_label: it.label, p_manufacture_year: year, p_purchase_price: usdPrice,
+            p_purchase_date: date, p_currency: currency, p_original_purchase_price: origPrice,
+            p_note: note || null,
+        });
+        eaStatus('Vehicle details saved.', false);
+        await loadEditAssetsList();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+// ── Auto-revaluation overrides (Phase 14) ──────────────────────────────────
+function buildRevalSettingsForm(it, i) {
+    const rs = _eaRevalSettings[String(it.label).toLowerCase()] || {};
+    const enabled = rs.auto_revalue_enabled !== false; // default true when no row yet
+    const rate = rs.custom_annual_rate_pct;
+    const rateNote = (rate !== null && rate !== undefined)
+        ? `Using a custom rate of ${rate}%/yr instead of the automatic market index / depreciation curve.`
+        : 'No custom rate set — uses the automatic market index / depreciation curve.';
+    return `
+    <div class="mrow" style="margin-bottom:14px;">
+        <label class="mlabel">Auto-Revaluation</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="eaRevalEnabled-${i}" ${enabled ? 'checked' : ''}> Auto-revalue this asset
+        </label>
+        <input class="minput" type="number" step="0.01" id="eaRevalRate-${i}" placeholder="Custom annual rate % (e.g. -6 = -6%/yr), optional" value="${rate ?? ''}">
+        <div style="font-size:10px;color:var(--text2);margin-top:5px;">${rateNote}</div>
+        <div class="mactions" style="margin-top:8px;">
+            <button class="mgray" style="padding:6px 12px;" onclick="saveRevalSettings(${i})">Save</button>
+            ${(rate !== null && rate !== undefined) ? `<button class="mcancel" onclick="clearRevalRate(${i})">Clear Custom Rate</button>` : ''}
+        </div>
+    </div>`;
+}
+
+async function saveRevalSettings(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const enabled = document.getElementById(`eaRevalEnabled-${i}`).checked;
+    const rateVal = parseFloat(document.getElementById(`eaRevalRate-${i}`).value);
+    eaStatus('Saving revaluation settings…', false);
+    try {
+        await rpcAuth('asset_revaluation_settings_upsert', {
+            p_label: it.label,
+            p_auto_revalue_enabled: enabled,
+            p_custom_annual_rate_pct: isNaN(rateVal) ? null : rateVal,
+            p_clear_custom_rate: false,
+        });
+        eaStatus('Revaluation settings saved.', false);
+        await loadEditAssetsList();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function clearRevalRate(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    eaStatus('Clearing custom rate…', false);
+    try {
+        await rpcAuth('asset_revaluation_settings_upsert', { p_label: it.label, p_clear_custom_rate: true });
+        eaStatus('Custom rate cleared — back to automatic.', false);
+        await loadEditAssetsList();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+// ── Value history (Phase 11/14) — optional, lazy-loaded on click ──────────
+function buildValueHistorySection(it, i) {
+    return `
+    <div class="mrow" style="margin-bottom:0;">
+        <button class="mgray" style="padding:5px 10px;font-size:10px;" id="eaHistBtn-${i}" onclick="toggleValueHistory(${i})">Show Value History &#9662;</button>
+        <div id="eaHistWrap-${i}" style="display:none;margin-top:8px;"></div>
+    </div>`;
+}
+
+async function toggleValueHistory(i) {
+    const it = _eaItems[i];
+    if (!it) return;
+    const wrap = document.getElementById(`eaHistWrap-${i}`);
+    const btn = document.getElementById(`eaHistBtn-${i}`);
+    if (!wrap) return;
+    const willShow = wrap.style.display === 'none' || !wrap.style.display;
+    if (!willShow) { wrap.style.display = 'none'; if (btn) btn.innerHTML = 'Show Value History &#9662;'; return; }
+    wrap.style.display = 'block';
+    if (btn) btn.innerHTML = 'Hide Value History &#9652;';
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;">Loading…</div>';
+    try {
+        const histRows = await rpc('manual_asset_value_history_list', { p_label: it.label });
+        if (!histRows || !histRows.length) {
+            wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;">No history recorded yet.</div>';
+            return;
+        }
+        const srcLabel = { manual: 'Manual edit', market_index: 'Market index', depreciation_curve: 'Depreciation curve' };
+        const rowsHtml = histRows.map(r => `<tr>
+            <td style="font-size:11px;padding:3px 8px 3px 0;">${escapeHtml(r.valuation_date)}</td>
+            <td style="font-size:11px;padding:3px 8px;">${fd(Number(r.value_usd) || 0)}</td>
+            <td style="font-size:11px;padding:3px 0;color:var(--text2);">${escapeHtml(srcLabel[r.source] || r.source || 'Manual edit')}</td>
+        </tr>`).join('');
+        wrap.innerHTML = `<table style="width:100%;"><thead><tr>
+            <th style="font-size:10px;padding:3px 8px 3px 0;">Date</th>
+            <th style="font-size:10px;padding:3px 8px;">Value</th>
+            <th style="font-size:10px;padding:3px 0;">Why it changed</th>
+        </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:11px;">Failed to load history: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+// ── Portfolios (Phase 12/15/16/17) — brokerage-style holdings, tracked as a
+// transaction ledger and kept separate from the manual assets list above.
+// Backend contract: portfolios_list() (read: each portfolio + its rolled-up
+// positions/cash, anon+authenticated), portfolio_transactions_list()
+// (read: one portfolio's raw ledger rows, authenticated-only — more granular
+// than the rolled-up view), portfolio_transaction_add() (write: a single
+// ledger row; get-or-create by portfolio name), portfolio_transaction_remove()
+// (write: delete one ledger row), and portfolio_remove() (write: delete an
+// entire portfolio + all its transactions, via the parent accounts row). A
+// portfolio's USD value only feeds Net Worth once the price-refresh collector
+// next runs — this panel shows the ledger's live positions/cash, not a live
+// valuation. ────────────────────────────────────────────────────────────────
+async function loadPortfolios() {
+    const wrap = document.getElementById('eaPortfoliosWrap');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    try {
+        const items = await rpc('portfolios_list');
+        renderPortfoliosList(Array.isArray(items) ? items : []);
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderPortfoliosList(items) {
+    _eaPortfolios = items;
+    const wrap = document.getElementById('eaPortfoliosWrap');
+    const nameList = document.getElementById('eaPfNameList');
+    if (nameList) nameList.innerHTML = items.map(p => `<option value="${escapeHtml(p.name)}">`).join('');
+    if (!items.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No portfolios yet — use "+ Add Transaction" below to create one (a portfolio is created automatically the first time you record a transaction under a new name).</div>';
+        return;
+    }
+    const rowsHtml = items.map(p => {
+        const positions = Array.isArray(p.positions) ? p.positions : [];
+        const ccy = p.base_currency === 'EUR' ? '€' : '$';
+        const posHtml = positions.length
+            ? `<table style="width:100%;margin-top:6px;"><thead><tr>
+                 <th style="font-size:10px;padding:2px 8px 2px 0;">Asset</th>
+                 <th style="font-size:10px;padding:2px 8px;">Qty</th>
+                 <th style="font-size:10px;padding:2px 8px;">Net Cost</th>
+                 <th style="font-size:10px;padding:2px 0;">Last Trade</th>
+               </tr></thead><tbody>${positions.map(pos => `<tr>
+                 <td style="font-size:11px;padding:2px 8px 2px 0;">${escapeHtml(pos.asset)}</td>
+                 <td style="font-size:11px;padding:2px 8px;">${fq(Number(pos.net_quantity) || 0)}</td>
+                 <td style="font-size:11px;padding:2px 8px;">${ccy}${(Number(pos.net_cost) || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                 <td style="font-size:11px;padding:2px 0;color:var(--text2);">${escapeHtml(pos.last_trade_date || '')}</td>
+               </tr>`).join('')}</tbody></table>`
+            : '<div style="font-size:11px;color:var(--text2);margin-top:4px;">No open positions.</div>';
+        return `<tr><td style="padding:10px 8px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+                <div><b>${escapeHtml(p.name)}</b> <span style="font-size:10px;color:var(--text2);">${escapeHtml(p.broker || '')} ${p.broker ? '·' : ''} ${escapeHtml(p.base_currency)}</span></div>
+                <div style="display:flex;align-items:baseline;gap:10px;">
+                    <div style="font-size:11px;color:var(--text2);">Cash: ${ccy}${(Number(p.cash_balance) || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                    <button class="mgray" style="padding:3px 8px;font-size:10px;" id="eaPfTxBtn-${p.portfolio_id}" onclick="toggleTransactionsList(${p.portfolio_id})">Show Transactions &#9662;</button>
+                    <button class="mgray" style="padding:3px 8px;font-size:10px;color:var(--red);" onclick="removePortfolio(${p.portfolio_id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}')">Remove Portfolio</button>
+                </div>
+            </div>
+            ${posHtml}
+            <div id="eaPfTxWrap-${p.portfolio_id}" style="display:none;"></div>
+        </td></tr>`;
+    }).join('');
+    wrap.innerHTML = `<table style="width:100%;"><tbody>${rowsHtml}</tbody></table>`;
+    // Re-open + re-fetch whichever portfolios' transaction lists were expanded before this reload.
+    items.forEach(p => {
+        if (_eaPfTxExpanded.has(p.portfolio_id)) {
+            const txWrap = document.getElementById(`eaPfTxWrap-${p.portfolio_id}`);
+            const txBtn = document.getElementById(`eaPfTxBtn-${p.portfolio_id}`);
+            if (txWrap) txWrap.style.display = 'block';
+            if (txBtn) txBtn.innerHTML = 'Hide Transactions &#9652;';
+            loadPortfolioTransactions(p.portfolio_id);
+        }
+    });
+}
+
+async function toggleTransactionsList(portfolioId) {
+    const wrap = document.getElementById(`eaPfTxWrap-${portfolioId}`);
+    const btn = document.getElementById(`eaPfTxBtn-${portfolioId}`);
+    if (!wrap) return;
+    const willShow = wrap.style.display === 'none' || !wrap.style.display;
+    if (!willShow) {
+        wrap.style.display = 'none';
+        if (btn) btn.innerHTML = 'Show Transactions &#9662;';
+        _eaPfTxExpanded.delete(portfolioId);
+        return;
+    }
+    wrap.style.display = 'block';
+    if (btn) btn.innerHTML = 'Hide Transactions &#9652;';
+    _eaPfTxExpanded.add(portfolioId);
+    await loadPortfolioTransactions(portfolioId);
+}
+
+async function loadPortfolioTransactions(portfolioId) {
+    const wrap = document.getElementById(`eaPfTxWrap-${portfolioId}`);
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;padding-top:6px;">Loading…</div>';
+    try {
+        const txRows = await rpcAuth('portfolio_transactions_list', { p_portfolio_id: portfolioId });
+        _eaPfTransactions[portfolioId] = Array.isArray(txRows) ? txRows : [];
+        renderPortfolioTransactions(portfolioId);
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:11px;padding-top:6px;">Failed to load transactions: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderPortfolioTransactions(portfolioId) {
+    const wrap = document.getElementById(`eaPfTxWrap-${portfolioId}`);
+    if (!wrap) return;
+    const txRows = _eaPfTransactions[portfolioId] || [];
+    if (!txRows.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;padding-top:6px;">No transactions.</div>';
+        return;
+    }
+    const rowsHtml = txRows.map(t => {
+        const qtyPrice = (t.tx_type === 'buy' || t.tx_type === 'sell')
+            ? `${fq(Number(t.quantity) || 0)} @ ${(Number(t.price_per_unit) || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`
+            : '—';
+        return `<tr>
+            <td style="font-size:11px;padding:3px 6px 3px 0;">${escapeHtml(t.trade_date)}</td>
+            <td style="font-size:11px;padding:3px 6px;text-transform:capitalize;">${escapeHtml(t.tx_type)}</td>
+            <td style="font-size:11px;padding:3px 6px;">${escapeHtml(t.asset || '—')}</td>
+            <td style="font-size:11px;padding:3px 6px;white-space:nowrap;">${qtyPrice}</td>
+            <td style="font-size:11px;padding:3px 6px;">${(Number(t.amount) || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td style="font-size:11px;padding:3px 6px;">${(Number(t.fee) || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+            <td style="font-size:10px;padding:3px 6px;color:var(--text2);">${escapeHtml(t.note || '')}</td>
+            <td style="padding:3px 0;"><button class="mgray" style="padding:3px 7px;font-size:10px;color:var(--red);" onclick="removePortfolioTransaction(${t.id}, ${portfolioId})">Remove</button></td>
+        </tr>`;
+    }).join('');
+    wrap.innerHTML = `<table style="width:100%;margin-top:6px;"><thead><tr>
+        <th style="font-size:10px;padding:3px 6px 3px 0;">Date</th>
+        <th style="font-size:10px;padding:3px 6px;">Type</th>
+        <th style="font-size:10px;padding:3px 6px;">Asset</th>
+        <th style="font-size:10px;padding:3px 6px;">Qty @ Price</th>
+        <th style="font-size:10px;padding:3px 6px;">Amount</th>
+        <th style="font-size:10px;padding:3px 6px;">Fee</th>
+        <th style="font-size:10px;padding:3px 6px;">Note</th>
+        <th style="font-size:10px;padding:3px 0;"></th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+async function removePortfolioTransaction(transactionId, portfolioId) {
+    const txRows = _eaPfTransactions[portfolioId] || [];
+    const t = txRows.find(r => r.id === transactionId);
+    const desc = t ? `${t.trade_date} ${t.tx_type}${t.asset ? ' ' + t.asset : ''}` : `#${transactionId}`;
+    if (!confirm(`Remove this transaction (${desc})? This cannot be undone.`)) return;
+    eaStatus('Removing transaction…', false);
+    try {
+        await rpcAuth('portfolio_transaction_remove', { p_transaction_id: transactionId });
+        eaStatus('Transaction removed.', false);
+        await loadPortfolios();
+        await loadData();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function removePortfolio(portfolioId, name) {
+    if (!confirm(`Remove portfolio "${name}"? This deletes ALL of its transactions and cannot be undone.`)) return;
+    eaStatus('Removing portfolio…', false);
+    try {
+        await rpcAuth('portfolio_remove', { p_portfolio_id: portfolioId });
+        eaStatus('Portfolio removed.', false);
+        await loadPortfolios();
+        await loadData();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+function togglePortfolioTxForm() {
+    const form = document.getElementById('eaPfTxForm');
+    const btn = document.getElementById('eaPfTxToggleBtn');
+    const willShow = form.style.display === 'none' || !form.style.display;
+    form.style.display = willShow ? 'block' : 'none';
+    if (btn) btn.textContent = willShow ? 'Hide Transaction Form' : '+ Add Transaction';
+    if (willShow) {
+        if (!document.getElementById('eaPfDate').value) {
+            document.getElementById('eaPfDate').value = new Date().toISOString().slice(0, 10);
+        }
+        portfolioTxTypeChanged();
+    }
+}
+
+function portfolioTxTypeChanged() {
+    const type = document.getElementById('eaPfTxType').value;
+    const assetRow = document.getElementById('eaPfAssetRow');
+    const isCashOnly = (type === 'deposit' || type === 'withdrawal' || type === 'fee');
+    assetRow.style.display = isCashOnly ? 'none' : 'flex';
+    autofillPortfolioAmount();
+}
+
+function autofillPortfolioAmount() {
+    const type = document.getElementById('eaPfTxType').value;
+    if (type !== 'buy' && type !== 'sell') return;
+    const qty = parseFloat(document.getElementById('eaPfQty').value);
+    const price = parseFloat(document.getElementById('eaPfPrice').value);
+    if (!isNaN(qty) && !isNaN(price) && qty > 0 && price > 0) {
+        document.getElementById('eaPfAmount').value = (qty * price).toFixed(2);
+    }
+}
+
+async function addPortfolioTransaction() {
+    const name = document.getElementById('eaPfName').value.trim();
+    const type = document.getElementById('eaPfTxType').value;
+    const date = document.getElementById('eaPfDate').value;
+    const amount = parseFloat(document.getElementById('eaPfAmount').value);
+    const asset = document.getElementById('eaPfAsset').value.trim();
+    const qty = parseFloat(document.getElementById('eaPfQty').value);
+    const price = parseFloat(document.getElementById('eaPfPrice').value);
+    const fee = parseFloat(document.getElementById('eaPfFee').value);
+    const baseCcy = document.getElementById('eaPfBaseCcy').value;
+    const broker = document.getElementById('eaPfBroker').value.trim();
+    const note = document.getElementById('eaPfNote').value.trim();
+
+    if (!name) { eaStatus('Enter a portfolio name.', true); return; }
+    if (!date) { eaStatus('Enter a trade date.', true); return; }
+    if (isNaN(amount) || amount < 0) { eaStatus('Enter a valid non-negative amount.', true); return; }
+    if ((type === 'buy' || type === 'sell') && (!asset || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0)) {
+        eaStatus('Buy/sell requires an asset, a quantity > 0, and a price per unit > 0.', true);
+        return;
+    }
+
+    const args = {
+        p_portfolio_name: name, p_tx_type: type, p_trade_date: date, p_amount: amount,
+        p_fee: isNaN(fee) ? 0 : fee, p_note: note || null,
+        p_base_currency: baseCcy, p_broker: broker || null,
+    };
+    if (type === 'buy' || type === 'sell') {
+        args.p_asset = asset; args.p_quantity = qty; args.p_price_per_unit = price;
+    } else if (type === 'dividend' && asset) {
+        args.p_asset = asset;
+    }
+
+    eaStatus('Saving transaction…', false);
+    try {
+        await rpcAuth('portfolio_transaction_add', args);
+        document.getElementById('eaPfAsset').value = '';
+        document.getElementById('eaPfQty').value = '';
+        document.getElementById('eaPfPrice').value = '';
+        document.getElementById('eaPfAmount').value = '';
+        document.getElementById('eaPfFee').value = '';
+        document.getElementById('eaPfNote').value = '';
+        eaStatus('Transaction saved.', false);
+        await loadPortfolios();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
 }
 
 async function saveEditAsset(i) {
@@ -1965,11 +2557,14 @@ async function saveEditAsset(i) {
                 ...currencyArgs,
             });
         } else {
-            await rpcAuth('manual_asset_upsert', {
+            const subtypeEl = document.getElementById(`eaSubtype-${i}`);
+            const args = {
                 p_label: it.label, p_type: it.type, p_value: usdVal,
                 p_is_liquid: it.is_liquid, p_scope_class: it.scope_class,
                 ...currencyArgs,
-            });
+            };
+            if (subtypeEl) args.p_account_subtype = subtypeEl.value || null;
+            await rpcAuth('manual_asset_upsert', args);
         }
         eaStatus('Saved.', false);
         await loadEditAssetsList();
@@ -1994,6 +2589,12 @@ async function removeEditAsset(i) {
     }
 }
 
+function eaNewTypeChanged() {
+    const type = document.getElementById('eaNewType').value;
+    const row = document.getElementById('eaNewSubtypeRow');
+    if (row) row.style.display = type === 'bank' ? 'flex' : 'none';
+}
+
 async function addEditAsset() {
     const label  = document.getElementById('eaNewLabel').value.trim();
     const type   = document.getElementById('eaNewType').value;
@@ -2007,11 +2608,18 @@ async function addEditAsset() {
         if (type === 'loan') {
             await rpcAuth('manual_loan_upsert', { p_label: label, p_value: usdVal, p_is_liquid: false, p_scope_class: 'tradfi', p_currency: 'EUR', p_original_value: eurAmt });
         } else {
-            await rpcAuth('manual_asset_upsert', { p_label: label, p_type: type, p_value: usdVal, p_is_liquid: null, p_scope_class: null, p_currency: 'EUR', p_original_value: eurAmt });
+            const args = { p_label: label, p_type: type, p_value: usdVal, p_is_liquid: null, p_scope_class: null, p_currency: 'EUR', p_original_value: eurAmt };
+            if (type === 'bank') {
+                const subtypeEl = document.getElementById('eaNewSubtype');
+                args.p_account_subtype = subtypeEl && subtypeEl.value ? subtypeEl.value : null;
+            }
+            await rpcAuth('manual_asset_upsert', args);
         }
         document.getElementById('eaNewLabel').value = '';
         document.getElementById('eaNewValue').value = '';
         document.getElementById('eaNewValuePreview').textContent = '';
+        const subtypeEl = document.getElementById('eaNewSubtype');
+        if (subtypeEl) subtypeEl.value = '';
         eaStatus('Added.', false);
         await loadEditAssetsList();
         await loadData();
