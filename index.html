@@ -753,11 +753,26 @@ tr:hover td{background:rgba(255,255,255,.03);}
                         <option value="expense">Expense</option>
                         <option value="transfer">Transfer</option>
                     </select>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:clamp(9px,0.85vw,11px);color:var(--text2);cursor:pointer;flex:0 0 auto;white-space:nowrap;">
+                        <input type="checkbox" id="cfFilterUncategorizedOnly" onchange="loadCashFlowTransactions()"> Uncategorized only
+                    </label>
                 </div>
                 <div class="mactions" style="margin-top:8px;">
                     <button class="mgray" onclick="loadCashFlowTransactions()">Apply Filters</button>
                     <button class="mgray" onclick="clearCfFilters()">Clear</button>
                 </div>
+
+                <!-- Bulk categorize bar (Phase 28) — targets whatever's checked in the
+                     table below via _cfSelectedTxnIds; "Choose category…" is deliberately
+                     not pre-selected so an accidental click can't silently apply the wrong
+                     category to hundreds of rows. -->
+                <div class="mrow-row" id="cfBulkBar" style="margin-top:10px;align-items:center;">
+                    <span id="cfSelectedCount" style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);">0 selected</span>
+                    <select class="minput" id="cfBulkCategorySelect" style="flex:0 0 200px;"><option value="">Choose category…</option></select>
+                    <button class="mprimary" style="padding:7px 14px;font-size:clamp(10px,0.9vw,12px);" onclick="cfBulkCategorize()">Categorize Selected</button>
+                    <button class="mgray" style="padding:7px 14px;font-size:clamp(10px,0.9vw,12px);" onclick="cfBulkClearCategory()">Clear Category</button>
+                </div>
+                <div id="cfBulkResult" style="font-size:clamp(9px,0.85vw,11px);margin-top:6px;"></div>
 
                 <div class="twrap" id="cfTxnList" style="max-height:320px;overflow:auto;margin-top:10px;"></div>
 
@@ -3455,6 +3470,9 @@ let _cfTags = [];            // cache of tag_list() rows
 let _cfTransactions = [];    // cache of the current cashflow_transactions_list() view
 let _cfEditingId = null;     // transaction id being edited, or null when the Add form is in "add" mode
 let _cfActiveTab = 'txns';
+// Bulk categorize (Phase 28) state — set of transaction ids checked in the
+// list below; cleared on every reload since the visible row set changes.
+let _cfSelectedTxnIds = new Set();
 // CSV import (Phase 21) state
 let _cfImportRawRows = null;    // raw parsed CSV cells, incl. header row if present
 let _cfImportValidRows = [];    // rows that passed client-side validation, ready for the RPC
@@ -3901,8 +3919,43 @@ function renderCfCategoryFilterAndPickers() {
         importCatSel.innerHTML = '<option value="">Leave uncategorized</option>' + catOptionsHtml;
         importCatSel.value = prev;
     }
+    const bulkCatSel = document.getElementById('cfBulkCategorySelect');
+    if (bulkCatSel) {
+        const prev = bulkCatSel.value;
+        bulkCatSel.innerHTML = '<option value="">Choose category…</option>' + catOptionsHtml;
+        bulkCatSel.value = prev;
+    }
     cfDirectionChanged();
     cfNewCatKindChanged();
+}
+
+// Options for a single row's inline category picker — restricted to the
+// transaction's own direction (income/expense categories can't mix) and to
+// active categories, but always keeps the transaction's CURRENT category in
+// the list even if it's since been deactivated so the select doesn't
+// silently show something other than the real saved value.
+//
+// CAUGHT BY TESTING, NOT ASSUMED: cashflow_transactions_bulk_categorize()
+// never validates that the category's kind matches each transaction's
+// direction (confirmed by reading schema_phase28.sql — it only checks the
+// category exists) — a bulk "categorize selected" spanning both income and
+// expense rows at once (e.g. via "select all visible") can legitimately end
+// up with an expense category on an income row. If that row's saved
+// category were simply left out of a kind-filtered list, the dropdown would
+// misleadingly show "Uncategorized" even though something IS saved. Always
+// surface the real value, flagged, instead of hiding it.
+function cfCategoryOptionsForKind(kind, selectedId) {
+    const opts = _cfCategories.filter(c => c.kind === kind && (c.is_active || c.id === selectedId));
+    let html = '<option value="">Uncategorized</option>' + opts.map(c =>
+        `<option value="${c.id}" ${Number(c.id) === Number(selectedId) ? 'selected' : ''}>${c.parent_id ? '— ' : ''}${escapeHtml(c.name)}</option>`
+    ).join('');
+    if (selectedId && !opts.some(c => Number(c.id) === Number(selectedId))) {
+        const mismatched = _cfCategories.find(c => Number(c.id) === Number(selectedId));
+        if (mismatched) {
+            html += `<option value="${mismatched.id}" selected>${escapeHtml(mismatched.name)} (${mismatched.kind} — unusual for this row)</option>`;
+        }
+    }
+    return html;
 }
 
 function cfDirectionChanged() {
@@ -4040,6 +4093,7 @@ function clearCfFilters() {
     document.getElementById('cfFilterCategory').value = '';
     document.getElementById('cfFilterTag').value = '';
     document.getElementById('cfFilterDirection').value = '';
+    document.getElementById('cfFilterUncategorizedOnly').checked = false;
     loadCashFlowTransactions();
 }
 
@@ -4053,9 +4107,14 @@ async function loadCashFlowTransactions() {
     const cat = document.getElementById('cfFilterCategory').value; if (cat) args.p_category_id = parseInt(cat, 10);
     const tag = document.getElementById('cfFilterTag').value; if (tag) args.p_tag_id = parseInt(tag, 10);
     const dir = document.getElementById('cfFilterDirection').value; if (dir) args.p_direction = dir;
+    const uncatOnly = document.getElementById('cfFilterUncategorizedOnly').checked; if (uncatOnly) args.p_uncategorized_only = true;
     try {
         const rows = await rpcAuth('cashflow_transactions_list', args);
         _cfTransactions = Array.isArray(rows) ? rows : [];
+        // Row set just changed — a stale selection (checked ids that may no
+        // longer even be visible) would be confusing, so always reset it.
+        _cfSelectedTxnIds.clear();
+        document.getElementById('cfBulkResult').innerHTML = '';
         renderCfTransactions();
     } catch (err) {
         wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
@@ -4064,6 +4123,7 @@ async function loadCashFlowTransactions() {
 
 function renderCfTransactions() {
     const wrap = document.getElementById('cfTxnList');
+    updateCfSelectedCount();
     if (!_cfTransactions.length) {
         wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No transactions match these filters.</div>';
         return;
@@ -4078,11 +4138,21 @@ function renderCfTransactions() {
             ? `<button class="mgray" style="padding:4px 9px;font-size:10px;color:var(--red);" onclick="removeCfTransfer(${t.id})">Remove Transfer</button>`
             : `<button class="mgray" style="padding:4px 9px;font-size:10px;" onclick="editCfTransaction(${t.id})">Edit</button>
                <button class="mgray" style="padding:4px 9px;font-size:10px;color:var(--red);" onclick="removeCfTransaction(${t.id})">Remove</button>`;
+        // Transfer legs can never carry a category (backend-enforced) — no
+        // checkbox and no picker for them, just a dash, same treatment as
+        // "Remove" vs "Remove Transfer" above.
+        const checkboxHtml = isTransfer
+            ? ''
+            : `<input type="checkbox" class="cf-txn-check" value="${t.id}" ${_cfSelectedTxnIds.has(t.id) ? 'checked' : ''} onchange="cfToggleTxnSelect(${t.id}, this.checked)">`;
+        const catHtml = isTransfer
+            ? `<span style="color:var(--text2);">—</span>`
+            : `<select class="minput cf-inline-cat" style="padding:4px 6px;font-size:11px;width:auto;min-width:140px;" onchange="cfInlineCategorize(${t.id}, this.value)">${cfCategoryOptionsForKind(t.direction, t.category_id)}</select>`;
         return `<tr>
+            <td>${checkboxHtml}</td>
             <td style="white-space:nowrap;">${escapeHtml(t.txn_date)}</td>
             <td>${escapeHtml(t.account_label)}</td>
             <td class="${dirColor}">${dirLabel}</td>
-            <td>${escapeHtml(t.category_name || (isTransfer ? '—' : 'Uncategorized'))}</td>
+            <td>${catHtml}</td>
             <td class="${dirColor}">${amountSign}${fd(Number(t.amount) || 0).replace('$', '€')}</td>
             <td>${escapeHtml(t.description || '')}${t.merchant ? ` <span style="color:var(--text2);">(${escapeHtml(t.merchant)})</span>` : ''}</td>
             <td>${tagsHtml}</td>
@@ -4090,8 +4160,105 @@ function renderCfTransactions() {
         </tr>`;
     }).join('');
     wrap.innerHTML = `<table><thead><tr>
+        <th><input type="checkbox" id="cfSelectAllVisible" onchange="cfToggleSelectAllVisible(this.checked)" title="Select all visible"></th>
         <th>Date</th><th>Account</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th>Tags</th><th></th>
     </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+// ── Selection + categorization (Phase 28) ───────────────────────────────────
+function updateCfSelectedCount() {
+    const el = document.getElementById('cfSelectedCount');
+    if (el) el.textContent = `${_cfSelectedTxnIds.size} selected`;
+}
+
+function cfToggleTxnSelect(id, checked) {
+    if (checked) _cfSelectedTxnIds.add(id); else _cfSelectedTxnIds.delete(id);
+    updateCfSelectedCount();
+    if (!checked) {
+        const selectAll = document.getElementById('cfSelectAllVisible');
+        if (selectAll) selectAll.checked = false;
+    }
+}
+
+function cfToggleSelectAllVisible(checked) {
+    document.querySelectorAll('.cf-txn-check').forEach(cb => {
+        cb.checked = checked;
+        const id = Number(cb.value);
+        if (checked) _cfSelectedTxnIds.add(id); else _cfSelectedTxnIds.delete(id);
+    });
+    updateCfSelectedCount();
+}
+
+// Single-row inline categorize — one-off change via the existing
+// cashflow_transaction_update RPC. Deliberately omits every param except
+// p_id/p_category_id/p_clear_category so it never touches amount/date/
+// description/merchant/note/tags (all default to "leave unchanged" server-
+// side; p_tag_ids left undefined means _cashflow_set_tags() sees NULL and
+// leaves the tag set untouched too).
+async function cfInlineCategorize(id, categoryVal) {
+    const catId = categoryVal ? parseInt(categoryVal, 10) : null;
+    cfStatus('Updating category…', false);
+    try {
+        await rpcAuth('cashflow_transaction_update', { p_id: id, p_category_id: catId, p_clear_category: !catId });
+        cfStatus('Category updated.', false);
+        await loadCashFlowTransactions();
+    } catch (err) {
+        cfStatus(err.message, true);
+        await loadCashFlowTransactions(); // reload so the dropdown reverts to the real saved value
+    }
+}
+
+function renderCfBulkResult(result) {
+    const el = document.getElementById('cfBulkResult');
+    if (!el || !result) return;
+    const updated = result.updated_count || 0;
+    const skipped = Array.isArray(result.skipped) ? result.skipped : [];
+    const cat = result.category_id ? _cfCategories.find(c => c.id === result.category_id) : null;
+    const catLabel = result.category_id ? (cat ? cat.name : `#${result.category_id}`) : 'Uncategorized';
+    let html = `<div style="color:var(--green);">${updated} transaction(s) set to "${escapeHtml(catLabel)}".</div>`;
+    if (skipped.length) {
+        html += `<div style="margin-top:4px;color:var(--yellow);">${skipped.length} skipped:</div>
+            <ul style="margin:4px 0 0 18px;padding:0;color:var(--text2);">
+                ${skipped.map(s => `<li>#${s.transaction_id} — ${escapeHtml(s.reason)}</li>`).join('')}
+            </ul>`;
+    }
+    el.innerHTML = html;
+}
+
+async function cfBulkCategorize() {
+    const catVal = document.getElementById('cfBulkCategorySelect').value;
+    if (!catVal) { cfStatus('Choose a category for the bulk action first.', true); return; }
+    if (!_cfSelectedTxnIds.size) { cfStatus('Select at least one transaction first.', true); return; }
+    const ids = Array.from(_cfSelectedTxnIds);
+    cfStatus(`Categorizing ${ids.length} transaction(s)…`, false);
+    try {
+        const result = await rpcAuth('cashflow_transactions_bulk_categorize', { p_transaction_ids: ids, p_category_id: parseInt(catVal, 10) });
+        cfStatus('', false);
+        // loadCashFlowTransactions() clears #cfBulkResult as part of its normal
+        // "row set just changed" reset -- render the summary AFTER it, not
+        // before, or the reload wipes it out before the user ever sees it
+        // (caught live: first pass had this backwards and the summary never
+        // appeared).
+        await loadCashFlowTransactions();
+        renderCfBulkResult(result);
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function cfBulkClearCategory() {
+    if (!_cfSelectedTxnIds.size) { cfStatus('Select at least one transaction first.', true); return; }
+    const ids = Array.from(_cfSelectedTxnIds);
+    if (!confirm(`Clear the category on ${ids.length} selected transaction(s)? They'll go back to Uncategorized.`)) return;
+    cfStatus(`Clearing category on ${ids.length} transaction(s)…`, false);
+    try {
+        const result = await rpcAuth('cashflow_transactions_bulk_categorize', { p_transaction_ids: ids, p_category_id: null });
+        cfStatus('', false);
+        await loadCashFlowTransactions();
+        renderCfBulkResult(result);
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
 }
 
 function toggleCfAddTxnForm() {
