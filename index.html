@@ -314,6 +314,10 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .mtitle{font-size:clamp(14px,1.4vw,17px);font-weight:700;margin-bottom:18px;}
 .mrow{margin-bottom:14px;}
 .mlabel{font-size:clamp(9px,0.88vw,11px);color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.7px;font-weight:600;}
+/* Plain-language help icon next to a form label — native title= tooltip on
+   hover/tap, used throughout the FIRE Calculator so a non-technical user can
+   see what each field means without asking. */
+.fire-help{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:4px;border:1px solid var(--text2);border-radius:50%;color:var(--text2);font-size:9px;font-weight:700;text-transform:none;letter-spacing:0;cursor:help;vertical-align:middle;}
 .minput{width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-size:clamp(11px,1.1vw,13px);}
 .minput:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent;}
 .mactions{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap;}
@@ -544,7 +548,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
             <div id="eaFireStatusNote" style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">Loading…</div>
             <div class="mrow-row">
                 <div style="flex:1;min-width:220px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Contribution Mode</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Contribution Mode<span class="fire-help" title="Manual: you type in a flat monthly amount you're investing. Salary-Driven: your monthly investable amount is calculated for you as salary minus essential expenses minus loan payments, and updates automatically as your salary grows or loans get paid off.">?</span></label>
                     <select class="minput" id="eaFireMode" onchange="onFireModeChange()">
                         <option value="manual">Manual — flat monthly contribution</option>
                         <option value="salary_driven">Salary-Driven — computed from salary, expenses &amp; loans</option>
@@ -553,32 +557,32 @@ tr:hover td{background:rgba(255,255,255,.03);}
             </div>
             <div class="mrow-row" style="margin-top:8px;">
                 <div style="flex:1;min-width:150px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Desired Annual Expense (USD)</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Desired Annual Expense (USD)<span class="fire-help" title="How much you expect to spend per year once retired/financially independent. This is the single biggest driver of your FIRE Number — the total nest egg you're aiming for.">?</span></label>
                     <input class="minput" id="eaFireExpense" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
                 </div>
                 <div style="flex:1;min-width:110px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Safe Withdrawal Rate %</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Safe Withdrawal Rate %<span class="fire-help" title="The % of your portfolio you withdraw each year in retirement without running out of money over a long retirement. 4% is the traditional rule of thumb — lower is more conservative (needs a bigger nest egg), higher is more aggressive.">?</span></label>
                     <input class="minput" id="eaFireSwr" type="number" step="0.1" min="0.1" max="100" oninput="renderFireOutputs()">
                 </div>
                 <div style="flex:1;min-width:120px;" id="eaFireContributionCol">
-                    <label class="mlabel" style="margin-bottom:3px;">Monthly Contribution</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Monthly Contribution<span class="fire-help" title="A flat amount you invest every month toward FIRE, on top of what's already invested. Only used in Manual mode — ignored in Salary-Driven mode, where this is calculated for you instead.">?</span></label>
                     <input class="minput" id="eaFireContribution" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
                 </div>
             </div>
             <div id="eaFireSalaryGroup" style="display:none;margin-top:8px;">
                 <div class="mrow-row">
                     <div style="flex:1;min-width:220px;">
-                        <label class="mlabel" style="margin-bottom:3px;">Latest Salary (from Salary History)</label>
+                        <label class="mlabel" style="margin-bottom:3px;">Latest Salary (from Salary History)<span class="fire-help" title="Your most recent Salary History entry — used as the starting point for Salary-Driven mode's projection. Add or edit entries in the Salary History section above.">?</span></label>
                         <div id="eaFireSalaryBaseline" style="font-size:12.5px;font-weight:700;padding:8px 0;">—</div>
                     </div>
                     <div style="flex:1;min-width:110px;">
-                        <label class="mlabel" style="margin-bottom:3px;">Salary Growth %/yr <span style="font-weight:400;color:var(--text2);">(optional)</span></label>
+                        <label class="mlabel" style="margin-bottom:3px;">Salary Growth %/yr <span style="font-weight:400;color:var(--text2);">(optional)</span><span class="fire-help" title="How much you expect your salary to grow each year, e.g. from raises or promotions. Leave blank to assume a flat salary with no growth. Compounds once per year, not smoothly month to month.">?</span></label>
                         <input class="minput" id="eaFireSalaryGrowth" type="number" step="0.1" placeholder="blank = flat" oninput="renderFireOutputs()">
                     </div>
                 </div>
                 <div class="mrow-row" style="margin-top:8px;">
                     <div style="flex:1;min-width:220px;">
-                        <label class="mlabel" style="margin-bottom:3px;">Essential Monthly Expenses (EUR)</label>
+                        <label class="mlabel" style="margin-bottom:3px;">Essential Monthly Expenses (EUR)<span class="fire-help" title="Your everyday living costs (rent/mortgage, groceries, bills — not counting loan payments, which are handled separately). Auto-suggested from your recent Cash Flow data as a starting point, but you can always type in your own number — your entry is what actually gets used.">?</span></label>
                         <input class="minput" id="eaFireEssentialExp" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
                         <div style="margin-top:5px;"><button class="mgray" style="padding:4px 9px;font-size:10px;" onclick="refreshFireEssentialExpenses()">&#8635; Re-suggest from Cash Flow</button></div>
                     </div>
@@ -587,25 +591,25 @@ tr:hover td{background:rgba(255,255,255,.03);}
             </div>
             <div class="mrow-row" style="margin-top:8px;">
                 <div style="flex:1;min-width:110px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Nominal Return %/yr</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Nominal Return %/yr<span class="fire-help" title="Your expected average annual investment growth, before inflation — e.g. roughly what a diversified stock portfolio has historically returned. This drives how fast your money grows in the projection.">?</span></label>
                     <input class="minput" id="eaFireReturn" type="number" step="0.1" oninput="renderFireOutputs()">
                 </div>
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Inflation %/yr</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Inflation %/yr<span class="fire-help" title="Expected annual rise in the cost of living. Shown for reference alongside your return assumption — a higher inflation rate erodes the real purchasing power of a given nest egg over time.">?</span></label>
                     <input class="minput" id="eaFireInflation" type="number" step="0.1" oninput="renderFireOutputs()">
                 </div>
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Volatility %/yr</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Volatility %/yr<span class="fire-help" title="How much your investment returns swing up and down year to year. Higher volatility means a wider range of possible outcomes in the simulation below — some years much better than average, some much worse.">?</span></label>
                     <input class="minput" id="eaFireVol" type="number" step="0.1" min="0" oninput="renderFireOutputs()">
                 </div>
             </div>
             <div class="mrow-row" style="margin-top:8px;">
                 <div style="flex:1;min-width:90px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Current Age</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Current Age<span class="fire-help" title="Your age today. Together with Retirement Age, this sets the real length of the projection below. Leave both blank to use a generic 15-year assumed horizon instead.">?</span></label>
                     <input class="minput" id="eaFireCurAge" type="number" step="1" min="0" max="130" oninput="renderFireOutputs()">
                 </div>
                 <div style="flex:1;min-width:90px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Retirement Age</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Retirement Age<span class="fire-help" title="The age you're aiming to reach financial independence by. Together with Current Age, this sets the real length of the projection below. Leave both blank to use a generic 15-year assumed horizon instead.">?</span></label>
                     <input class="minput" id="eaFireRetAge" type="number" step="1" min="0" max="130" oninput="renderFireOutputs()">
                 </div>
             </div>
@@ -624,7 +628,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
                 </div>
             </div>
             <div id="eaFireTiers" style="margin-top:12px;"></div>
-            <div style="margin-top:12px;"><div class="chwrap" style="min-height:190px;"><canvas id="eaFireChart"></canvas></div></div>
+            <div style="margin-top:12px;"><div class="chwrap" style="min-height:320px;"><canvas id="eaFireChart"></canvas></div></div>
             <div id="eaFireChartCaption" style="font-size:10px;color:var(--text2);margin-top:4px;"></div>
             <div id="eaFireSalaryPanel" style="margin-top:10px;"></div>
             <div id="eaFireLoanPanel" style="margin-top:10px;"></div>
@@ -1253,7 +1257,7 @@ const WIDGET_HTML = {
             `<div id="mc-empty" style="display:none;text-align:center;color:var(--text2);font-size:clamp(10px,1vw,12px);padding:20px 10px;line-height:1.6;"></div>` +
             `<div id="mc-content">` +
                 `<div class="mc-stats" id="mc-stats"></div>` +
-                `<div class="chwrap" style="min-height:150px;"><canvas id="mcChart"></canvas></div>` +
+                `<div class="chwrap" style="min-height:320px;"><canvas id="mcChart"></canvas></div>` +
                 `<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>` +
             `</div>` +
             `<div style="text-align:center;margin-top:8px;"><button class="mgray" style="padding:5px 12px;font-size:11px;" onclick="openEditAssets()">Configure FIRE Plan &rarr;</button></div>` +
@@ -1316,7 +1320,7 @@ const DEFAULT_LAYOUT = [
     {id:'w-milestone',      x:0,  y:16, w:24, h:6},
     {id:'w-assets',         x:0,  y:22, w:14, h:7},
     {id:'w-yearly',         x:14, y:22, w:10, h:7},
-    {id:'w-monte',          x:0,  y:29, w:24, h:8},
+    {id:'w-monte',          x:0,  y:29, w:24, h:11},
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2128,7 +2132,7 @@ async function renderMonteCarlo() {
             essentialExp: has(plan.essential_monthly_expenses) ? Number(plan.essential_monthly_expenses) : NaN,
             salaryGrowthPct: has(plan.salary_growth_pct) ? Number(plan.salary_growth_pct) : NaN,
         };
-        const projection = computeFireProjection(f, _mainFireInvestmentTotal, _mainFireLoans, salaryHistory, 300);
+        const projection = computeFireProjection(f, _mainFireInvestmentTotal, _mainFireLoans, salaryHistory, 500);
         renderMainFireSummary(projection);
     } catch (err) {
         renderFireSetupPrompt('Failed to load your FIRE plan — try refreshing.');
@@ -3570,12 +3574,16 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     const returnPct = isNaN(f.returnPct) ? 6 : f.returnPct;
     const volPct = isNaN(f.volPct) ? 15 : Math.max(0, f.volPct);
     const baseContribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
-    let years = 30, horizonIsAssumed = true;
+    // Horizon: use the real gap (retirement_age − current_age) when both ages
+    // are set on the plan; otherwise fall back to a 15-yr assumed horizon
+    // (was 30yr — shortened per the user's explicit request, doesn't touch
+    // the real-ages branch below at all).
+    let years = 15, horizonIsAssumed = true;
     if (!isNaN(f.curAge) && !isNaN(f.retAge) && f.retAge > f.curAge) {
         years = Math.min(60, f.retAge - f.curAge);
         horizonIsAssumed = false;
     }
-    const SIMS = simsOverride || 300;
+    const SIMS = simsOverride || 500;
     const meanMonthly = (returnPct / 100) / 12;
     const monthlyVol = (volPct / 100) / Math.sqrt(12);
     const startCapital = investmentTotal || 0;
@@ -3670,7 +3678,7 @@ function renderFireOutputs() {
     // that the main-dashboard summary widget also uses, so the two can never
     // drift apart again. This function only handles the modal's own UI:
     // panels, caption, chart.
-    const projection = computeFireProjection(f, _eaFireInvestmentTotal, _eaFireLoans, _eaFireSalaryHistory, 300);
+    const projection = computeFireProjection(f, _eaFireInvestmentTotal, _eaFireLoans, _eaFireSalaryHistory, 500);
 
     if (f.mode === 'salary_driven') {
         const loanPanel = document.getElementById('eaFireLoanPanel');
