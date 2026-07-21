@@ -315,7 +315,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
 /* ── Modal ───────────────────────────────────────────────────────────────── */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;align-items:center;justify-content:center;}
 .modal.open{display:flex;}
-.mbox{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:clamp(18px,2vw,26px);width:480px;max-width:95vw;}
+.mbox{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:clamp(18px,2vw,26px);width:480px;max-width:95vw;max-height:88vh;overflow-y:auto;}
 .mtitle{font-size:clamp(14px,1.4vw,17px);font-weight:700;margin-bottom:18px;}
 .mrow{margin-bottom:14px;}
 .mlabel{font-size:clamp(9px,0.88vw,11px);color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.7px;font-weight:600;}
@@ -701,7 +701,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
      layout that would need reworking once those arrive. Shares the SAME
      login/session as Edit Assets & Tax Summary. -->
 <div class="modal" id="cfModal">
-    <div class="mbox" style="width:980px;max-height:92vh;overflow-y:auto;">
+    <div class="mbox" style="width:980px;">
         <div class="mtitle">Cash Flow</div>
 
         <!-- Login form -->
@@ -825,23 +825,34 @@ tr:hover td{background:rgba(255,255,255,.03);}
                 <div id="cfImportStep1">
                     <label class="mlabel">Step 1 — Upload a CSV</label>
                     <div style="font-size:10px;color:var(--text2);margin:4px 0 8px;">Parsed entirely in your browser — nothing is sent anywhere until you confirm the import in Step 4.</div>
-                    <input class="minput" type="file" id="cfImportFile" accept=".csv,text/csv" onchange="handleCfImportFile(event)" style="padding:9px;">
+                    <div class="mrow-row">
+                        <input class="minput" type="file" id="cfImportFile" accept=".csv,text/csv" onchange="handleCfImportFile(event)" style="padding:9px;flex:2;min-width:200px;">
+                        <select class="minput" id="cfImportEncoding" style="flex:1;min-width:190px;">
+                            <option value="utf-8" selected>Encoding: UTF-8 (default)</option>
+                            <option value="windows-1252">Encoding: Windows-1252 (Western European)</option>
+                        </select>
+                    </div>
+                    <div style="font-size:10px;color:var(--text2);margin-top:6px;">If accented characters (á, ã, ç, é…) look garbled in the mapping step below, switch the encoding above and re-upload the same file.</div>
                 </div>
 
                 <!-- Step 2: Map columns -->
                 <div id="cfImportStep2" style="display:none;">
                     <label class="mlabel">Step 2 — Map Columns &amp; Settings</label>
-                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin:8px 0;cursor:pointer;">
-                        <input type="checkbox" id="cfImportHasHeader" checked onchange="buildCfImportMappingStep()"> First row is a header
-                    </label>
-                    <div id="cfImportMappingCols"></div>
+                    <div class="mrow-row" style="align-items:center;">
+                        <label style="font-size:11px;color:var(--text2);white-space:nowrap;">Header row:</label>
+                        <input class="minput" type="number" id="cfImportHeaderRow" min="0" step="1" style="width:80px;" onchange="buildCfImportMappingStep()">
+                        <div id="cfImportHeaderRowNote" style="font-size:10px;color:var(--text2);flex:1;min-width:200px;"></div>
+                    </div>
+                    <div style="font-size:10px;color:var(--text2);margin-top:4px;">Auto-detected — many bank exports have several lines of account info before the real column headers. Change the row number above if it guessed wrong, or set it to 0 if the file has no header row at all.</div>
+                    <div id="cfImportMappingCols" style="margin-top:8px;"></div>
+                    <div id="cfImportRoleWarning" style="display:none;color:var(--yellow);font-size:10px;margin-top:8px;background:rgba(255,204,0,0.06);border:1px solid var(--yellow);border-radius:3px;padding:6px 9px;"></div>
 
                     <div class="card-divider" style="margin:14px 0;"></div>
                     <div class="mrow-row">
                         <select class="minput" id="cfImportDateFormat" style="flex:1;min-width:140px;">
                             <option value="YMD">Date format: YYYY-MM-DD</option>
-                            <option value="DMY" selected>Date format: DD/MM/YYYY</option>
-                            <option value="MDY">Date format: MM/DD/YYYY</option>
+                            <option value="DMY" selected>Date format: DD/MM/YYYY (also matches DD-MM-YYYY)</option>
+                            <option value="MDY">Date format: MM/DD/YYYY (also matches MM-DD-YYYY)</option>
                         </select>
                         <label style="display:flex;align-items:center;gap:6px;font-size:11px;flex:1;min-width:220px;cursor:pointer;">
                             <input type="checkbox" id="cfImportSignedAmounts" checked> No Direction column? Use amount sign (negative = expense)
@@ -4285,19 +4296,42 @@ function parseCsvText(text) {
     return rows;
 }
 
+// Strips a genuine BOM char (rare here — TextDecoder already strips a real
+// UTF-8 BOM by default) AND the specific 3-character "ï»¿" artifact that
+// shows up when a file's real UTF-8 BOM bytes were relayed through some
+// earlier step that mis-decoded them as Latin-1/Windows-1252 before the file
+// reached here — a real, observed shape in an actual bank export sample, not
+// a hypothetical. Left un-stripped, those 3 garbage characters end up
+// prepended to the first column's header/value.
+function cfStripBomArtifact(text) {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    if (text.startsWith('ï»¿')) text = text.slice(3);
+    return text;
+}
+
 function handleCfImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-        const rows = parseCsvText(String(reader.result));
+        const encoding = document.getElementById('cfImportEncoding').value || 'utf-8';
+        let text;
+        try {
+            text = new TextDecoder(encoding).decode(reader.result);
+        } catch (err) {
+            cfStatus(`Could not decode this file as ${encoding}: ${err.message}`, true);
+            return;
+        }
+        text = cfStripBomArtifact(text);
+        const rows = parseCsvText(text);
         if (!rows.length) { cfStatus('That CSV appears to be empty.', true); return; }
         _cfImportRawRows = rows;
+        document.getElementById('cfImportHeaderRow').value = ''; // force re-detection for this new file
         buildCfImportMappingStep();
         cfGotoImportStep(2);
     };
     reader.onerror = () => cfStatus('Failed to read the file.', true);
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file); // ArrayBuffer + TextDecoder, not readAsText — gives real control over encoding
 }
 
 const CF_IMPORT_ROLES = ['ignore', 'date', 'amount', 'direction', 'description', 'merchant', 'note'];
@@ -4314,21 +4348,107 @@ function cfGuessColumnRole(headerName) {
     return 'ignore';
 }
 
+// Auto-detects which parsed row is the real header, for files with a
+// multi-line preamble before the actual column headers (a real, common bank-
+// export shape — account holder/NIF/balance/query-period lines etc. all
+// appear before the header row). Heuristic: the header row and every data
+// row normally share the same cell count, while preamble lines (blank-ish,
+// or simple "Label;Value" pairs) usually don't match that count and are far
+// outnumbered by data rows once a full statement is included — so the modal
+// (most frequent) non-trivial cell count's FIRST occurrence is a strong,
+// simple signal for where the header actually is. For an ordinary CSV with
+// no preamble at all, the header row already shares the data rows' cell
+// count, so this naturally resolves to row 0, matching prior behavior.
+function cfDetectHeaderRowIndex(rows) {
+    if (!rows || !rows.length) return 0;
+    const counts = rows.map(r => r.filter(c => c !== undefined && String(c).trim() !== '').length);
+    const freq = {};
+    counts.forEach(c => { if (c >= 2) freq[c] = (freq[c] || 0) + 1; });
+    let modeCount = 0, modeFreq = 0;
+    Object.keys(freq).forEach(cStr => {
+        const c = parseInt(cStr, 10);
+        if (freq[cStr] > modeFreq) { modeFreq = freq[cStr]; modeCount = c; }
+    });
+    if (modeCount === 0) return 0;
+    const idx = counts.findIndex(c => c === modeCount);
+    return idx === -1 ? 0 : idx;
+}
+
 function buildCfImportMappingStep() {
-    const hasHeader = document.getElementById('cfImportHasHeader').checked;
     const rows = _cfImportRawRows;
     if (!rows || !rows.length) return;
-    const colCount = rows[0].length;
-    const headerRow = hasHeader ? rows[0] : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
-    const sampleRow = hasHeader ? (rows[1] || []) : (rows[0] || []);
+    const headerInput = document.getElementById('cfImportHeaderRow');
+    if (headerInput.value === '') {
+        headerInput.value = String(cfDetectHeaderRowIndex(rows) + 1); // 1-based; only auto-fills once per uploaded file
+    }
+    const headerRowNum = Math.max(0, parseInt(headerInput.value, 10) || 0); // 0 = "no header row"
+    const headerIdx = headerRowNum - 1; // 0-based index into rows, meaningless when headerRowNum is 0
+
+    const noteEl = document.getElementById('cfImportHeaderRowNote');
+    if (headerRowNum > 0 && rows[headerIdx]) {
+        noteEl.textContent = headerIdx > 0
+            ? `Row ${headerRowNum} used as header — ${headerIdx} row(s) above it are skipped as preamble.`
+            : `Row ${headerRowNum} used as header.`;
+    } else {
+        noteEl.textContent = 'No header row — columns shown as "Column 1", "Column 2", etc.';
+    }
+
+    const colCount = (headerRowNum > 0 && rows[headerIdx]) ? rows[headerIdx].length : rows[0].length;
+    const headerRowCells = (headerRowNum > 0 && rows[headerIdx])
+        ? rows[headerIdx]
+        : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
+    const sampleRow = (headerRowNum > 0 ? rows[headerIdx + 1] : rows[0]) || [];
+
+    // Auto-guess every column's role, then fix up the specific real-world
+    // ambiguity of TWO date-like columns (e.g. "transaction date" vs "value
+    // date") both matching the generic date guess — keep whichever one's
+    // header hints at the transaction/posting date, downgrade the other(s)
+    // to Ignore rather than leaving two columns silently fighting over the
+    // same singular role.
+    const guesses = headerRowCells.map(h => cfGuessColumnRole(h));
+    const dateIdxs = guesses.map((g, i) => g === 'date' ? i : -1).filter(i => i !== -1);
+    if (dateIdxs.length > 1) {
+        const movIdx = dateIdxs.find(i => /mov|trans|post|lancamento|lançamento/.test((headerRowCells[i] || '').toLowerCase()));
+        const keepIdx = movIdx !== undefined ? movIdx : dateIdxs[0];
+        dateIdxs.forEach(i => { if (i !== keepIdx) guesses[i] = 'ignore'; });
+    }
+
     const wrap = document.getElementById('cfImportMappingCols');
-    wrap.innerHTML = headerRow.map((h, i) => `
+    wrap.innerHTML = headerRowCells.map((h, i) => `
         <div class="mrow-row" style="align-items:center;margin-top:8px;">
             <div style="flex:1;min-width:140px;font-size:11px;"><b>${escapeHtml(h)}</b><div style="color:var(--text2);font-size:10px;">e.g. "${escapeHtml(sampleRow[i] ?? '')}"</div></div>
-            <select class="minput" style="flex:1;min-width:180px;" id="cfImportColRole-${i}">
-                ${CF_IMPORT_ROLES.map(r => `<option value="${r}" ${cfGuessColumnRole(h) === r ? 'selected' : ''}>${CF_IMPORT_ROLE_LABELS[r]}</option>`).join('')}
+            <select class="minput" style="flex:1;min-width:180px;" id="cfImportColRole-${i}" onchange="cfCheckDuplicateRoles()">
+                ${CF_IMPORT_ROLES.map(r => `<option value="${r}" ${guesses[i] === r ? 'selected' : ''}>${CF_IMPORT_ROLE_LABELS[r]}</option>`).join('')}
             </select>
         </div>`).join('');
+    cfCheckDuplicateRoles();
+}
+
+// Live warning if the current column-role selections leave more than one
+// column assigned to a role that should be singular — the underlying
+// mapping logic silently keeps only the LAST matching column for each role,
+// so a duplicate assignment needs to be visible, not just silently resolved.
+function cfCheckDuplicateRoles() {
+    const warnEl = document.getElementById('cfImportRoleWarning');
+    const rows = _cfImportRawRows;
+    if (!warnEl || !rows || !rows.length) return;
+    const headerRowNum = Math.max(0, parseInt(document.getElementById('cfImportHeaderRow').value, 10) || 0);
+    const refRow = (headerRowNum > 0 && rows[headerRowNum - 1]) ? rows[headerRowNum - 1] : rows[0];
+    const colCount = refRow.length;
+    const singularRoles = ['date', 'amount', 'direction'];
+    const counts = {};
+    for (let i = 0; i < colCount; i++) {
+        const sel = document.getElementById(`cfImportColRole-${i}`);
+        if (sel && singularRoles.includes(sel.value)) counts[sel.value] = (counts[sel.value] || 0) + 1;
+    }
+    const dupes = Object.entries(counts).filter(([, c]) => c > 1).map(([role]) => CF_IMPORT_ROLE_LABELS[role]);
+    if (dupes.length) {
+        warnEl.textContent = `More than one column is set to ${dupes.join(' / ')} — only the last matching column will actually be used. Set the extra column(s) to something else (e.g. Ignore) to avoid losing data silently.`;
+        warnEl.style.display = 'block';
+    } else {
+        warnEl.textContent = '';
+        warnEl.style.display = 'none';
+    }
 }
 
 function cfParseDate(raw, fmt) {
@@ -4370,14 +4490,15 @@ function cfParseDirection(raw) {
 }
 
 function parseAndValidateCfImportRows() {
-    const hasHeader = document.getElementById('cfImportHasHeader').checked;
     const rows = _cfImportRawRows;
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    const colCount = rows[0].length;
+    const headerRowNum = Math.max(0, parseInt(document.getElementById('cfImportHeaderRow').value, 10) || 0);
+    const headerIdx = headerRowNum - 1;
+    const dataRows = headerRowNum > 0 ? rows.slice(headerIdx + 1) : rows;
+    const colCount = (headerRowNum > 0 && rows[headerIdx]) ? rows[headerIdx].length : rows[0].length;
     const roleOf = {};
     for (let i = 0; i < colCount; i++) {
         const sel = document.getElementById(`cfImportColRole-${i}`);
-        if (sel && sel.value !== 'ignore') roleOf[sel.value] = i;
+        if (sel && sel.value !== 'ignore') roleOf[sel.value] = i; // last-wins — cfCheckDuplicateRoles() warns about this in the UI
     }
     const dateFmt = document.getElementById('cfImportDateFormat').value;
     const signedAmounts = document.getElementById('cfImportSignedAmounts').checked;
@@ -4386,7 +4507,7 @@ function parseAndValidateCfImportRows() {
 
     const valid = [], excluded = [];
     dataRows.forEach((r, i) => {
-        const rowNum = i + 1 + (hasHeader ? 1 : 0); // 1-based CSV line number
+        const rowNum = headerRowNum > 0 ? (headerRowNum + 1 + i) : (i + 1); // 1-based position within the parsed (non-blank) rows
         if (!r.some(f => f !== undefined && String(f).trim() !== '')) return; // skip blank lines silently
         const isoDate = roleOf.date !== undefined ? cfParseDate(r[roleOf.date], dateFmt) : null;
         const amtRaw = roleOf.amount !== undefined ? cfParseAmount(r[roleOf.amount]) : null;
@@ -4513,6 +4634,8 @@ function resetCfImport() {
     _cfImportExcludedRows = [];
     const fileEl = document.getElementById('cfImportFile');
     if (fileEl) fileEl.value = '';
+    const headerRowEl = document.getElementById('cfImportHeaderRow');
+    if (headerRowEl) headerRowEl.value = ''; // forces re-detection on the next uploaded file
     cfGotoImportStep(1);
 }
 
