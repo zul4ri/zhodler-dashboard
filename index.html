@@ -371,6 +371,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <button class="ibtn"                 onclick="doRefresh()"     aria-label="Refresh data">&#8635; Refresh</button>
         <a class="ibtn" href="https://bot-dashboard-weld.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open bot performance dashboard" style="text-decoration:none;display:inline-flex;align-items:center;">&#129302; Bots</a>
         <button class="ibtn" id="editAssetsBtn" onclick="openEditAssets()" aria-label="Edit manual assets">&#128273; Edit Assets</button>
+        <button class="ibtn" id="taxSummaryBtn" onclick="openTaxSummary()" aria-label="Open PT tax summary estimate">&#128220; Tax Summary</button>
+        <button class="ibtn" id="cashFlowBtn" onclick="openCashFlow()" aria-label="Open cash flow ledger">&#128181; Cash Flow</button>
         <button class="ibtn"                 onclick="openSettings()"  aria-label="Open settings">&#9881; Settings</button>
     </div>
 </div>
@@ -525,9 +527,483 @@ tr:hover td{background:rgba(255,255,255,.03);}
                 <div style="margin-top:8px;"><button class="mgray" onclick="addPortfolioTransaction()">Save Transaction</button></div>
             </div>
 
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Salary History <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— informational, doesn't affect Net Worth</span></label>
+            <div class="twrap" id="eaSalaryWrap" style="max-height:220px;overflow:auto;"></div>
+            <div class="mrow-row" style="margin-top:10px;">
+                <input class="minput" id="eaSalNewDate" type="date" style="flex:1;min-width:120px;">
+                <input class="minput" id="eaSalNewGross" type="number" step="0.01" min="0" placeholder="Gross amount" style="flex:1;min-width:100px;">
+                <input class="minput" id="eaSalNewNet" type="number" step="0.01" min="0" placeholder="Net amount (optional)" style="flex:1;min-width:110px;">
+                <select class="minput" id="eaSalNewCurrency" style="flex:0 0 80px;">
+                    <option value="EUR" selected>EUR</option>
+                    <option value="USD">USD</option>
+                </select>
+            </div>
+            <div class="mrow-row" style="margin-top:8px;">
+                <input class="minput" id="eaSalNewEmployer" placeholder="Employer (optional)" style="flex:1;min-width:130px;">
+                <input class="minput" id="eaSalNewNote" placeholder="Note (optional)" style="flex:1;min-width:130px;">
+            </div>
+            <div style="margin-top:8px;"><button class="mgray" onclick="addSalaryEntry()">+ Add Salary Entry</button></div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">FIRE Calculator <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— Financial Independence / Retire Early</span></label>
+            <div id="eaFireStatusNote" style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">Loading…</div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:150px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Desired Annual Expense (USD)</label>
+                    <input class="minput" id="eaFireExpense" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
+                </div>
+                <div style="flex:1;min-width:110px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Safe Withdrawal Rate %</label>
+                    <input class="minput" id="eaFireSwr" type="number" step="0.1" min="0.1" max="100" oninput="renderFireOutputs()">
+                </div>
+                <div style="flex:1;min-width:120px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Monthly Contribution</label>
+                    <input class="minput" id="eaFireContribution" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
+                </div>
+            </div>
+            <div class="mrow-row" style="margin-top:8px;">
+                <div style="flex:1;min-width:110px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Nominal Return %/yr</label>
+                    <input class="minput" id="eaFireReturn" type="number" step="0.1" oninput="renderFireOutputs()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Inflation %/yr</label>
+                    <input class="minput" id="eaFireInflation" type="number" step="0.1" oninput="renderFireOutputs()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Volatility %/yr</label>
+                    <input class="minput" id="eaFireVol" type="number" step="0.1" min="0" oninput="renderFireOutputs()">
+                </div>
+            </div>
+            <div class="mrow-row" style="margin-top:8px;">
+                <div style="flex:1;min-width:90px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Current Age</label>
+                    <input class="minput" id="eaFireCurAge" type="number" step="1" min="0" max="130" oninput="renderFireOutputs()">
+                </div>
+                <div style="flex:1;min-width:90px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Retirement Age</label>
+                    <input class="minput" id="eaFireRetAge" type="number" step="1" min="0" max="130" oninput="renderFireOutputs()">
+                </div>
+            </div>
+            <div style="margin-top:8px;"><button class="mgray" onclick="saveFirePlan()">Save Plan</button></div>
+
+            <div class="card-divider" style="margin:14px 0;"></div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:140px;">
+                    <div class="mlabel" style="margin-bottom:3px;">FIRE Number</div>
+                    <div id="eaFireNumber" style="font-size:18px;font-weight:800;">—</div>
+                </div>
+                <div style="flex:1;min-width:140px;">
+                    <div class="mlabel" style="margin-bottom:3px;">Current Investments</div>
+                    <div id="eaFireCurrentInv" style="font-size:18px;font-weight:800;">—</div>
+                    <div style="font-size:9px;color:var(--text2);">Crypto/DeFi + portfolios only — excludes cash, real estate, vehicles</div>
+                </div>
+            </div>
+            <div id="eaFireTiers" style="margin-top:12px;"></div>
+            <div style="margin-top:12px;"><div class="chwrap" style="min-height:190px;"><canvas id="eaFireChart"></canvas></div></div>
+            <div id="eaFireChartCaption" style="font-size:10px;color:var(--text2);margin-top:4px;"></div>
+
             <div class="mactions">
                 <button class="mcancel" onclick="closeEditAssets()">Close</button>
                 <button class="mprimary" onclick="addEditAsset()">+ Add Asset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAX SUMMARY MODAL (Supabase mode only) — separate section/modal from Edit
+     Assets: read-mostly (one required input for the englobamento advisor),
+     large enough (5 RPCs, a disclaimer, a per-disposal table) to deserve its
+     own space rather than being one more collapsible block in an already-long
+     Edit Assets panel. Shares the SAME login/session (authToken/sessionStorage)
+     as Edit Assets — sign in once via either modal, both unlock together. -->
+<div class="modal" id="taxModal">
+    <div class="mbox" style="width:920px;">
+        <div class="mtitle">PT Tax Summary — Estimate</div>
+
+        <!-- Disclaimer — always visible, loads even before sign-in (tax_disclaimer()
+             is anon-readable, and this must never be hidden behind login/a tooltip). -->
+        <div id="taxDisclaimerBox" style="border:1px solid var(--yellow);background:rgba(255,204,0,0.06);border-radius:4px;padding:12px 14px;margin-bottom:16px;">
+            <div style="font-size:11px;color:var(--yellow);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Not tax advice — informative estimate only</div>
+            <div id="taxDisclaimerText" style="font-size:clamp(10px,0.9vw,12px);color:var(--text);line-height:1.5;margin-bottom:8px;">Loading disclaimer…</div>
+            <div id="taxDisclaimerTextEn" style="font-size:clamp(10px,0.9vw,12px);color:var(--text2);line-height:1.5;margin-bottom:10px;font-style:italic;"></div>
+            <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">This estimate does NOT account for:</div>
+            <ul id="taxAssumptionsList" style="margin:0;padding-left:18px;font-size:10.5px;color:var(--text2);line-height:1.6;"></ul>
+        </div>
+
+        <!-- Login form — shown until signed in -->
+        <div id="taxLoginBox">
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see your personal tax estimate (income, capital gains, dividends). Already signed in via Edit Assets in this session? This unlocks automatically — no need to sign in twice.</div>
+            <div class="mrow">
+                <label class="mlabel">Email</label>
+                <input class="minput" id="taxEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('taxPassword').focus()">
+            </div>
+            <div class="mrow">
+                <label class="mlabel">Password</label>
+                <input class="minput" id="taxPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginTaxSummary()">
+            </div>
+            <div id="taxLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
+            <div class="mactions">
+                <button class="mcancel" onclick="closeTaxSummary()">Cancel</button>
+                <button class="mprimary" id="taxLoginBtn" onclick="loginTaxSummary()">Sign In</button>
+            </div>
+        </div>
+
+        <!-- Panel — shown once signed in -->
+        <div id="taxPanel" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label class="mlabel" style="margin-bottom:0;">Tax Year</label>
+                    <input class="minput" id="taxYearInput" type="number" step="1" style="width:90px;padding:6px 8px;" onchange="loadTaxSummary()">
+                </div>
+                <button class="mgray" style="padding:6px 12px;" onclick="logoutTaxSummary()">Sign Out</button>
+            </div>
+            <div style="font-size:10px;color:var(--text2);margin-bottom:10px;">Figures below are raw sums of amounts already entered in Salary History / Portfolios, in whatever currency each entry used (EUR or USD) — <b>no currency conversion is applied here</b>. Keep entries in one consistent currency for these totals to be meaningful.</div>
+            <div id="taxStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
+
+            <div class="card-divider" style="margin:14px 0;"></div>
+            <label class="mlabel">Category A — Employment Income</label>
+            <div id="taxCatA" style="margin-top:8px;"></div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Category G — Capital Gains (FIFO)</label>
+            <div id="taxCgSummary" style="margin-top:8px;"></div>
+            <div class="twrap" id="taxCgDisposals" style="max-height:280px;overflow:auto;margin-top:10px;"></div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Category E — Dividends</label>
+            <div id="taxCatE" style="margin-top:8px;"></div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <label class="mlabel">Englobamento Advisor <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— flat rate vs. aggregation, what-if</span></label>
+            <div style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">Requires your TOTAL other taxable income for the year (not just what's in Salary History — include any other Category A/B/F/H income you have). This tool cannot assume salary history alone is the complete picture, so it won't compute anything until you enter this.</div>
+            <div class="mrow-row">
+                <input class="minput" id="taxOtherIncome" type="number" step="0.01" min="0" placeholder="Your other taxable income, required" style="flex:1;min-width:220px;">
+                <button class="mgray" onclick="runEnglobamentoAdvisor()">Calculate</button>
+            </div>
+            <div id="taxEnglobamento" style="margin-top:10px;"></div>
+
+            <div class="card-divider" style="margin:16px 0;"></div>
+            <div id="taxYearConfigFooter" style="font-size:10px;color:var(--text2);"></div>
+
+            <div class="mactions">
+                <button class="mcancel" onclick="closeTaxSummary()">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CASH FLOW MODAL (Supabase mode only) — Stage 3, own section (not folded
+     into Edit Assets): this is the day-to-day screen (CSV import, recurring
+     bills, budgets, bills calendar, goals, analytics all land here in later
+     phases), so it gets its own tabbed area from the start rather than a
+     layout that would need reworking once those arrive. Shares the SAME
+     login/session as Edit Assets & Tax Summary. -->
+<div class="modal" id="cfModal">
+    <div class="mbox" style="width:980px;max-height:92vh;overflow-y:auto;">
+        <div class="mtitle">Cash Flow</div>
+
+        <!-- Login form -->
+        <div id="cfLoginBox">
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see and manage your everyday income/expense ledger. Already signed in via Edit Assets or Tax Summary in this session? This unlocks automatically.</div>
+            <div class="mrow">
+                <label class="mlabel">Email</label>
+                <input class="minput" id="cfEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('cfPassword').focus()">
+            </div>
+            <div class="mrow">
+                <label class="mlabel">Password</label>
+                <input class="minput" id="cfPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginCashFlow()">
+            </div>
+            <div id="cfLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
+            <div class="mactions">
+                <button class="mcancel" onclick="closeCashFlow()">Cancel</button>
+                <button class="mprimary" id="cfLoginBtn" onclick="loginCashFlow()">Sign In</button>
+            </div>
+        </div>
+
+        <!-- Panel -->
+        <div id="cfPanel" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="mgray" id="cfTabBtn-txns" onclick="switchCfTab('txns')">Transactions</button>
+                    <button class="mgray" id="cfTabBtn-import" onclick="switchCfTab('import')">Import CSV</button>
+                    <button class="mgray" id="cfTabBtn-bills" onclick="switchCfTab('bills')">Bills Calendar</button>
+                    <button class="mgray" id="cfTabBtn-goals" onclick="switchCfTab('goals')">Goals</button>
+                    <button class="mgray" id="cfTabBtn-analytics" onclick="switchCfTab('analytics')">Analytics</button>
+                    <button class="mgray" id="cfTabBtn-categories" onclick="switchCfTab('categories')">Categories</button>
+                    <button class="mgray" id="cfTabBtn-tags" onclick="switchCfTab('tags')">Tags</button>
+                </div>
+                <button class="mgray" style="padding:6px 12px;" onclick="logoutCashFlow()">Sign Out</button>
+            </div>
+            <div id="cfStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
+
+            <!-- ── TRANSACTIONS TAB ───────────────────────────────────────── -->
+            <div id="cfTabTxns" class="cf-tab-content">
+                <label class="mlabel">Filters</label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <input class="minput" id="cfFilterFrom" type="date" title="From date" style="flex:1;min-width:120px;">
+                    <input class="minput" id="cfFilterTo" type="date" title="To date" style="flex:1;min-width:120px;">
+                    <select class="minput" id="cfFilterAccount" style="flex:1;min-width:140px;"><option value="">All accounts</option></select>
+                    <select class="minput" id="cfFilterCategory" style="flex:1;min-width:140px;"><option value="">All categories</option></select>
+                    <select class="minput" id="cfFilterTag" style="flex:1;min-width:120px;"><option value="">All tags</option></select>
+                    <select class="minput" id="cfFilterDirection" style="flex:0 0 120px;">
+                        <option value="">All types</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                        <option value="transfer">Transfer</option>
+                    </select>
+                </div>
+                <div class="mactions" style="margin-top:8px;">
+                    <button class="mgray" onclick="loadCashFlowTransactions()">Apply Filters</button>
+                    <button class="mgray" onclick="clearCfFilters()">Clear</button>
+                </div>
+
+                <div class="twrap" id="cfTxnList" style="max-height:320px;overflow:auto;margin-top:10px;"></div>
+
+                <div class="card-divider" style="margin:16px 0;"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="mgray" id="cfAddTxnToggleBtn" onclick="toggleCfAddTxnForm()">+ Add Transaction</button>
+                    <button class="mgray" id="cfAddTransferToggleBtn" onclick="toggleCfAddTransferForm()">+ Add Transfer</button>
+                </div>
+
+                <!-- Add/Edit Transaction form -->
+                <div id="cfAddTxnForm" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px;">
+                    <label class="mlabel" id="cfAddTxnTitle">Add Transaction</label>
+                    <div class="mrow-row" style="margin-top:6px;" id="cfTxnAccountRow">
+                        <select class="minput" id="cfTxnAccount" style="flex:1;min-width:220px;"></select>
+                    </div>
+                    <div class="mrow-row" style="margin-top:8px;" id="cfTxnDirectionRow">
+                        <select class="minput" id="cfTxnDirection" style="flex:1;min-width:100px;" onchange="cfDirectionChanged()">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                        <select class="minput" id="cfTxnCategory" style="flex:1;min-width:140px;"><option value="">No category</option></select>
+                        <input class="minput" id="cfTxnAmount" type="number" step="0.01" min="0.01" placeholder="Amount (EUR)" style="flex:1;min-width:110px;">
+                        <input class="minput" id="cfTxnDate" type="date" style="flex:1;min-width:130px;">
+                    </div>
+                    <div class="mrow-row" style="margin-top:8px;">
+                        <input class="minput" id="cfTxnDescription" placeholder="Description" style="flex:1;min-width:140px;">
+                        <input class="minput" id="cfTxnMerchant" placeholder="Merchant (optional)" style="flex:1;min-width:140px;">
+                    </div>
+                    <input class="minput" id="cfTxnNote" placeholder="Note (optional)" style="margin-top:8px;">
+                    <div style="margin-top:8px;">
+                        <div class="mlabel" style="margin-bottom:4px;">Tags</div>
+                        <div id="cfTxnTagsPicker" style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text2);"></div>
+                    </div>
+                    <div class="mactions">
+                        <button class="mcancel" onclick="cancelCfTxnForm()">Cancel</button>
+                        <button class="mprimary" id="cfTxnSubmitBtn" onclick="submitCfTxnForm()">Add</button>
+                    </div>
+                </div>
+
+                <!-- Add Transfer form -->
+                <div id="cfAddTransferForm" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px;">
+                    <label class="mlabel">Add Transfer <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— between two of your own accounts</span></label>
+                    <div class="mrow-row" style="margin-top:6px;">
+                        <select class="minput" id="cfTransferFrom" style="flex:1;min-width:140px;"></select>
+                        <select class="minput" id="cfTransferTo" style="flex:1;min-width:140px;"></select>
+                    </div>
+                    <div class="mrow-row" style="margin-top:8px;">
+                        <input class="minput" id="cfTransferAmount" type="number" step="0.01" min="0.01" placeholder="Amount (EUR)" style="flex:1;min-width:110px;">
+                        <input class="minput" id="cfTransferDate" type="date" style="flex:1;min-width:130px;">
+                    </div>
+                    <div class="mrow-row" style="margin-top:8px;">
+                        <input class="minput" id="cfTransferDescription" placeholder="Description (optional)" style="flex:1;min-width:140px;">
+                        <input class="minput" id="cfTransferNote" placeholder="Note (optional)" style="flex:1;min-width:140px;">
+                    </div>
+                    <div class="mactions">
+                        <button class="mcancel" onclick="toggleCfAddTransferForm()">Cancel</button>
+                        <button class="mprimary" onclick="submitCfTransfer()">Add Transfer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── IMPORT CSV TAB ─────────────────────────────────────────── -->
+            <div id="cfTabImport" class="cf-tab-content" style="display:none;">
+                <!-- Step 1: Upload -->
+                <div id="cfImportStep1">
+                    <label class="mlabel">Step 1 — Upload a CSV</label>
+                    <div style="font-size:10px;color:var(--text2);margin:4px 0 8px;">Parsed entirely in your browser — nothing is sent anywhere until you confirm the import in Step 4.</div>
+                    <input class="minput" type="file" id="cfImportFile" accept=".csv,text/csv" onchange="handleCfImportFile(event)" style="padding:9px;">
+                </div>
+
+                <!-- Step 2: Map columns -->
+                <div id="cfImportStep2" style="display:none;">
+                    <label class="mlabel">Step 2 — Map Columns &amp; Settings</label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin:8px 0;cursor:pointer;">
+                        <input type="checkbox" id="cfImportHasHeader" checked onchange="buildCfImportMappingStep()"> First row is a header
+                    </label>
+                    <div id="cfImportMappingCols"></div>
+
+                    <div class="card-divider" style="margin:14px 0;"></div>
+                    <div class="mrow-row">
+                        <select class="minput" id="cfImportDateFormat" style="flex:1;min-width:140px;">
+                            <option value="YMD">Date format: YYYY-MM-DD</option>
+                            <option value="DMY" selected>Date format: DD/MM/YYYY</option>
+                            <option value="MDY">Date format: MM/DD/YYYY</option>
+                        </select>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:11px;flex:1;min-width:220px;cursor:pointer;">
+                            <input type="checkbox" id="cfImportSignedAmounts" checked> No Direction column? Use amount sign (negative = expense)
+                        </label>
+                    </div>
+                    <div class="mrow-row" style="margin-top:10px;">
+                        <select class="minput" id="cfImportAccount" style="flex:1;min-width:220px;"></select>
+                    </div>
+                    <div class="mrow-row" style="margin-top:8px;">
+                        <select class="minput" id="cfImportCategory" style="flex:1;min-width:200px;"><option value="">Leave uncategorized</option></select>
+                    </div>
+                    <div style="font-size:10px;color:var(--text2);margin-top:5px;">The category above applies to the WHOLE imported batch (or leave every row uncategorized) — per-row category mapping from the CSV itself isn't supported yet.</div>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:8px;cursor:pointer;">
+                        <input type="checkbox" id="cfImportSkipDup" checked> Skip duplicates (same account/date/amount/description as an existing transaction)
+                    </label>
+                    <div class="mactions">
+                        <button class="mcancel" onclick="resetCfImport()">Start Over</button>
+                        <button class="mprimary" onclick="cfGoToPreview()">Continue to Preview</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Preview -->
+                <div id="cfImportStep3" style="display:none;">
+                    <label class="mlabel">Step 3 — Preview</label>
+                    <div id="cfImportPreviewSummary" style="font-size:12px;margin:8px 0;"></div>
+                    <div id="cfImportPreviewWrap"></div>
+                    <div class="mactions">
+                        <button class="mcancel" onclick="cfGotoImportStep(2)">Back</button>
+                        <button class="mprimary" id="cfImportConfirmBtn" onclick="confirmCfImport()">Confirm Import</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Result -->
+                <div id="cfImportStep4" style="display:none;">
+                    <label class="mlabel">Step 4 — Import Result</label>
+                    <div id="cfImportResultStats" style="margin-top:10px;"></div>
+                    <div class="twrap" id="cfImportResultRows" style="max-height:240px;overflow:auto;margin-top:10px;"></div>
+                    <div class="mactions">
+                        <button class="mcancel" onclick="resetCfImport()">Start New Import</button>
+                        <button class="mprimary" onclick="switchCfTab('txns'); loadCashFlowTransactions();">View Transactions</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── BILLS CALENDAR TAB ─────────────────────────────────────── -->
+            <div id="cfTabBills" class="cf-tab-content" style="display:none;">
+                <label class="mlabel">Bills Calendar <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— recurring rules, loan payments, and already-logged upcoming transactions</span></label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <input class="minput" id="cfBillsFrom" type="date" style="flex:1;min-width:130px;">
+                    <input class="minput" id="cfBillsTo" type="date" style="flex:1;min-width:130px;">
+                    <button class="mgray" onclick="loadCfBills()">Load</button>
+                    <button class="mgray" onclick="cfBillsQuickRange(30)">Next 30 Days</button>
+                    <button class="mgray" onclick="cfBillsQuickRange(90)">Next 90 Days</button>
+                </div>
+                <div style="font-size:10px;color:var(--text2);margin-top:6px;">A manually-logged transaction that coincides with an active recurring rule's own projection may appear twice below (once per source) — there's no automatic reconciliation between the two yet. Matching same-date/same-amount/same-direction entries are marked "possible duplicate."</div>
+                <div id="cfBillsList" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- ── GOALS TAB ──────────────────────────────────────────────── -->
+            <div id="cfTabGoals" class="cf-tab-content" style="display:none;">
+                <label class="mlabel">Goals</label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <select class="minput" id="cfGoalsFilterStatus" style="flex:1;min-width:140px;" onchange="loadCfGoals()">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="achieved">Achieved</option>
+                        <option value="abandoned">Abandoned</option>
+                    </select>
+                </div>
+                <div id="cfGoalsList" style="margin-top:12px;"></div>
+
+                <div class="card-divider" style="margin:16px 0;"></div>
+                <label class="mlabel" id="cfGoalFormTitle">Add Goal</label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <input class="minput" id="cfGoalName" placeholder="Goal name" style="flex:1;min-width:160px;">
+                    <input class="minput" id="cfGoalTarget" type="number" step="0.01" min="0.01" placeholder="Target amount (EUR)" style="flex:1;min-width:140px;">
+                </div>
+                <div class="mrow-row" style="margin-top:8px;">
+                    <input class="minput" id="cfGoalTargetDate" type="date" title="Target date (optional)" style="flex:1;min-width:130px;">
+                    <input class="minput" id="cfGoalMonthly" type="number" step="0.01" min="0" placeholder="Monthly contribution (optional)" style="flex:1;min-width:170px;">
+                    <select class="minput" id="cfGoalLinkedAccount" style="flex:1;min-width:170px;"><option value="">No linked account</option></select>
+                </div>
+                <div style="font-size:10px;color:var(--text2);margin-top:5px;">Target date and monthly contribution are both optional — leave either blank to skip pace projections for this goal rather than guessing. Linking an account is informational only for now (not auto-tracked yet).</div>
+                <div class="mactions">
+                    <button class="mcancel" id="cfGoalCancelBtn" style="display:none;" onclick="cancelCfGoalForm()">Cancel Edit</button>
+                    <button class="mprimary" id="cfGoalSubmitBtn" onclick="submitCfGoalForm()">+ Add Goal</button>
+                </div>
+            </div>
+
+            <!-- ── ANALYTICS TAB ──────────────────────────────────────────── -->
+            <div id="cfTabAnalytics" class="cf-tab-content" style="display:none;">
+                <label class="mlabel">Analytics</label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <input class="minput" id="cfAnalyticsFrom" type="date" style="flex:1;min-width:130px;">
+                    <input class="minput" id="cfAnalyticsTo" type="date" style="flex:1;min-width:130px;">
+                    <button class="mgray" onclick="loadCfAnalytics()">Load</button>
+                    <button class="mgray" onclick="cfAnalyticsQuickRange(3)">Last 3mo</button>
+                    <button class="mgray" onclick="cfAnalyticsQuickRange(6)">Last 6mo</button>
+                    <button class="mgray" onclick="cfAnalyticsQuickRange(12)">Last 12mo</button>
+                </div>
+
+                <div class="card-divider" style="margin:14px 0;"></div>
+                <label class="mlabel">Income vs Expense vs Net</label>
+                <div style="margin-top:8px;"><div class="chwrap" style="min-height:200px;"><canvas id="cfAnalyticsChart"></canvas></div></div>
+
+                <div class="card-divider" style="margin:16px 0;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <label class="mlabel" style="margin-bottom:0;">Category Breakdown</label>
+                    <select class="minput" id="cfAnalyticsCatDirection" style="width:auto;padding:6px 8px;" onchange="loadCfAnalyticsCategoryGrid()">
+                        <option value="expense">Expenses</option>
+                        <option value="income">Income</option>
+                    </select>
+                </div>
+                <div class="twrap" id="cfAnalyticsHeatmap" style="max-height:320px;overflow:auto;margin-top:8px;"></div>
+
+                <div class="card-divider" style="margin:16px 0;"></div>
+                <div id="cfAnalyticsInsightsSection" style="display:none;">
+                    <label class="mlabel">Insights</label>
+                    <div id="cfAnalyticsInsights" style="margin-top:8px;"></div>
+                    <div class="card-divider" style="margin:16px 0;"></div>
+                </div>
+
+                <button class="mgray" id="cfCutSuggestBtn" onclick="loadCfCutSuggestions()">Show Cost-Cutting Suggestions</button>
+                <div style="font-size:10px;color:var(--text2);margin-top:6px;">This only runs when you ask for it — nothing is analyzed until you click.</div>
+                <div id="cfCutSuggestions" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- ── CATEGORIES TAB ─────────────────────────────────────────── -->
+            <div id="cfTabCategories" class="cf-tab-content" style="display:none;">
+                <label class="mlabel">Income Categories</label>
+                <div id="cfCategoriesIncome" style="margin-top:8px;"></div>
+                <div class="card-divider" style="margin:14px 0;"></div>
+                <label class="mlabel">Expense Categories</label>
+                <div id="cfCategoriesExpense" style="margin-top:8px;"></div>
+
+                <div class="card-divider" style="margin:16px 0;"></div>
+                <label class="mlabel">Add Category</label>
+                <div class="mrow-row" style="margin-top:6px;">
+                    <input class="minput" id="cfNewCatName" placeholder="Category name" style="flex:1;min-width:140px;">
+                    <select class="minput" id="cfNewCatKind" style="flex:1;min-width:100px;" onchange="cfNewCatKindChanged()">
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                    </select>
+                    <select class="minput" id="cfNewCatParent" style="flex:1;min-width:160px;">
+                        <option value="">Top-level (no parent)</option>
+                    </select>
+                </div>
+                <div style="margin-top:8px;"><button class="mgray" onclick="addCfCategory()">+ Add Category</button></div>
+            </div>
+
+            <!-- ── TAGS TAB ───────────────────────────────────────────────── -->
+            <div id="cfTabTags" class="cf-tab-content" style="display:none;">
+                <label class="mlabel">Tags</label>
+                <div class="twrap" id="cfTagsList" style="max-height:260px;overflow:auto;margin-top:8px;"></div>
+                <div class="mrow-row" style="margin-top:10px;">
+                    <input class="minput" id="cfNewTagName" placeholder="New tag name" style="flex:1;min-width:160px;">
+                    <button class="mgray" onclick="addCfTag()">+ Add Tag</button>
+                </div>
+            </div>
+
+            <div class="mactions">
+                <button class="mcancel" onclick="closeCashFlow()">Close</button>
             </div>
         </div>
     </div>
@@ -576,6 +1052,9 @@ let _eaExpanded = new Set();// Edit Assets: labels (lowercase) whose Details pan
 let _eaPortfolios = [];     // Edit Assets: cache of portfolios_list() rows
 let _eaPfTxExpanded = new Set(); // Edit Assets: portfolio_ids whose transaction list is currently open
 let _eaPfTransactions = {};      // Edit Assets: portfolio_id -> cached portfolio_transactions_list() rows
+let _eaSalaryItems = [];         // Edit Assets: cache of salary_history_list() rows
+let _eaFirePlan = null;          // Edit Assets: cache of fire_plan_get() result
+let _eaFireInvestmentTotal = 0;  // Edit Assets: cache of fire_investment_total() result
 let eurUsdRate = null;      // Edit Assets: cached EUR->USD rate, fetched once per session
 let eurRatePromise = null;  // Edit Assets: in-flight rate fetch (avoids duplicate calls)
 let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback rate
@@ -1910,6 +2389,8 @@ function updateEditAssetsView() {
         eaStatus('', false);
         loadEditAssetsList();
         loadPortfolios();
+        loadSalaryHistory();
+        loadFireCalculator();
     } else {
         loginBox.style.display = 'block';
         panel.style.display = 'none';
@@ -2452,6 +2933,319 @@ async function removePortfolio(portfolioId, name) {
     }
 }
 
+// ── Salary History (Phase 18) — pure record, no net-worth effect. Add-or-edit
+// via an optional p_id (no natural unique key: a mid-year raise can produce
+// two close-together rows). Backend contract: salary_history_list() (anon+
+// authenticated), salary_history_upsert()/salary_history_remove() (authenticated
+// only). ──────────────────────────────────────────────────────────────────
+async function loadSalaryHistory() {
+    const wrap = document.getElementById('eaSalaryWrap');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    try {
+        const items = await rpc('salary_history_list');
+        renderSalaryHistory(Array.isArray(items) ? items : []);
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderSalaryHistory(items) {
+    _eaSalaryItems = items;
+    const wrap = document.getElementById('eaSalaryWrap');
+    if (!items.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No salary history yet — add an entry below.</div>';
+        return;
+    }
+    const rowsHtml = items.map((it, i) => `<tr>
+        <td><input class="minput" style="padding:5px 8px;width:120px;" type="date" id="eaSalDate-${i}" value="${it.entry_date || ''}"></td>
+        <td><input class="minput" style="padding:5px 8px;width:100px;" type="text" id="eaSalEmployer-${i}" value="${escapeHtml(it.employer || '')}" placeholder="Employer"></td>
+        <td>
+            <div style="display:flex;align-items:center;gap:3px;">
+                <input class="minput" style="padding:5px 8px;width:80px;" type="number" step="0.01" min="0" id="eaSalGross-${i}" value="${it.gross_amount ?? ''}">
+                <select class="minput" style="padding:5px 4px;width:54px;" id="eaSalCurrency-${i}">
+                    <option value="EUR" ${it.currency === 'EUR' ? 'selected' : ''}>EUR</option>
+                    <option value="USD" ${it.currency === 'USD' ? 'selected' : ''}>USD</option>
+                </select>
+            </div>
+        </td>
+        <td><input class="minput" style="padding:5px 8px;width:80px;" type="number" step="0.01" min="0" id="eaSalNet-${i}" value="${it.net_amount ?? ''}" placeholder="Net"></td>
+        <td><input class="minput" style="padding:5px 8px;width:100px;" type="text" id="eaSalNote-${i}" value="${escapeHtml(it.note || '')}" placeholder="Note"></td>
+        <td style="white-space:nowrap;">
+            <button class="mgray" style="padding:5px 10px;" onclick="saveSalaryEntry(${i})">Save</button>
+            <button class="mgray" style="padding:5px 10px;color:var(--red);" onclick="removeSalaryEntry(${i})">Remove</button>
+        </td>
+    </tr>`).join('');
+    wrap.innerHTML = `<table><thead><tr><th>Date</th><th>Employer</th><th>Gross</th><th>Net</th><th>Note</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+async function saveSalaryEntry(i) {
+    const it = _eaSalaryItems[i];
+    if (!it) return;
+    const date = document.getElementById(`eaSalDate-${i}`).value;
+    const gross = parseFloat(document.getElementById(`eaSalGross-${i}`).value);
+    const net = parseFloat(document.getElementById(`eaSalNet-${i}`).value);
+    const currency = document.getElementById(`eaSalCurrency-${i}`).value;
+    const employer = document.getElementById(`eaSalEmployer-${i}`).value.trim();
+    const note = document.getElementById(`eaSalNote-${i}`).value.trim();
+    if (!date) { eaStatus('Enter a date.', true); return; }
+    if (isNaN(gross) || gross < 0) { eaStatus('Enter a valid non-negative gross amount.', true); return; }
+    eaStatus('Saving…', false);
+    try {
+        await rpcAuth('salary_history_upsert', {
+            p_entry_date: date, p_gross_amount: gross,
+            p_net_amount: isNaN(net) ? null : net, p_currency: currency,
+            p_employer: employer || null, p_note: note || null, p_id: it.id,
+        });
+        eaStatus('Saved.', false);
+        await loadSalaryHistory();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function removeSalaryEntry(i) {
+    const it = _eaSalaryItems[i];
+    if (!it) return;
+    if (!confirm(`Remove this salary entry (${it.entry_date}${it.employer ? ', ' + it.employer : ''})? This cannot be undone.`)) return;
+    eaStatus('Removing…', false);
+    try {
+        await rpcAuth('salary_history_remove', { p_id: it.id });
+        eaStatus('Removed.', false);
+        await loadSalaryHistory();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+async function addSalaryEntry() {
+    const date = document.getElementById('eaSalNewDate').value;
+    const gross = parseFloat(document.getElementById('eaSalNewGross').value);
+    const net = parseFloat(document.getElementById('eaSalNewNet').value);
+    const currency = document.getElementById('eaSalNewCurrency').value;
+    const employer = document.getElementById('eaSalNewEmployer').value.trim();
+    const note = document.getElementById('eaSalNewNote').value.trim();
+    if (!date) { eaStatus('Enter a date.', true); return; }
+    if (isNaN(gross) || gross < 0) { eaStatus('Enter a valid non-negative gross amount.', true); return; }
+    eaStatus('Adding…', false);
+    try {
+        await rpcAuth('salary_history_upsert', {
+            p_entry_date: date, p_gross_amount: gross,
+            p_net_amount: isNaN(net) ? null : net, p_currency: currency,
+            p_employer: employer || null, p_note: note || null,
+        });
+        document.getElementById('eaSalNewDate').value = '';
+        document.getElementById('eaSalNewGross').value = '';
+        document.getElementById('eaSalNewNet').value = '';
+        document.getElementById('eaSalNewEmployer').value = '';
+        document.getElementById('eaSalNewNote').value = '';
+        eaStatus('Added.', false);
+        await loadSalaryHistory();
+    } catch (err) {
+        eaStatus(err.message, true);
+    }
+}
+
+// ── FIRE Calculator (Phase 18) — inputs/plan persistence come from the
+// backend (fire_plan_get/upsert, fire_investment_total); all the actual math,
+// including the Monte Carlo projection, runs client-side on every input
+// change (a live what-if tool, not a server round-trip per keystroke, by
+// design — see the coordinator's brief). fire_investment_total() is
+// investment holdings ONLY (crypto/DeFi + portfolios) — deliberately NEVER
+// substituted with total net worth or any figure including cash/real-estate/
+// vehicles, per Census's own explicit rule. ────────────────────────────────
+async function loadFireCalculator() {
+    const note = document.getElementById('eaFireStatusNote');
+    try {
+        const [plan, invTotal] = await Promise.all([
+            rpc('fire_plan_get'),
+            rpc('fire_investment_total'),
+        ]);
+        _eaFirePlan = plan;
+        _eaFireInvestmentTotal = Number(invTotal) || 0;
+        populateFireInputs(plan);
+        renderFireOutputs();
+    } catch (err) {
+        if (note) { note.textContent = `Failed to load: ${err.message}`; note.style.color = 'var(--red)'; }
+    }
+}
+
+function populateFireInputs(plan) {
+    document.getElementById('eaFireExpense').value = plan.desired_annual_expense ?? '';
+    document.getElementById('eaFireSwr').value = plan.safe_withdrawal_rate_pct ?? 4;
+    document.getElementById('eaFireContribution').value = plan.monthly_contribution ?? 0;
+    document.getElementById('eaFireReturn').value = plan.nominal_return_pct ?? 6;
+    document.getElementById('eaFireInflation').value = plan.inflation_pct ?? 2;
+    document.getElementById('eaFireVol').value = plan.volatility_pct ?? 15;
+    document.getElementById('eaFireCurAge').value = plan.current_age ?? '';
+    document.getElementById('eaFireRetAge').value = plan.retirement_age ?? '';
+    const note = document.getElementById('eaFireStatusNote');
+    if (note) {
+        note.style.color = 'var(--text2)';
+        note.textContent = plan.is_saved
+            ? `Showing your saved plan${plan.updated_at ? ' (last updated ' + new Date(plan.updated_at).toLocaleDateString() + ')' : ''}.`
+            : 'Showing default assumptions — nothing saved yet. Adjust the numbers and click "Save Plan" to persist them.';
+    }
+}
+
+function readFireInputs() {
+    return {
+        expense: parseFloat(document.getElementById('eaFireExpense').value),
+        swr: parseFloat(document.getElementById('eaFireSwr').value),
+        contribution: parseFloat(document.getElementById('eaFireContribution').value),
+        returnPct: parseFloat(document.getElementById('eaFireReturn').value),
+        inflationPct: parseFloat(document.getElementById('eaFireInflation').value),
+        volPct: parseFloat(document.getElementById('eaFireVol').value),
+        curAge: parseInt(document.getElementById('eaFireCurAge').value, 10),
+        retAge: parseInt(document.getElementById('eaFireRetAge').value, 10),
+    };
+}
+
+async function saveFirePlan() {
+    const f = readFireInputs();
+    const statusEl = document.getElementById('eaFireStatusNote');
+    if (statusEl) { statusEl.style.color = 'var(--text2)'; statusEl.textContent = 'Saving…'; }
+    try {
+        const saved = await rpcAuth('fire_plan_upsert', {
+            p_desired_annual_expense: isNaN(f.expense) ? null : f.expense,
+            p_safe_withdrawal_rate_pct: isNaN(f.swr) ? null : f.swr,
+            p_monthly_contribution: isNaN(f.contribution) ? null : f.contribution,
+            p_nominal_return_pct: isNaN(f.returnPct) ? null : f.returnPct,
+            p_inflation_pct: isNaN(f.inflationPct) ? null : f.inflationPct,
+            p_volatility_pct: isNaN(f.volPct) ? null : f.volPct,
+            p_current_age: isNaN(f.curAge) ? null : f.curAge,
+            p_retirement_age: isNaN(f.retAge) ? null : f.retAge,
+        });
+        _eaFirePlan = { ...saved, is_saved: true };
+        if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = `Plan saved (${new Date().toLocaleDateString()}).`; }
+        eaStatus('FIRE plan saved.', false);
+    } catch (err) {
+        if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = err.message; }
+        eaStatus(err.message, true);
+    }
+}
+
+// Box-Muller standard-normal sample, same technique as the dashboard's
+// existing Liquid-assets Monte Carlo widget (renderMonteCarlo()) — kept as a
+// separate local helper here rather than a shared global to avoid coupling
+// this new tool to that widget's unrelated lifecycle.
+function fireRandNormal() {
+    const u1 = Math.random(), u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1 || 1e-10)) * Math.cos(2 * Math.PI * u2);
+}
+
+function firePercentile(arr, p) {
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.max(0, Math.min(s.length - 1, Math.floor(s.length * p)))];
+}
+
+function renderFireOutputs() {
+    const f = readFireInputs();
+    const numEl = document.getElementById('eaFireNumber');
+    const invEl = document.getElementById('eaFireCurrentInv');
+    const tiersEl = document.getElementById('eaFireTiers');
+    const captionEl = document.getElementById('eaFireChartCaption');
+    if (!numEl) return;
+
+    invEl.textContent = fd(_eaFireInvestmentTotal);
+
+    if (isNaN(f.expense) || f.expense <= 0 || isNaN(f.swr) || f.swr <= 0) {
+        numEl.textContent = '—';
+        tiersEl.innerHTML = '<div style="color:var(--text2);font-size:11px;">Enter a desired annual expense and a safe withdrawal rate to see your FIRE number.</div>';
+        if (charts.fire) { charts.fire.destroy(); charts.fire = null; }
+        if (captionEl) captionEl.textContent = '';
+        return;
+    }
+
+    const fireNumber = f.expense / (f.swr / 100);
+    numEl.textContent = fd(fireNumber);
+
+    const tiers = [
+        { label: 'Lean FIRE (0.7×)', mult: 0.7 },
+        { label: 'Regular FIRE (1×)', mult: 1.0 },
+        { label: 'Fat FIRE (1.5×)', mult: 1.5 },
+    ];
+    tiersEl.innerHTML = tiers.map(t => {
+        const target = fireNumber * t.mult;
+        const pctDone = target > 0 ? Math.min(100, (_eaFireInvestmentTotal / target) * 100) : 0;
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:3px;padding:9px 12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+                <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">${t.label}</div>
+                <div style="font-size:11px;color:var(--text2);">${fd(target)}</div>
+            </div>
+            <div class="pbar" style="margin-top:7px;"><div class="pfill" style="width:${pctDone}%"></div></div>
+            <div style="font-size:10px;color:var(--text2);margin-top:4px;">${pctDone.toFixed(1)}% there</div>
+        </div>`;
+    }).join('');
+
+    // ── Monte Carlo projection (300 simulated paths, monthly steps) ──
+    const returnPct = isNaN(f.returnPct) ? 6 : f.returnPct;
+    const volPct = isNaN(f.volPct) ? 15 : Math.max(0, f.volPct);
+    const contribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
+    let years = 30, horizonIsAssumed = true;
+    if (!isNaN(f.curAge) && !isNaN(f.retAge) && f.retAge > f.curAge) {
+        years = Math.min(60, f.retAge - f.curAge);
+        horizonIsAssumed = false;
+    }
+    const SIMS = 300;
+    const meanMonthly = (returnPct / 100) / 12;
+    const monthlyVol = (volPct / 100) / Math.sqrt(12);
+    const startCapital = _eaFireInvestmentTotal;
+    const tracks = [], fireYrs = [];
+    for (let sim = 0; sim < SIMS; sim++) {
+        let value = startCapital, fireYr = null;
+        const track = [value];
+        for (let mo = 0; mo < years * 12; mo++) {
+            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contribution);
+            if ((mo + 1) % 12 === 0) track.push(value);
+            if (value >= fireNumber && fireYr === null) fireYr = (mo + 1) / 12;
+        }
+        tracks.push(track);
+        if (fireYr !== null) fireYrs.push(fireYr);
+    }
+    const yearLabels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Now' : `Y${i}`);
+    const p10s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.10));
+    const p50s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.50));
+    const p90s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.90));
+    const targetLine = yearLabels.map(() => fireNumber);
+    const fireProb = (fireYrs.length / SIMS * 100).toFixed(0);
+    const medianFireYrs = fireYrs.length ? firePercentile(fireYrs, 0.5).toFixed(1) : null;
+
+    if (captionEl) {
+        captionEl.textContent = `${years}-yr horizon${horizonIsAssumed ? ' (assumed — set current/retirement age for a real one)' : ''} · `
+            + `${SIMS} simulations · FIRE probability by year ${years}: ${fireProb}% · `
+            + `Median time to FIRE: ${medianFireYrs ? medianFireYrs + ' yrs' : 'not reached in horizon'}`;
+    }
+
+    if (charts.fire) charts.fire.destroy();
+    const ctx = document.getElementById('eaFireChart');
+    if (ctx) {
+        charts.fire = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: yearLabels,
+                datasets: [
+                    { label: 'P90', data: p90s, borderColor: 'rgba(124,111,239,.8)', backgroundColor: 'rgba(124,111,239,.12)', fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'Median', data: p50s, borderColor: '#00c896', backgroundColor: 'rgba(0,200,150,.08)', fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'P10', data: p10s, borderColor: 'rgba(255,77,109,.7)', backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
+                    { label: 'FIRE Number', data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
+                ],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                    tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw)}` } },
+                },
+                scales: {
+                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+                    y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: 'rgba(255,255,255,.05)' } },
+                },
+            },
+        });
+    }
+}
+
 function togglePortfolioTxForm() {
     const form = document.getElementById('eaPfTxForm');
     const btn = document.getElementById('eaPfTxToggleBtn');
@@ -2629,6 +3423,1536 @@ async function addEditAsset() {
 }
 
 document.getElementById('eaModal').addEventListener('click', e => { if (e.target === document.getElementById('eaModal')) closeEditAssets(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAX SUMMARY (Phase 19, Supabase mode only) — PT IRS/Modelo 3 estimate.
+// Separate modal from Edit Assets (read-mostly, one required input, large
+// enough to deserve its own space) but shares the SAME authToken/session as
+// Edit Assets — sign in once via either, both unlock together. Backend
+// contract: tax_disclaimer()/tax_year_config_get() (anon-readable, reference
+// data only); tax_category_a_income()/tax_capital_gains_summary()/
+// tax_capital_gains_disposals()/tax_category_e_dividends()/
+// tax_englobamento_advisor() (authenticated-only, real personal figures).
+// All under {SUPABASE_URL}/rest/v1/rpc/.
+// ─────────────────────────────────────────────────────────────────────────────
+let _taxDisclaimerLoaded = false;
+
+// ── Cash Flow (Phase 20) state ──────────────────────────────────────────────
+let _cfAccounts = [];        // cache of accounts_list() rows ({id, label, type, account_subtype})
+let _cfCategories = [];      // cache of category_list() rows
+let _cfTags = [];            // cache of tag_list() rows
+let _cfTransactions = [];    // cache of the current cashflow_transactions_list() view
+let _cfEditingId = null;     // transaction id being edited, or null when the Add form is in "add" mode
+let _cfActiveTab = 'txns';
+// CSV import (Phase 21) state
+let _cfImportRawRows = null;    // raw parsed CSV cells, incl. header row if present
+let _cfImportValidRows = [];    // rows that passed client-side validation, ready for the RPC
+let _cfImportExcludedRows = []; // rows that failed client-side validation (never sent to the RPC)
+let _cfImportStep = 1;
+// Bills calendar (Phase 22) state
+let _cfBillsRange = null;    // {from, to} currently shown
+let _cfBills = [];           // cache of the current bills_calendar() view
+// Goals (Phase 26) state
+let _cfGoals = [];           // cache of the current goals_list() view
+let _cfEditingGoalId = null; // goal id being edited, or null when the Add form is in "add" mode
+// Analytics (Phase 27) state
+let _cfAnalyticsRange = null;       // {from, to} currently shown
+let _cfAnalyticsMonthly = [];       // cache of cashflow_monthly() rows
+let _cfAnalyticsCategoryGrid = [];  // cache of cashflow_by_category() rows
+
+function openTaxSummary() {
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    if (source !== 'supabase') {
+        toast('Tax Summary requires Supabase mode — switch it on in Settings first.', true);
+        return;
+    }
+    if (!authToken) {
+        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
+        if (saved) authToken = saved;
+    }
+    document.getElementById('taxModal').classList.add('open');
+    loadTaxDisclaimer();
+    updateTaxSummaryView();
+}
+
+function closeTaxSummary() {
+    document.getElementById('taxModal').classList.remove('open');
+    const err = document.getElementById('taxLoginErr'); if (err) err.textContent = '';
+}
+
+function updateTaxSummaryView() {
+    const loginBox = document.getElementById('taxLoginBox');
+    const panel = document.getElementById('taxPanel');
+    if (authToken) {
+        loginBox.style.display = 'none';
+        panel.style.display = 'block';
+        const yearEl = document.getElementById('taxYearInput');
+        if (!yearEl.value) yearEl.value = new Date().getFullYear();
+        taxStatus('', false);
+        loadTaxSummary();
+    } else {
+        loginBox.style.display = 'block';
+        panel.style.display = 'none';
+    }
+}
+
+async function loginTaxSummary() {
+    const email = document.getElementById('taxEmail').value.trim();
+    const password = document.getElementById('taxPassword').value;
+    const errEl = document.getElementById('taxLoginErr');
+    const btn = document.getElementById('taxLoginBtn');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token) {
+            errEl.textContent = 'Invalid credentials.';
+            return;
+        }
+        authToken = data.access_token;
+        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
+        sessionStorage.setItem(SS_EMAIL_KEY, email);
+        document.getElementById('taxPassword').value = '';
+        errEl.textContent = '';
+        updateTaxSummaryView();
+    } catch (err) {
+        errEl.textContent = 'Sign-in failed — check your connection and try again.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
+
+function logoutTaxSummary() {
+    // Shared session with Edit Assets (same authToken/sessionStorage keys) —
+    // reuse its logout so both panels sign out together, no separate state.
+    logoutEditAssets();
+    updateTaxSummaryView();
+}
+
+function taxStatus(msg, isErr) {
+    const el = document.getElementById('taxStatusMsg');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isErr ? 'var(--red)' : 'var(--green)';
+}
+
+async function loadTaxDisclaimer() {
+    if (_taxDisclaimerLoaded) return;
+    try {
+        const d = await rpc('tax_disclaimer');
+        document.getElementById('taxDisclaimerText').textContent = d.pt || '';
+        document.getElementById('taxDisclaimerTextEn').textContent = d.en || '';
+        const list = document.getElementById('taxAssumptionsList');
+        list.innerHTML = (d.assumptions || []).map(a => `<li style="margin-bottom:3px;">${escapeHtml(a)}</li>`).join('');
+        _taxDisclaimerLoaded = true;
+    } catch (err) {
+        const el = document.getElementById('taxDisclaimerText');
+        el.textContent = 'Failed to load the disclaimer — do not rely on any figures below until this loads correctly.';
+        el.style.color = 'var(--red)';
+    }
+}
+
+async function loadTaxSummary() {
+    if (!authToken) return;
+    const year = parseInt(document.getElementById('taxYearInput').value, 10) || new Date().getFullYear();
+    taxStatus('Loading…', false);
+    document.getElementById('taxEnglobamento').innerHTML = ''; // stale from a prior year, clear it
+    try {
+        const [catA, cgSummary, disposals, catE, yearConfig] = await Promise.all([
+            rpcAuth('tax_category_a_income', { p_tax_year: year }),
+            rpcAuth('tax_capital_gains_summary', { p_tax_year: year }),
+            rpcAuth('tax_capital_gains_disposals', { p_tax_year: year }),
+            rpcAuth('tax_category_e_dividends', { p_tax_year: year }),
+            rpc('tax_year_config_get', { p_tax_year: year }),
+        ]);
+        renderTaxCategoryA(catA);
+        renderTaxCapitalGains(cgSummary, Array.isArray(disposals) ? disposals : []);
+        renderTaxCategoryE(catE);
+        renderTaxYearConfigFooter(yearConfig, year);
+        taxStatus('', false);
+    } catch (err) {
+        taxStatus(err.message, true);
+    }
+}
+
+function renderTaxCategoryA(catA) {
+    const el = document.getElementById('taxCatA');
+    if (!catA) { el.innerHTML = '<div style="color:var(--text2);font-size:11px;">No data.</div>'; return; }
+    el.innerHTML = `
+        <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div class="mlabel" style="margin-bottom:3px;">Gross</div><div style="font-size:16px;font-weight:700;">${fd(Number(catA.gross_amount) || 0)}</div></div>
+            <div><div class="mlabel" style="margin-bottom:3px;">Net</div><div style="font-size:16px;font-weight:700;">${fd(Number(catA.net_amount) || 0)}</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:6px;">Sum of Salary History entries dated in ${catA.tax_year}.</div>
+    `;
+}
+
+function renderTaxCapitalGains(summary, disposals) {
+    const sumEl = document.getElementById('taxCgSummary');
+    const taxable = Number(summary.taxable_balance) || 0;
+    const exempt = Number(summary.exempt_balance) || 0;
+    const taxDue = Number(summary.tax_at_flat_rate) || 0;
+    sumEl.innerHTML = `
+        <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div class="mlabel" style="margin-bottom:3px;">Taxable Balance</div><div style="font-size:16px;font-weight:700;" class="${taxable < 0 ? 'neg' : taxable > 0 ? 'pos' : ''}">${fd(taxable)}</div><div style="font-size:9px;color:var(--text2);">${summary.taxable_disposal_count || 0} disposal(s)</div></div>
+            <div><div class="mlabel" style="margin-bottom:3px;">Exempt Balance</div><div style="font-size:16px;font-weight:700;color:var(--text2);">${fd(exempt)}</div><div style="font-size:9px;color:var(--text2);">${summary.exempt_disposal_count || 0} disposal(s) — still declarable (Anexo G1)</div></div>
+            <div><div class="mlabel" style="margin-bottom:3px;">Tax at ${summary.flat_rate_pct ?? '—'}% flat rate</div><div style="font-size:16px;font-weight:700;color:var(--yellow);">${fd(taxDue)}</div></div>
+        </div>
+        ${summary.has_loss_carryforward_candidate ? `<div style="font-size:10px;color:var(--yellow);margin-top:8px;background:rgba(255,204,0,0.08);border:1px solid var(--yellow);border-radius:3px;padding:8px 10px;">${escapeHtml(summary.loss_carryforward_note || '')}</div>` : ''}
+    `;
+
+    const disEl = document.getElementById('taxCgDisposals');
+    if (!disposals.length) {
+        disEl.innerHTML = '<div style="color:var(--text2);font-size:11px;padding:8px 0;">No disposals recorded for this year.</div>';
+        return;
+    }
+    const rowsHtml = disposals.map(d => {
+        const badge = d.exempt
+            ? `<span style="font-size:9px;padding:2px 7px;border-radius:8px;border:1px solid var(--text2);color:var(--text2);white-space:nowrap;">EXEMPT</span>`
+            : `<span style="font-size:9px;padding:2px 7px;border-radius:8px;border:1px solid var(--yellow);color:var(--yellow);white-space:nowrap;">TAXABLE</span>`;
+        const gl = Number(d.gain_loss) || 0;
+        return `<tr style="${d.exempt ? 'opacity:0.65;' : ''}">
+            <td>${escapeHtml(d.portfolio_name)}</td>
+            <td>${escapeHtml(d.asset)}${d.is_crypto ? ' <span style="font-size:9px;color:var(--text2);">(crypto)</span>' : ''}</td>
+            <td>${fq(Number(d.quantity) || 0)}</td>
+            <td>${escapeHtml(d.acquisition_date)}</td>
+            <td>${escapeHtml(d.disposal_date)}</td>
+            <td>${d.days_held}d</td>
+            <td>${fd(Number(d.cost_basis) || 0)}</td>
+            <td>${fd(Number(d.proceeds) || 0)}</td>
+            <td class="${gl < 0 ? 'neg' : gl > 0 ? 'pos' : ''}">${fd(gl)}</td>
+            <td>${badge}</td>
+            <td>${fd(Number(d.taxable_gain_loss) || 0)}</td>
+        </tr>`;
+    }).join('');
+    disEl.innerHTML = `<table><thead><tr>
+        <th>Portfolio</th><th>Asset</th><th>Qty</th><th>Acquired</th><th>Disposed</th><th>Held</th>
+        <th>Cost Basis</th><th>Proceeds</th><th>Gain/Loss</th><th>Status</th><th>Taxable</th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+function renderTaxCategoryE(catE) {
+    const el = document.getElementById('taxCatE');
+    const total = Number(catE.total_dividend_income) || 0;
+    const taxDue = Number(catE.tax_at_flat_rate) || 0;
+    const byPortfolio = Array.isArray(catE.by_portfolio) ? catE.by_portfolio : [];
+    el.innerHTML = `
+        <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div class="mlabel" style="margin-bottom:3px;">Total Dividend Income</div><div style="font-size:16px;font-weight:700;">${fd(total)}</div></div>
+            <div><div class="mlabel" style="margin-bottom:3px;">Tax at ${catE.flat_rate_pct ?? '—'}% flat rate</div><div style="font-size:16px;font-weight:700;color:var(--yellow);">${fd(taxDue)}</div></div>
+        </div>
+        ${byPortfolio.length
+            ? `<div style="margin-top:8px;">` + byPortfolio.map(p => `<div style="font-size:11px;color:var(--text2);">${escapeHtml(p.portfolio_name)}: ${fd(Number(p.amount) || 0)}</div>`).join('') + `</div>`
+            : '<div style="font-size:11px;color:var(--text2);margin-top:6px;">No dividend transactions recorded for this year.</div>'}
+    `;
+}
+
+async function runEnglobamentoAdvisor() {
+    const year = parseInt(document.getElementById('taxYearInput').value, 10) || new Date().getFullYear();
+    const otherIncomeRaw = document.getElementById('taxOtherIncome').value;
+    const otherIncome = parseFloat(otherIncomeRaw);
+    const outEl = document.getElementById('taxEnglobamento');
+    if (otherIncomeRaw === '' || isNaN(otherIncome) || otherIncome < 0) {
+        outEl.innerHTML = '<div style="color:var(--red);font-size:11px;">Enter your total other taxable income (0 or more) first — this is required, the tool cannot assume salary history alone is complete.</div>';
+        return;
+    }
+    outEl.innerHTML = '<div style="color:var(--text2);font-size:11px;">Calculating…</div>';
+    try {
+        const result = await rpcAuth('tax_englobamento_advisor', { p_tax_year: year, p_other_taxable_income: otherIncome });
+        const flat = result.flat_rate_scenario || {}, eng = result.englobamento_scenario || {};
+        const recLabel = result.recommendation === 'flat_rate' ? 'Flat Rate (28%)' : 'Englobamento (aggregation)';
+        outEl.innerHTML = `
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:220px;background:var(--card);border:1px solid ${result.recommendation === 'flat_rate' ? 'var(--green)' : 'var(--border)'};border-radius:4px;padding:10px 12px;">
+                    <div class="mlabel" style="margin-bottom:4px;">Flat Rate Scenario</div>
+                    <div style="font-size:18px;font-weight:800;">${fd(Number(flat.total_tax) || 0)}</div>
+                    <div style="font-size:10px;color:var(--text2);margin-top:4px;">${escapeHtml(flat.note || '')}</div>
+                </div>
+                <div style="flex:1;min-width:220px;background:var(--card);border:1px solid ${result.recommendation === 'englobamento' ? 'var(--green)' : 'var(--border)'};border-radius:4px;padding:10px 12px;">
+                    <div class="mlabel" style="margin-bottom:4px;">Englobamento Scenario</div>
+                    <div style="font-size:18px;font-weight:800;">${fd(Number(eng.total_tax) || 0)}</div>
+                    <div style="font-size:10px;color:var(--text2);margin-top:4px;">${escapeHtml(eng.note || '')}</div>
+                </div>
+            </div>
+            <div style="margin-top:10px;font-size:12px;">Lower estimated tax: <b style="color:var(--green);">${recLabel}</b> — by ${fd(Number(result.savings) || 0)} vs. the other option (both are estimates; see disclaimer above).</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:6px;">${escapeHtml(result.other_reason_to_consider_englobamento || '')}</div>
+        `;
+    } catch (err) {
+        outEl.innerHTML = `<div style="color:var(--red);font-size:11px;">${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderTaxYearConfigFooter(cfg, year) {
+    const el = document.getElementById('taxYearConfigFooter');
+    if (!cfg) { el.textContent = `No configured tax rules found for ${year} — figures above may have failed to load.`; return; }
+    el.innerHTML = `Rules and values for ${cfg.tax_year || year} (${escapeHtml(cfg.region || 'continente')}) — capital gains ${cfg.capital_gains_flat_rate_pct}% flat, dividends ${cfg.dividend_flat_rate_pct}% flat, crypto exemption at ${cfg.crypto_exemption_days}+ days held. ${escapeHtml(cfg.source_note || '')}`;
+}
+
+document.getElementById('taxModal').addEventListener('click', e => { if (e.target === document.getElementById('taxModal')) closeTaxSummary(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CASH FLOW (Phase 20/21/22, Supabase mode only) — everyday income/expense
+// ledger, completely separate from the investment Portfolios ledger built
+// earlier. Own modal (not folded into Edit Assets) with an internal tab bar
+// so later phases (budgets, goals, analytics) have somewhere to land without
+// a redesign. Shares the SAME authToken/session as Edit Assets & Tax Summary.
+//
+// Account picker sourced from accounts_list() (id/label/type/account_subtype,
+// anon+authenticated) — this closed a real gap the first version of this
+// panel had to work around with a self-bootstrapping/"Add by ID" fallback;
+// that workaround is gone now that a real lookup RPC exists.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function openCashFlow() {
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    if (source !== 'supabase') {
+        toast('Cash Flow requires Supabase mode — switch it on in Settings first.', true);
+        return;
+    }
+    if (!authToken) {
+        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
+        if (saved) authToken = saved;
+    }
+    document.getElementById('cfModal').classList.add('open');
+    updateCashFlowView();
+}
+
+function closeCashFlow() {
+    document.getElementById('cfModal').classList.remove('open');
+    const err = document.getElementById('cfLoginErr'); if (err) err.textContent = '';
+}
+
+function updateCashFlowView() {
+    const loginBox = document.getElementById('cfLoginBox');
+    const panel = document.getElementById('cfPanel');
+    if (authToken) {
+        loginBox.style.display = 'none';
+        panel.style.display = 'block';
+        cfStatus('', false);
+        switchCfTab(_cfActiveTab);
+        loadCashFlowAll();
+    } else {
+        loginBox.style.display = 'block';
+        panel.style.display = 'none';
+    }
+}
+
+async function loginCashFlow() {
+    const email = document.getElementById('cfEmail').value.trim();
+    const password = document.getElementById('cfPassword').value;
+    const errEl = document.getElementById('cfLoginErr');
+    const btn = document.getElementById('cfLoginBtn');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token) {
+            errEl.textContent = 'Invalid credentials.';
+            return;
+        }
+        authToken = data.access_token;
+        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
+        sessionStorage.setItem(SS_EMAIL_KEY, email);
+        document.getElementById('cfPassword').value = '';
+        errEl.textContent = '';
+        updateCashFlowView();
+    } catch (err) {
+        errEl.textContent = 'Sign-in failed — check your connection and try again.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
+
+function logoutCashFlow() {
+    logoutEditAssets(); // shared session — same authToken/sessionStorage keys
+    updateCashFlowView();
+}
+
+function cfStatus(msg, isErr) {
+    const el = document.getElementById('cfStatusMsg');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isErr ? 'var(--red)' : 'var(--green)';
+}
+
+function switchCfTab(tab) {
+    _cfActiveTab = tab;
+    ['txns', 'import', 'bills', 'goals', 'analytics', 'categories', 'tags'].forEach(t => {
+        const content = document.getElementById(`cfTab${t.charAt(0).toUpperCase()}${t.slice(1)}`);
+        const btn = document.getElementById(`cfTabBtn-${t}`);
+        const active = t === tab;
+        if (content) content.style.display = active ? 'block' : 'none';
+        if (btn) {
+            btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+            btn.style.color = active ? 'var(--accent)' : 'var(--text)';
+        }
+    });
+    if (tab === 'bills' && !_cfBillsRange) {
+        cfBillsQuickRange(30);
+    }
+    if (tab === 'analytics' && !_cfAnalyticsRange) {
+        cfAnalyticsQuickRange(6);
+    }
+}
+
+async function loadCashFlowAll() {
+    await Promise.all([loadCfAccounts(), loadCfCategories(), loadCfTags(), loadCfGoals()]);
+    await loadCashFlowTransactions();
+}
+
+// ── Account picker (accounts_list()) ────────────────────────────────────────
+async function loadCfAccounts() {
+    try {
+        const items = await rpc('accounts_list');
+        _cfAccounts = Array.isArray(items) ? items : [];
+        refreshCfAccountSelects();
+    } catch (err) {
+        cfStatus(`Failed to load accounts: ${err.message}`, true);
+    }
+}
+
+function refreshCfAccountSelects() {
+    const optionsHtml = _cfAccounts.length
+        ? _cfAccounts.map(a => `<option value="${a.id}">${escapeHtml(a.label)} (${escapeHtml(a.type)}${a.account_subtype ? '/' + escapeHtml(a.account_subtype) : ''})</option>`).join('')
+        : '<option value="">No accounts found</option>';
+    ['cfFilterAccount', 'cfTxnAccount', 'cfTransferFrom', 'cfTransferTo', 'cfImportAccount', 'cfGoalLinkedAccount'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        const prevVal = sel.value;
+        let prefix = '';
+        if (selId === 'cfFilterAccount') prefix = '<option value="">All accounts</option>';
+        else if (selId === 'cfGoalLinkedAccount') prefix = '<option value="">No linked account</option>';
+        sel.innerHTML = prefix + optionsHtml;
+        if (_cfAccounts.some(a => String(a.id) === prevVal)) sel.value = prevVal;
+    });
+}
+
+// ── Categories ──────────────────────────────────────────────────────────────
+async function loadCfCategories() {
+    try {
+        const items = await rpc('category_list');
+        _cfCategories = Array.isArray(items) ? items : [];
+        renderCfCategories();
+        renderCfCategoryFilterAndPickers();
+    } catch (err) {
+        cfStatus(`Failed to load categories: ${err.message}`, true);
+    }
+}
+
+function renderCfCategories() {
+    const incWrap = document.getElementById('cfCategoriesIncome');
+    const expWrap = document.getElementById('cfCategoriesExpense');
+    if (!incWrap || !expWrap) return;
+    ['income', 'expense'].forEach(kind => {
+        const wrap = kind === 'income' ? incWrap : expWrap;
+        const topLevel = _cfCategories.filter(c => c.kind === kind && !c.parent_id);
+        if (!topLevel.length) { wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;">None yet.</div>'; return; }
+        wrap.innerHTML = topLevel.map(cat => {
+            const children = _cfCategories.filter(c => c.parent_id === cat.id);
+            const rowHtml = (c, indent) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;${indent ? 'padding-left:18px;' : ''}${c.is_active ? '' : 'opacity:0.5;'}">
+                <div style="font-size:12px;">${escapeHtml(c.name)}${!c.is_active ? ' <span style="font-size:9px;color:var(--text2);">(inactive)</span>' : ''}</div>
+                <div style="display:flex;gap:5px;">
+                    <button class="mgray" style="padding:3px 8px;font-size:10px;" onclick="toggleCfCategoryActive(${c.id}, ${!c.is_active})">${c.is_active ? 'Deactivate' : 'Activate'}</button>
+                    <button class="mgray" style="padding:3px 8px;font-size:10px;color:var(--red);" onclick="removeCfCategory(${c.id})">Remove</button>
+                </div>
+            </div>`;
+            return rowHtml(cat, false) + children.map(c => rowHtml(c, true)).join('');
+        }).join('');
+    });
+}
+
+// Populates the category filter dropdown (all categories) and the Add
+// Transaction form's category dropdown (filtered to the current direction's
+// kind, and to active categories only), plus the new-category parent picker.
+function renderCfCategoryFilterAndPickers() {
+    const catOptionsHtml = _cfCategories.map(c => `<option value="${c.id}">${c.parent_id ? '— ' : ''}${escapeHtml(c.name)} (${c.kind})</option>`).join('');
+    const filterSel = document.getElementById('cfFilterCategory');
+    if (filterSel) {
+        const prev = filterSel.value;
+        filterSel.innerHTML = '<option value="">All categories</option>' + catOptionsHtml;
+        filterSel.value = prev;
+    }
+    const importCatSel = document.getElementById('cfImportCategory');
+    if (importCatSel) {
+        const prev = importCatSel.value;
+        importCatSel.innerHTML = '<option value="">Leave uncategorized</option>' + catOptionsHtml;
+        importCatSel.value = prev;
+    }
+    cfDirectionChanged();
+    cfNewCatKindChanged();
+}
+
+function cfDirectionChanged() {
+    const dirSel = document.getElementById('cfTxnDirection');
+    const catSel = document.getElementById('cfTxnCategory');
+    if (!dirSel || !catSel) return;
+    const kind = dirSel.value; // 'income' | 'expense'
+    const prev = catSel.value;
+    const opts = _cfCategories.filter(c => c.kind === kind && c.is_active);
+    catSel.innerHTML = '<option value="">No category</option>' +
+        opts.map(c => `<option value="${c.id}">${c.parent_id ? '— ' : ''}${escapeHtml(c.name)}</option>`).join('');
+    if (opts.some(c => String(c.id) === prev)) catSel.value = prev;
+}
+
+function cfNewCatKindChanged() {
+    const kindSel = document.getElementById('cfNewCatKind');
+    const parentSel = document.getElementById('cfNewCatParent');
+    if (!kindSel || !parentSel) return;
+    const kind = kindSel.value;
+    const topLevel = _cfCategories.filter(c => c.kind === kind && !c.parent_id);
+    parentSel.innerHTML = '<option value="">Top-level (no parent)</option>' +
+        topLevel.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+}
+
+async function addCfCategory() {
+    const name = document.getElementById('cfNewCatName').value.trim();
+    const kind = document.getElementById('cfNewCatKind').value;
+    const parentId = document.getElementById('cfNewCatParent').value;
+    if (!name) { cfStatus('Enter a category name.', true); return; }
+    cfStatus('Adding…', false);
+    try {
+        await rpcAuth('category_add', { p_name: name, p_kind: kind, p_parent_id: parentId ? parseInt(parentId, 10) : null });
+        document.getElementById('cfNewCatName').value = '';
+        cfStatus('Category added.', false);
+        await loadCfCategories();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function toggleCfCategoryActive(id, newActive) {
+    cfStatus(newActive ? 'Activating…' : 'Deactivating…', false);
+    try {
+        await rpcAuth('category_update', { p_id: id, p_is_active: newActive });
+        cfStatus('Saved.', false);
+        await loadCfCategories();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function removeCfCategory(id) {
+    if (!confirm('Remove this category? This only works if no transactions use it yet.')) return;
+    cfStatus('Removing…', false);
+    try {
+        await rpcAuth('category_remove', { p_id: id });
+        cfStatus('Category removed.', false);
+        await loadCfCategories();
+    } catch (err) {
+        // category_remove()'s own error message already explains "deactivate
+        // instead" when transactions reference it — surface it verbatim.
+        cfStatus(err.message, true);
+    }
+}
+
+// ── Tags ────────────────────────────────────────────────────────────────────
+async function loadCfTags() {
+    try {
+        const items = await rpc('tag_list');
+        _cfTags = Array.isArray(items) ? items : [];
+        renderCfTags();
+        renderCfTagsFilterAndPicker();
+    } catch (err) {
+        cfStatus(`Failed to load tags: ${err.message}`, true);
+    }
+}
+
+function renderCfTags() {
+    const wrap = document.getElementById('cfTagsList');
+    if (!wrap) return;
+    if (!_cfTags.length) { wrap.innerHTML = '<div style="color:var(--text2);font-size:11px;padding:8px 0;">No tags yet.</div>'; return; }
+    const rowsHtml = _cfTags.map(t => `<tr>
+        <td>${escapeHtml(t.name)}</td>
+        <td style="text-align:right;"><button class="mgray" style="padding:4px 9px;font-size:10px;color:var(--red);" onclick="removeCfTag(${t.id})">Remove</button></td>
+    </tr>`).join('');
+    wrap.innerHTML = `<table><thead><tr><th>Name</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+function renderCfTagsFilterAndPicker() {
+    const filterSel = document.getElementById('cfFilterTag');
+    if (filterSel) {
+        const prev = filterSel.value;
+        filterSel.innerHTML = '<option value="">All tags</option>' + _cfTags.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        filterSel.value = prev;
+    }
+    const picker = document.getElementById('cfTxnTagsPicker');
+    if (picker) {
+        picker.innerHTML = _cfTags.length
+            ? _cfTags.map(t => `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="cf-tag-check" value="${t.id}"> ${escapeHtml(t.name)}</label>`).join('')
+            : '<span>No tags yet — add some in the Tags tab.</span>';
+    }
+}
+
+async function addCfTag() {
+    const name = document.getElementById('cfNewTagName').value.trim();
+    if (!name) { cfStatus('Enter a tag name.', true); return; }
+    cfStatus('Adding…', false);
+    try {
+        await rpcAuth('tag_add', { p_name: name });
+        document.getElementById('cfNewTagName').value = '';
+        cfStatus('Tag added.', false);
+        await loadCfTags();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function removeCfTag(id) {
+    if (!confirm('Remove this tag? It will be detached from any transactions that use it.')) return;
+    cfStatus('Removing…', false);
+    try {
+        await rpcAuth('tag_remove', { p_id: id });
+        cfStatus('Tag removed.', false);
+        await loadCfTags();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+// ── Transactions ────────────────────────────────────────────────────────────
+function clearCfFilters() {
+    document.getElementById('cfFilterFrom').value = '';
+    document.getElementById('cfFilterTo').value = '';
+    document.getElementById('cfFilterAccount').value = '';
+    document.getElementById('cfFilterCategory').value = '';
+    document.getElementById('cfFilterTag').value = '';
+    document.getElementById('cfFilterDirection').value = '';
+    loadCashFlowTransactions();
+}
+
+async function loadCashFlowTransactions() {
+    const wrap = document.getElementById('cfTxnList');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    const args = {};
+    const from = document.getElementById('cfFilterFrom').value; if (from) args.p_from = from;
+    const to = document.getElementById('cfFilterTo').value; if (to) args.p_to = to;
+    const acct = document.getElementById('cfFilterAccount').value; if (acct) args.p_account_id = parseInt(acct, 10);
+    const cat = document.getElementById('cfFilterCategory').value; if (cat) args.p_category_id = parseInt(cat, 10);
+    const tag = document.getElementById('cfFilterTag').value; if (tag) args.p_tag_id = parseInt(tag, 10);
+    const dir = document.getElementById('cfFilterDirection').value; if (dir) args.p_direction = dir;
+    try {
+        const rows = await rpcAuth('cashflow_transactions_list', args);
+        _cfTransactions = Array.isArray(rows) ? rows : [];
+        renderCfTransactions();
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderCfTransactions() {
+    const wrap = document.getElementById('cfTxnList');
+    if (!_cfTransactions.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No transactions match these filters.</div>';
+        return;
+    }
+    const rowsHtml = _cfTransactions.map(t => {
+        const isTransfer = t.direction === 'transfer';
+        const dirColor = t.direction === 'income' ? 'pos' : t.direction === 'expense' ? 'neg' : '';
+        const dirLabel = isTransfer ? '&#8644; Transfer' : (t.direction.charAt(0).toUpperCase() + t.direction.slice(1));
+        const amountSign = t.direction === 'income' ? '+' : t.direction === 'expense' ? '-' : '';
+        const tagsHtml = (t.tags || []).map(tg => `<span style="font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid var(--border);color:var(--text2);margin-right:3px;">${escapeHtml(tg.name)}</span>`).join('');
+        const actions = isTransfer
+            ? `<button class="mgray" style="padding:4px 9px;font-size:10px;color:var(--red);" onclick="removeCfTransfer(${t.id})">Remove Transfer</button>`
+            : `<button class="mgray" style="padding:4px 9px;font-size:10px;" onclick="editCfTransaction(${t.id})">Edit</button>
+               <button class="mgray" style="padding:4px 9px;font-size:10px;color:var(--red);" onclick="removeCfTransaction(${t.id})">Remove</button>`;
+        return `<tr>
+            <td style="white-space:nowrap;">${escapeHtml(t.txn_date)}</td>
+            <td>${escapeHtml(t.account_label)}</td>
+            <td class="${dirColor}">${dirLabel}</td>
+            <td>${escapeHtml(t.category_name || (isTransfer ? '—' : 'Uncategorized'))}</td>
+            <td class="${dirColor}">${amountSign}${fd(Number(t.amount) || 0).replace('$', '€')}</td>
+            <td>${escapeHtml(t.description || '')}${t.merchant ? ` <span style="color:var(--text2);">(${escapeHtml(t.merchant)})</span>` : ''}</td>
+            <td>${tagsHtml}</td>
+            <td style="white-space:nowrap;">${actions}</td>
+        </tr>`;
+    }).join('');
+    wrap.innerHTML = `<table><thead><tr>
+        <th>Date</th><th>Account</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th>Tags</th><th></th>
+    </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+function toggleCfAddTxnForm() {
+    const form = document.getElementById('cfAddTxnForm');
+    const willShow = form.style.display === 'none' || !form.style.display;
+    form.style.display = willShow ? 'block' : 'none';
+    if (willShow && !_cfEditingId) {
+        document.getElementById('cfAddTxnTitle').textContent = 'Add Transaction';
+        document.getElementById('cfTxnSubmitBtn').textContent = 'Add';
+        if (!document.getElementById('cfTxnDate').value) document.getElementById('cfTxnDate').value = new Date().toISOString().slice(0, 10);
+        cfDirectionChanged();
+    }
+}
+
+function cancelCfTxnForm() {
+    _cfEditingId = null;
+    document.getElementById('cfAddTxnForm').style.display = 'none';
+    document.getElementById('cfTxnAccountRow').style.display = 'flex';
+    document.getElementById('cfTxnDirectionRow').style.display = 'flex';
+    document.getElementById('cfTxnAmount').value = '';
+    document.getElementById('cfTxnDescription').value = '';
+    document.getElementById('cfTxnMerchant').value = '';
+    document.getElementById('cfTxnNote').value = '';
+    document.querySelectorAll('.cf-tag-check').forEach(cb => { cb.checked = false; });
+}
+
+async function editCfTransaction(id) {
+    const t = _cfTransactions.find(r => r.id === id);
+    if (!t) return;
+    _cfEditingId = id;
+    document.getElementById('cfAddTxnForm').style.display = 'block';
+    document.getElementById('cfAddTxnTitle').textContent = `Edit Transaction #${id}`;
+    document.getElementById('cfTxnSubmitBtn').textContent = 'Save Changes';
+    // Account/direction can't change after creation (backend-enforced) — hide those controls.
+    document.getElementById('cfTxnAccountRow').style.display = 'none';
+    document.getElementById('cfTxnDirectionRow').style.display = 'none';
+    document.getElementById('cfTxnDirection').value = t.direction === 'income' ? 'income' : 'expense';
+    cfDirectionChanged();
+    document.getElementById('cfTxnCategory').value = t.category_id || '';
+    document.getElementById('cfTxnAmount').value = t.amount;
+    document.getElementById('cfTxnDate').value = t.txn_date;
+    document.getElementById('cfTxnDescription').value = t.description || '';
+    document.getElementById('cfTxnMerchant').value = t.merchant || '';
+    document.getElementById('cfTxnNote').value = t.note || '';
+    const tagIds = new Set((t.tags || []).map(tg => String(tg.id)));
+    document.querySelectorAll('.cf-tag-check').forEach(cb => { cb.checked = tagIds.has(cb.value); });
+    document.getElementById('cfAddTxnForm').scrollIntoView({ block: 'center' });
+}
+
+async function submitCfTxnForm() {
+    const amount = parseFloat(document.getElementById('cfTxnAmount').value);
+    const date = document.getElementById('cfTxnDate').value;
+    const categoryVal = document.getElementById('cfTxnCategory').value;
+    const description = document.getElementById('cfTxnDescription').value.trim();
+    const merchant = document.getElementById('cfTxnMerchant').value.trim();
+    const note = document.getElementById('cfTxnNote').value.trim();
+    const tagIds = Array.from(document.querySelectorAll('.cf-tag-check:checked')).map(cb => parseInt(cb.value, 10));
+    if (isNaN(amount) || amount <= 0) { cfStatus('Enter an amount greater than 0.', true); return; }
+    if (!date) { cfStatus('Enter a date.', true); return; }
+
+    if (_cfEditingId) {
+        cfStatus('Saving…', false);
+        try {
+            await rpcAuth('cashflow_transaction_update', {
+                p_id: _cfEditingId,
+                p_category_id: categoryVal ? parseInt(categoryVal, 10) : null,
+                p_clear_category: !categoryVal,
+                p_amount: amount, p_txn_date: date,
+                p_description: description || null, p_merchant: merchant || null, p_note: note || null,
+                p_tag_ids: tagIds,
+            });
+            cfStatus('Transaction updated.', false);
+            cancelCfTxnForm();
+            document.getElementById('cfAddTxnForm').style.display = 'none';
+            await loadCashFlowTransactions();
+        } catch (err) {
+            cfStatus(err.message, true);
+        }
+        return;
+    }
+
+    const accountId = parseInt(document.getElementById('cfTxnAccount').value, 10);
+    const direction = document.getElementById('cfTxnDirection').value;
+    if (isNaN(accountId)) { cfStatus('Select an account first.', true); return; }
+    cfStatus('Adding…', false);
+    try {
+        await rpcAuth('cashflow_transaction_add', {
+            p_account_id: accountId, p_direction: direction, p_amount: amount, p_txn_date: date,
+            p_category_id: categoryVal ? parseInt(categoryVal, 10) : null,
+            p_description: description || null, p_merchant: merchant || null, p_note: note || null,
+            p_tag_ids: tagIds.length ? tagIds : null,
+        });
+        cfStatus('Transaction added.', false);
+        cancelCfTxnForm();
+        document.getElementById('cfAddTxnForm').style.display = 'none';
+        await loadCashFlowTransactions();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function removeCfTransaction(id) {
+    const t = _cfTransactions.find(r => r.id === id);
+    const desc = t ? `${t.txn_date} · ${t.direction} · ${fd(Number(t.amount) || 0).replace('$', '€')}` : `#${id}`;
+    if (!confirm(`Remove this transaction (${desc})? This cannot be undone.`)) return;
+    cfStatus('Removing…', false);
+    try {
+        await rpcAuth('cashflow_transaction_remove', { p_id: id });
+        cfStatus('Removed.', false);
+        await loadCashFlowTransactions();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function removeCfTransfer(id) {
+    if (!confirm('Remove this transfer? Both linked legs will be removed together. This cannot be undone.')) return;
+    cfStatus('Removing transfer…', false);
+    try {
+        await rpcAuth('cashflow_transfer_remove', { p_transaction_id: id });
+        cfStatus('Transfer removed.', false);
+        await loadCashFlowTransactions();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+function toggleCfAddTransferForm() {
+    const form = document.getElementById('cfAddTransferForm');
+    const willShow = form.style.display === 'none' || !form.style.display;
+    form.style.display = willShow ? 'block' : 'none';
+    if (willShow && !document.getElementById('cfTransferDate').value) {
+        document.getElementById('cfTransferDate').value = new Date().toISOString().slice(0, 10);
+    }
+}
+
+async function submitCfTransfer() {
+    const fromId = parseInt(document.getElementById('cfTransferFrom').value, 10);
+    const toId = parseInt(document.getElementById('cfTransferTo').value, 10);
+    const amount = parseFloat(document.getElementById('cfTransferAmount').value);
+    const date = document.getElementById('cfTransferDate').value;
+    const description = document.getElementById('cfTransferDescription').value.trim();
+    const note = document.getElementById('cfTransferNote').value.trim();
+    if (isNaN(fromId) || isNaN(toId)) { cfStatus('Select both a from and a to account.', true); return; }
+    if (fromId === toId) { cfStatus('From and To accounts must differ.', true); return; }
+    if (isNaN(amount) || amount <= 0) { cfStatus('Enter an amount greater than 0.', true); return; }
+    if (!date) { cfStatus('Enter a date.', true); return; }
+    cfStatus('Adding transfer…', false);
+    try {
+        await rpcAuth('cashflow_transfer_add', {
+            p_from_account_id: fromId, p_to_account_id: toId, p_amount: amount, p_txn_date: date,
+            p_description: description || null, p_note: note || null,
+        });
+        document.getElementById('cfTransferAmount').value = '';
+        document.getElementById('cfTransferDescription').value = '';
+        document.getElementById('cfTransferNote').value = '';
+        cfStatus('Transfer added.', false);
+        document.getElementById('cfAddTransferForm').style.display = 'none';
+        await loadCashFlowTransactions();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+// ── CSV Import (Phase 21) ───────────────────────────────────────────────────
+// Classic 4-step flow (upload → map columns → preview → confirm), matching
+// Census.money's own import UX per the coordinator's brief. Parsing/mapping/
+// preview all happen client-side; only the final mapped row set is sent, in
+// one call to cashflow_transactions_bulk_add() (server-side per-row
+// validation + duplicate skip + partial-failure isolation, same contract as
+// cashflow_transaction_add plus a p_skip_duplicates flag).
+
+// Minimal RFC4180-ish CSV parser: handles quoted fields (incl. embedded
+// delimiters/newlines, "" as an escaped quote) and auto-detects comma vs
+// semicolon from the header line (PT/EU exports commonly use semicolon).
+function parseCsvText(text) {
+    const firstLine = text.split(/\r\n|\n|\r/)[0] || '';
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semiCount = (firstLine.match(/;/g) || []).length;
+    const delim = semiCount > commaCount ? ';' : ',';
+
+    const rows = [];
+    let field = '', row = [], inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i], next = text[i + 1];
+        if (inQuotes) {
+            if (c === '"' && next === '"') { field += '"'; i++; }
+            else if (c === '"') { inQuotes = false; }
+            else { field += c; }
+        } else {
+            if (c === '"') { inQuotes = true; }
+            else if (c === delim) { row.push(field); field = ''; }
+            else if (c === '\n' || c === '\r') {
+                if (c === '\r' && next === '\n') i++;
+                row.push(field); field = '';
+                if (row.length > 1 || row[0] !== '') rows.push(row);
+                row = [];
+            } else { field += c; }
+        }
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows;
+}
+
+function handleCfImportFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        const rows = parseCsvText(String(reader.result));
+        if (!rows.length) { cfStatus('That CSV appears to be empty.', true); return; }
+        _cfImportRawRows = rows;
+        buildCfImportMappingStep();
+        cfGotoImportStep(2);
+    };
+    reader.onerror = () => cfStatus('Failed to read the file.', true);
+    reader.readAsText(file);
+}
+
+const CF_IMPORT_ROLES = ['ignore', 'date', 'amount', 'direction', 'description', 'merchant', 'note'];
+const CF_IMPORT_ROLE_LABELS = { ignore: 'Ignore', date: 'Date', amount: 'Amount', direction: 'Direction (income/expense)', description: 'Description', merchant: 'Merchant', note: 'Note' };
+
+function cfGuessColumnRole(headerName) {
+    const n = (headerName || '').toLowerCase();
+    if (/date|data/.test(n)) return 'date';
+    if (/amount|valor|montante|value/.test(n)) return 'amount';
+    if (/desc|memo|details|historico|histórico/.test(n)) return 'description';
+    if (/merchant|payee|entidade|beneficiary/.test(n)) return 'merchant';
+    if (/note|obs/.test(n)) return 'note';
+    if (/type|direction|tipo/.test(n)) return 'direction';
+    return 'ignore';
+}
+
+function buildCfImportMappingStep() {
+    const hasHeader = document.getElementById('cfImportHasHeader').checked;
+    const rows = _cfImportRawRows;
+    if (!rows || !rows.length) return;
+    const colCount = rows[0].length;
+    const headerRow = hasHeader ? rows[0] : Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
+    const sampleRow = hasHeader ? (rows[1] || []) : (rows[0] || []);
+    const wrap = document.getElementById('cfImportMappingCols');
+    wrap.innerHTML = headerRow.map((h, i) => `
+        <div class="mrow-row" style="align-items:center;margin-top:8px;">
+            <div style="flex:1;min-width:140px;font-size:11px;"><b>${escapeHtml(h)}</b><div style="color:var(--text2);font-size:10px;">e.g. "${escapeHtml(sampleRow[i] ?? '')}"</div></div>
+            <select class="minput" style="flex:1;min-width:180px;" id="cfImportColRole-${i}">
+                ${CF_IMPORT_ROLES.map(r => `<option value="${r}" ${cfGuessColumnRole(h) === r ? 'selected' : ''}>${CF_IMPORT_ROLE_LABELS[r]}</option>`).join('')}
+            </select>
+        </div>`).join('');
+}
+
+function cfParseDate(raw, fmt) {
+    if (!raw) return null;
+    const parts = String(raw).trim().split(/[\/\-.]/);
+    if (parts.length !== 3) return null;
+    let y, m, d;
+    if (fmt === 'YMD') { [y, m, d] = parts; }
+    else if (fmt === 'DMY') { [d, m, y] = parts; }
+    else { [m, d, y] = parts; } // MDY
+    if (y.length === 2) y = '20' + y;
+    m = m.padStart(2, '0'); d = d.padStart(2, '0');
+    if (!/^\d{4}$/.test(y) || !/^\d{2}$/.test(m) || !/^\d{2}$/.test(d)) return null;
+    const iso = `${y}-${m}-${d}`;
+    const dt = new Date(`${iso}T00:00:00Z`);
+    if (isNaN(dt.getTime()) || dt.getUTCDate() !== parseInt(d, 10)) return null; // catches e.g. day 31 in a 30-day month
+    return iso;
+}
+
+function cfParseAmount(raw) {
+    if (raw === undefined || raw === null) return null;
+    let s = String(raw).trim().replace(/[€$\s]/g, '');
+    if (s === '') return null;
+    const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
+    if (lastComma > -1 && lastDot > -1) {
+        s = lastComma > lastDot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    } else if (lastComma > -1) {
+        s = s.replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+}
+
+function cfParseDirection(raw) {
+    const s = String(raw || '').trim().toLowerCase();
+    if (['income', 'credit', 'in', '+', 'deposit', 'receita'].includes(s)) return 'income';
+    if (['expense', 'debit', 'out', '-', 'withdrawal', 'payment', 'despesa'].includes(s)) return 'expense';
+    return null;
+}
+
+function parseAndValidateCfImportRows() {
+    const hasHeader = document.getElementById('cfImportHasHeader').checked;
+    const rows = _cfImportRawRows;
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const colCount = rows[0].length;
+    const roleOf = {};
+    for (let i = 0; i < colCount; i++) {
+        const sel = document.getElementById(`cfImportColRole-${i}`);
+        if (sel && sel.value !== 'ignore') roleOf[sel.value] = i;
+    }
+    const dateFmt = document.getElementById('cfImportDateFormat').value;
+    const signedAmounts = document.getElementById('cfImportSignedAmounts').checked;
+    const accountId = parseInt(document.getElementById('cfImportAccount').value, 10);
+    const categoryVal = document.getElementById('cfImportCategory').value;
+
+    const valid = [], excluded = [];
+    dataRows.forEach((r, i) => {
+        const rowNum = i + 1 + (hasHeader ? 1 : 0); // 1-based CSV line number
+        if (!r.some(f => f !== undefined && String(f).trim() !== '')) return; // skip blank lines silently
+        const isoDate = roleOf.date !== undefined ? cfParseDate(r[roleOf.date], dateFmt) : null;
+        const amtRaw = roleOf.amount !== undefined ? cfParseAmount(r[roleOf.amount]) : null;
+        let direction = null;
+        if (roleOf.direction !== undefined) {
+            direction = cfParseDirection(r[roleOf.direction]);
+        } else if (signedAmounts && amtRaw !== null) {
+            direction = amtRaw < 0 ? 'expense' : 'income';
+        }
+        const amount = amtRaw !== null ? Math.abs(amtRaw) : null;
+        const description = roleOf.description !== undefined ? String(r[roleOf.description] || '').trim() : '';
+        const merchant = roleOf.merchant !== undefined ? String(r[roleOf.merchant] || '').trim() : '';
+        const note = roleOf.note !== undefined ? String(r[roleOf.note] || '').trim() : '';
+
+        const problems = [];
+        if (roleOf.date === undefined) problems.push('no Date column mapped');
+        else if (!isoDate) problems.push('unparseable date');
+        if (roleOf.amount === undefined) problems.push('no Amount column mapped');
+        else if (amount === null || amount === 0) problems.push('unparseable or zero amount');
+        if (!direction) problems.push('could not determine income/expense (map a Direction column or enable the amount-sign option)');
+
+        if (problems.length) {
+            excluded.push({ rowNum, raw: r, reason: problems.join('; ') });
+        } else {
+            valid.push({
+                rowNum, account_id: accountId, direction, amount, txn_date: isoDate,
+                category_id: categoryVal ? parseInt(categoryVal, 10) : null,
+                description: description || null, merchant: merchant || null, note: note || null,
+                currency: 'EUR',
+            });
+        }
+    });
+    return { valid, excluded };
+}
+
+function cfGoToPreview() {
+    if (isNaN(parseInt(document.getElementById('cfImportAccount').value, 10))) {
+        cfStatus('Select an account for this import first.', true);
+        return;
+    }
+    const { valid, excluded } = parseAndValidateCfImportRows();
+    _cfImportValidRows = valid;
+    _cfImportExcludedRows = excluded;
+    renderCfImportPreview();
+    cfGotoImportStep(3);
+}
+
+function renderCfImportPreview() {
+    const summary = document.getElementById('cfImportPreviewSummary');
+    summary.innerHTML = `<b style="color:var(--green);">${_cfImportValidRows.length}</b> row(s) ready to import` +
+        (_cfImportExcludedRows.length ? `, <b style="color:var(--yellow);">${_cfImportExcludedRows.length}</b> row(s) excluded below (won't be sent — fix the mapping and go back if this looks wrong).` : '.');
+    const validRowsHtml = _cfImportValidRows.map(r => `<tr>
+        <td>${r.rowNum}</td><td>${r.txn_date}</td>
+        <td class="${r.direction === 'income' ? 'pos' : 'neg'}">${r.direction}</td>
+        <td>${fd(r.amount).replace('$', '€')}</td>
+        <td>${escapeHtml(r.description || '')}</td>
+        <td>${escapeHtml(r.merchant || '')}</td>
+    </tr>`).join('');
+    const excludedRowsHtml = _cfImportExcludedRows.map(r => `<tr style="opacity:0.75;">
+        <td>${r.rowNum}</td>
+        <td colspan="4" style="color:var(--red);white-space:normal;">${escapeHtml(r.reason)}</td>
+        <td style="color:var(--text2);">${escapeHtml((r.raw || []).join(' | '))}</td>
+    </tr>`).join('');
+    document.getElementById('cfImportPreviewWrap').innerHTML = `
+        <label class="mlabel">Ready to Import (${_cfImportValidRows.length})</label>
+        <div class="twrap" style="max-height:220px;overflow:auto;"><table><thead><tr>
+            <th>CSV Row</th><th>Date</th><th>Type</th><th>Amount</th><th>Description</th><th>Merchant</th>
+        </tr></thead><tbody>${validRowsHtml || '<tr><td colspan="6" style="color:var(--text2);">None.</td></tr>'}</tbody></table></div>
+        ${_cfImportExcludedRows.length ? `<label class="mlabel" style="margin-top:14px;">Excluded — Won't Be Imported (${_cfImportExcludedRows.length})</label>
+        <div class="twrap" style="max-height:160px;overflow:auto;"><table><thead><tr><th>CSV Row</th><th colspan="4">Reason</th><th>Raw Data</th></tr></thead><tbody>${excludedRowsHtml}</tbody></table></div>` : ''}
+    `;
+}
+
+async function confirmCfImport() {
+    if (!_cfImportValidRows.length) { cfStatus('Nothing to import.', true); return; }
+    const skipDup = document.getElementById('cfImportSkipDup').checked;
+    const payload = _cfImportValidRows.map(r => ({
+        account_id: r.account_id, direction: r.direction, amount: r.amount, txn_date: r.txn_date,
+        category_id: r.category_id, description: r.description, merchant: r.merchant, note: r.note, currency: r.currency,
+    }));
+    const btn = document.getElementById('cfImportConfirmBtn');
+    btn.disabled = true;
+    cfStatus('Importing…', false);
+    try {
+        const result = await rpcAuth('cashflow_transactions_bulk_add', { p_rows: payload, p_skip_duplicates: skipDup });
+        renderCfImportResult(result);
+        cfGotoImportStep(4);
+        cfStatus('Import finished.', false);
+    } catch (err) {
+        cfStatus(err.message, true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderCfImportResult(result) {
+    const s = result.summary || {};
+    const statBox = (label, val, color) => `<div style="flex:1;min-width:100px;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:10px 12px;text-align:center;">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">${label}</div>
+        <div style="font-size:20px;font-weight:800;${color ? `color:${color};` : ''}">${val}</div>
+    </div>`;
+    document.getElementById('cfImportResultStats').innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${statBox('Total', s.total ?? 0)}
+        ${statBox('Inserted', s.inserted ?? 0, 'var(--green)')}
+        ${statBox('Skipped', s.skipped ?? 0, 'var(--yellow)')}
+        ${statBox('Errored', s.errored ?? 0, 'var(--red)')}
+    </div>`;
+    const rows = result.results || [];
+    const rowsHtml = rows.map(r => {
+        const color = r.status === 'inserted' ? 'var(--green)' : r.status === 'skipped' ? 'var(--yellow)' : 'var(--red)';
+        const detail = r.reason || (r.transaction_id ? `Created transaction #${r.transaction_id}` : '');
+        return `<tr>
+            <td>${r.row_index}</td>
+            <td style="color:${color};text-transform:uppercase;font-size:10px;">${r.status}</td>
+            <td>${escapeHtml(detail)}</td>
+        </tr>`;
+    }).join('');
+    document.getElementById('cfImportResultRows').innerHTML = `<table><thead><tr><th>Row</th><th>Status</th><th>Detail</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+function resetCfImport() {
+    _cfImportRawRows = null;
+    _cfImportValidRows = [];
+    _cfImportExcludedRows = [];
+    const fileEl = document.getElementById('cfImportFile');
+    if (fileEl) fileEl.value = '';
+    cfGotoImportStep(1);
+}
+
+function cfGotoImportStep(n) {
+    _cfImportStep = n;
+    for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`cfImportStep${i}`);
+        if (el) el.style.display = i === n ? 'block' : 'none';
+    }
+}
+
+// ── Bills Calendar (Phase 22) ───────────────────────────────────────────────
+// Upcoming-list layout (grouped by date), not a month-grid — matches this
+// modal's established list/table visual language better than a calendar
+// widget would, and every other tab here is list-based too. bills_calendar()
+// merges recurring_rules + loan_details + already-logged future transactions;
+// per the coordinator's brief, an active recurring rule's own projection can
+// coincide with a manually-logged transaction with no reconciliation between
+// them (a known backend limitation, not a bug) — softened here by flagging
+// same-date/same-amount/same-direction entries as "possible duplicate"
+// rather than silently showing two unexplained identical lines.
+function cfBillsQuickRange(days) {
+    const from = new Date();
+    const to = new Date();
+    to.setDate(to.getDate() + days);
+    document.getElementById('cfBillsFrom').value = from.toISOString().slice(0, 10);
+    document.getElementById('cfBillsTo').value = to.toISOString().slice(0, 10);
+    loadCfBills();
+}
+
+async function loadCfBills() {
+    const from = document.getElementById('cfBillsFrom').value;
+    const to = document.getElementById('cfBillsTo').value;
+    if (!from || !to) { cfStatus('Pick a From and To date (or use a quick-range button).', true); return; }
+    const wrap = document.getElementById('cfBillsList');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    try {
+        const rows = await rpcAuth('bills_calendar', { p_from: from, p_to: to });
+        _cfBills = Array.isArray(rows) ? rows : [];
+        _cfBillsRange = { from, to };
+        renderCfBills();
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+const CF_BILLS_SOURCE_BADGE = { recurring: 'RECURRING', loan: 'LOAN', transaction: 'LOGGED' };
+const CF_BILLS_SOURCE_COLOR = { recurring: 'var(--accent)', loan: 'var(--yellow)', transaction: 'var(--text2)' };
+
+function renderCfBills() {
+    const wrap = document.getElementById('cfBillsList');
+    if (!_cfBills.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Nothing due in this range.</div>';
+        return;
+    }
+    const dupKey = b => `${b.due_date}|${b.amount}|${b.direction}`;
+    const counts = {};
+    _cfBills.forEach(b => { counts[dupKey(b)] = (counts[dupKey(b)] || 0) + 1; });
+
+    const sorted = [...(_cfBills)].sort((a, b) => a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0);
+    const byDate = {};
+    sorted.forEach(b => { (byDate[b.due_date] = byDate[b.due_date] || []).push(b); });
+
+    wrap.innerHTML = Object.keys(byDate).map(date => {
+        const rowsHtml = byDate[date].map(b => {
+            const isDup = counts[dupKey(b)] > 1;
+            const dirColor = b.direction === 'income' ? 'pos' : 'neg';
+            const sign = b.direction === 'income' ? '+' : '-';
+            const badgeColor = CF_BILLS_SOURCE_COLOR[b.source_kind] || 'var(--border)';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:9px;padding:2px 6px;border-radius:8px;border:1px solid ${badgeColor};color:${badgeColor};white-space:nowrap;">${CF_BILLS_SOURCE_BADGE[b.source_kind] || escapeHtml(b.source_kind)}</span>
+                    <span style="font-size:12px;">${escapeHtml(b.label)}</span>
+                    ${isDup ? '<span style="font-size:9px;color:var(--yellow);">possible duplicate</span>' : ''}
+                </div>
+                <div class="${dirColor}" style="font-size:13px;font-weight:600;white-space:nowrap;">${sign}${fd(Number(b.amount) || 0).replace('$', '€')}</div>
+            </div>`;
+        }).join('');
+        return `<div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${escapeHtml(date)}</div>
+            ${rowsHtml}
+        </div>`;
+    }).join('');
+}
+
+// ── Goals (Phase 26) ─────────────────────────────────────────────────────────
+// goals_list() computes pace projection at read time from a decision tree
+// (achieved -> no_target_date -> overdue -> on_track/behind/no_contribution_set,
+// see schema_phase26.sql's own header for the exact tree) — the frontend only
+// needs to render whatever pace_status/numbers come back, never re-derive
+// them. Per the coordinator's brief: 'behind' surfaces suggested_monthly_
+// increase prominently; 'achieved' gets a small celebration touch;
+// 'no_target_date'/'no_contribution_set' skip projection numbers entirely
+// rather than showing nulls.
+const CF_GOAL_PACE_LABEL = {
+    achieved: '\u{1F389} Achieved', no_target_date: 'No target date', overdue: 'Overdue',
+    no_contribution_set: 'No monthly contribution set', on_track: 'On track', behind: 'Behind pace',
+};
+const CF_GOAL_PACE_COLOR = {
+    achieved: 'var(--green)', no_target_date: 'var(--text2)', overdue: 'var(--red)',
+    no_contribution_set: 'var(--yellow)', on_track: 'var(--green)', behind: 'var(--red)',
+};
+
+async function loadCfGoals() {
+    const wrap = document.getElementById('cfGoalsList');
+    if (wrap) wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    const statusEl = document.getElementById('cfGoalsFilterStatus');
+    const status = statusEl ? statusEl.value : '';
+    try {
+        const rows = await rpcAuth('goals_list', status ? { p_status: status } : {});
+        _cfGoals = Array.isArray(rows) ? rows : [];
+        renderCfGoals();
+    } catch (err) {
+        if (wrap) wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderCfGoals() {
+    const wrap = document.getElementById('cfGoalsList');
+    if (!wrap) return;
+    if (!_cfGoals.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No goals yet — add one below.</div>';
+        return;
+    }
+    wrap.innerHTML = _cfGoals.map(buildCfGoalCard).join('');
+}
+
+function buildCfGoalCard(g) {
+    const progress = Math.max(0, Math.min(100, Number(g.progress_pct) || 0));
+    const achieved = g.pace_status === 'achieved';
+    const paceLabel = CF_GOAL_PACE_LABEL[g.pace_status] || g.pace_status;
+    const paceColor = CF_GOAL_PACE_COLOR[g.pace_status] || 'var(--text2)';
+    const eur = n => fd(Number(n) || 0).replace('$', '€');
+
+    let projectionHtml = '';
+    if (g.pace_status === 'behind') {
+        projectionHtml = `<div style="margin-top:8px;background:rgba(255,77,109,.08);border:1px solid var(--red);border-radius:3px;padding:8px 10px;font-size:11px;">
+            Increase to <b>${eur(g.required_monthly)}/mo</b> (+${eur(g.suggested_monthly_increase)}/mo) to reach this goal by ${escapeHtml(g.target_date)}.
+        </div>`;
+    } else if (g.pace_status === 'on_track') {
+        projectionHtml = `<div style="font-size:11px;color:var(--text2);margin-top:6px;">On track at ${eur(g.monthly_contribution)}/mo (needs ${eur(g.required_monthly)}/mo) — ~${g.months_remaining} months left.</div>`;
+    } else if (g.pace_status === 'no_contribution_set') {
+        projectionHtml = `<div style="font-size:11px;color:var(--text2);margin-top:6px;">Needs ~${eur(g.required_monthly)}/mo to reach by ${escapeHtml(g.target_date)} (~${g.months_remaining} months left) — no monthly contribution set yet.</div>`;
+    } else if (g.pace_status === 'overdue') {
+        projectionHtml = `<div style="font-size:11px;color:var(--red);margin-top:6px;">Target date (${escapeHtml(g.target_date)}) has passed.</div>`;
+    }
+    // 'achieved' and 'no_target_date' deliberately show no projection numbers.
+
+    const metaBits = [`${eur(g.current_amount)} of ${eur(g.target_amount)} (${progress}%)`];
+    if (g.linked_account_label) metaBits.push(escapeHtml(g.linked_account_label));
+    if (g.target_date) metaBits.push(`target ${escapeHtml(g.target_date)}`);
+
+    return `<div style="background:var(--card);border:1px solid ${achieved ? 'var(--green)' : 'var(--border)'};border-radius:4px;padding:12px 14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;">
+            <div style="font-size:14px;font-weight:700;">${escapeHtml(g.name)}</div>
+            <div style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid ${paceColor};color:${paceColor};white-space:nowrap;">${paceLabel}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;">${metaBits.join(' · ')}</div>
+        <div class="pbar" style="margin-top:8px;"><div class="pfill" style="width:${progress}%;${achieved ? 'background:var(--green);' : ''}"></div></div>
+        ${projectionHtml}
+        <div class="mrow-row" style="margin-top:10px;align-items:center;">
+            <input class="minput" style="padding:7px 9px;flex:1;min-width:90px;" type="number" step="0.01" id="cfGoalContribAmt-${g.id}" placeholder="Amount">
+            <button class="mgray" style="padding:7px 10px;font-size:11px;" onclick="cfContributeToGoal(${g.id})">Contribute</button>
+            <button class="mgray" style="padding:7px 10px;font-size:11px;" onclick="editCfGoal(${g.id})">Edit</button>
+            ${g.status === 'active' ? `<button class="mgray" style="padding:7px 10px;font-size:11px;" onclick="cfSetGoalStatus(${g.id},'abandoned')">Abandon</button>` : `<button class="mgray" style="padding:7px 10px;font-size:11px;" onclick="cfSetGoalStatus(${g.id},'active')">Reactivate</button>`}
+            <button class="mgray" style="padding:7px 10px;font-size:11px;color:var(--red);" onclick="removeCfGoal(${g.id})">Remove</button>
+        </div>
+    </div>`;
+}
+
+async function cfContributeToGoal(id) {
+    const input = document.getElementById(`cfGoalContribAmt-${id}`);
+    const amount = parseFloat(input.value);
+    if (isNaN(amount) || amount === 0) { cfStatus('Enter a nonzero amount (negative to correct/withdraw).', true); return; }
+    cfStatus('Saving contribution…', false);
+    try {
+        await rpcAuth('goal_contribute', { p_id: id, p_amount: amount });
+        cfStatus('Contribution saved.', false);
+        await loadCfGoals();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+function editCfGoal(id) {
+    const g = _cfGoals.find(x => x.id === id);
+    if (!g) return;
+    _cfEditingGoalId = id;
+    document.getElementById('cfGoalFormTitle').textContent = `Edit Goal — ${g.name}`;
+    document.getElementById('cfGoalName').value = g.name;
+    document.getElementById('cfGoalTarget').value = g.target_amount;
+    document.getElementById('cfGoalTargetDate').value = g.target_date || '';
+    document.getElementById('cfGoalMonthly').value = g.monthly_contribution ?? '';
+    document.getElementById('cfGoalLinkedAccount').value = g.linked_account_id || '';
+    document.getElementById('cfGoalSubmitBtn').textContent = 'Save Changes';
+    document.getElementById('cfGoalCancelBtn').style.display = 'inline-block';
+    document.getElementById('cfGoalFormTitle').scrollIntoView({ block: 'center' });
+}
+
+function cancelCfGoalForm() {
+    _cfEditingGoalId = null;
+    document.getElementById('cfGoalFormTitle').textContent = 'Add Goal';
+    document.getElementById('cfGoalName').value = '';
+    document.getElementById('cfGoalTarget').value = '';
+    document.getElementById('cfGoalTargetDate').value = '';
+    document.getElementById('cfGoalMonthly').value = '';
+    document.getElementById('cfGoalLinkedAccount').value = '';
+    document.getElementById('cfGoalSubmitBtn').textContent = '+ Add Goal';
+    document.getElementById('cfGoalCancelBtn').style.display = 'none';
+}
+
+async function submitCfGoalForm() {
+    const name = document.getElementById('cfGoalName').value.trim();
+    const target = parseFloat(document.getElementById('cfGoalTarget').value);
+    const targetDate = document.getElementById('cfGoalTargetDate').value;
+    const monthlyRaw = document.getElementById('cfGoalMonthly').value;
+    const monthly = monthlyRaw === '' ? null : parseFloat(monthlyRaw);
+    const linkedRaw = document.getElementById('cfGoalLinkedAccount').value;
+    const linked = linkedRaw ? parseInt(linkedRaw, 10) : null;
+
+    if (!name) { cfStatus('Enter a goal name.', true); return; }
+    if (isNaN(target) || target <= 0) { cfStatus('Enter a target amount greater than 0.', true); return; }
+
+    if (_cfEditingGoalId) {
+        cfStatus('Saving…', false);
+        try {
+            await rpcAuth('goal_update', {
+                p_id: _cfEditingGoalId, p_name: name, p_target_amount: target,
+                p_target_date: targetDate || null, p_clear_target_date: !targetDate,
+                p_monthly_contribution: monthly, p_clear_monthly_contribution: monthlyRaw === '',
+                p_linked_account_id: linked, p_clear_linked_account: !linked,
+            });
+            cfStatus('Goal updated.', false);
+            cancelCfGoalForm();
+            await loadCfGoals();
+        } catch (err) {
+            cfStatus(err.message, true);
+        }
+        return;
+    }
+
+    cfStatus('Adding…', false);
+    try {
+        await rpcAuth('goal_add', {
+            p_name: name, p_target_amount: target, p_target_date: targetDate || null,
+            p_monthly_contribution: monthly, p_linked_account_id: linked,
+        });
+        cfStatus('Goal added.', false);
+        cancelCfGoalForm();
+        await loadCfGoals();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function cfSetGoalStatus(id, status) {
+    cfStatus('Updating…', false);
+    try {
+        await rpcAuth('goal_update', { p_id: id, p_status: status });
+        cfStatus('Goal updated.', false);
+        await loadCfGoals();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+async function removeCfGoal(id) {
+    const g = _cfGoals.find(x => x.id === id);
+    if (!confirm(`Remove goal "${g ? g.name : id}"? This cannot be undone.`)) return;
+    cfStatus('Removing…', false);
+    try {
+        await rpcAuth('goal_remove', { p_id: id });
+        cfStatus('Goal removed.', false);
+        await loadCfGoals();
+    } catch (err) {
+        cfStatus(err.message, true);
+    }
+}
+
+// ── Analytics (Phase 27, final Stage 3 piece) ───────────────────────────────
+// Kept as a final tab, not the modal's default landing view — Transactions
+// stays the default since this is the day-to-day screen (per the original
+// Cash Flow brief); Analytics is an occasional deep-dive, not something
+// every open of the modal needs to compute. Date-range picker mirrors the
+// Bills Calendar tab's pattern (From/To + quick-range buttons) for
+// consistency. cashflow_cut_suggestions() is deliberately NEVER called
+// automatically — only on an explicit button click, matching the brief's
+// "this only runs when you ask for it" framing.
+function cfAnalyticsQuickRange(months) {
+    const to = new Date();
+    const from = new Date();
+    from.setMonth(from.getMonth() - (months - 1));
+    from.setDate(1);
+    document.getElementById('cfAnalyticsFrom').value = from.toISOString().slice(0, 10);
+    document.getElementById('cfAnalyticsTo').value = to.toISOString().slice(0, 10);
+    loadCfAnalytics();
+}
+
+async function loadCfAnalytics() {
+    const from = document.getElementById('cfAnalyticsFrom').value;
+    const to = document.getElementById('cfAnalyticsTo').value;
+    if (!from || !to) { cfStatus('Pick a From and To date (or use a quick-range button).', true); return; }
+    _cfAnalyticsRange = { from, to };
+    document.getElementById('cfCutSuggestions').innerHTML = ''; // stale from a prior range — opt-in, don't auto-refetch
+    await Promise.all([loadCfAnalyticsMonthly(), loadCfAnalyticsCategoryGrid(), loadCfAnalyticsInsights()]);
+}
+
+async function loadCfAnalyticsMonthly() {
+    if (!_cfAnalyticsRange) return;
+    try {
+        const rows = await rpcAuth('cashflow_monthly', { p_from: _cfAnalyticsRange.from, p_to: _cfAnalyticsRange.to });
+        _cfAnalyticsMonthly = Array.isArray(rows) ? rows : [];
+        renderCfAnalyticsChart();
+    } catch (err) {
+        cfStatus(`Failed to load monthly cash flow: ${err.message}`, true);
+    }
+}
+
+function renderCfAnalyticsChart() {
+    const labels = _cfAnalyticsMonthly.map(r => r.month);
+    const income = _cfAnalyticsMonthly.map(r => Number(r.income_total) || 0);
+    const expense = _cfAnalyticsMonthly.map(r => Number(r.expense_total) || 0);
+    const net = _cfAnalyticsMonthly.map(r => Number(r.net) || 0);
+    if (charts.cfAnalytics) { charts.cfAnalytics.destroy(); charts.cfAnalytics = null; }
+    const ctx = document.getElementById('cfAnalyticsChart');
+    if (!ctx) return;
+    charts.cfAnalytics = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                { type: 'bar', label: 'Income', data: income, backgroundColor: 'rgba(0,200,150,.55)', borderRadius: 2, order: 2 },
+                { type: 'bar', label: 'Expense', data: expense, backgroundColor: 'rgba(255,77,109,.55)', borderRadius: 2, order: 2 },
+                { type: 'line', label: 'Net', data: net, borderColor: '#ffb84d', backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2, order: 1 },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw).replace('$', '€')}` } },
+            },
+            scales: {
+                x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+                y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => '€' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) }, grid: { color: 'rgba(255,255,255,.05)' } },
+            },
+        },
+    });
+}
+
+async function loadCfAnalyticsCategoryGrid() {
+    if (!_cfAnalyticsRange) return;
+    const direction = document.getElementById('cfAnalyticsCatDirection').value;
+    const wrap = document.getElementById('cfAnalyticsHeatmap');
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">Loading…</div>';
+    try {
+        const rows = await rpcAuth('cashflow_by_category', { p_from: _cfAnalyticsRange.from, p_to: _cfAnalyticsRange.to, p_direction: direction });
+        _cfAnalyticsCategoryGrid = Array.isArray(rows) ? rows : [];
+        renderCfAnalyticsHeatmap();
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px 0;">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+// Simple HTML-table heatmap (category rows x month columns), cell background
+// opacity scaled to that cell's share of the grid's max value — reuses the
+// dashboard's existing plain <table> styling rather than a chart-library
+// heatmap widget, consistent with every other tab here being table-based.
+function renderCfAnalyticsHeatmap() {
+    const wrap = document.getElementById('cfAnalyticsHeatmap');
+    if (!_cfAnalyticsCategoryGrid.length) {
+        wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0;">No transactions in this range.</div>';
+        return;
+    }
+    const months = [...new Set(_cfAnalyticsCategoryGrid.map(r => r.month))].sort();
+    const catNames = [...new Set(_cfAnalyticsCategoryGrid.map(r => r.category_name))]
+        .sort((a, b) => (a === 'Uncategorized') - (b === 'Uncategorized') || a.localeCompare(b));
+    const cellMap = {};
+    let maxVal = 0;
+    _cfAnalyticsCategoryGrid.forEach(r => {
+        const val = Number(r.total) || 0;
+        cellMap[`${r.category_name}|${r.month}`] = val;
+        if (val > maxVal) maxVal = val;
+    });
+    const headerHtml = `<th>Category</th>` + months.map(m => `<th>${escapeHtml(m)}</th>`).join('');
+    const rowsHtml = catNames.map(name => {
+        const cellsHtml = months.map(m => {
+            const val = cellMap[`${name}|${m}`] || 0;
+            const intensity = maxVal > 0 ? val / maxVal : 0;
+            const bg = intensity > 0 ? `rgba(255,120,80,${(0.08 + intensity * 0.55).toFixed(2)})` : 'transparent';
+            return `<td style="background:${bg};text-align:right;">${val > 0 ? fd(val).replace('$', '€') : '—'}</td>`;
+        }).join('');
+        return `<tr><td style="white-space:nowrap;">${escapeHtml(name)}</td>${cellsHtml}</tr>`;
+    }).join('');
+    wrap.innerHTML = `<table><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+const CF_INSIGHT_SEVERITY_COLOR = { notice: 'var(--accent)', info: 'var(--text2)', warning: 'var(--yellow)' };
+
+async function loadCfAnalyticsInsights() {
+    if (!_cfAnalyticsRange) return;
+    const section = document.getElementById('cfAnalyticsInsightsSection');
+    const wrap = document.getElementById('cfAnalyticsInsights');
+    try {
+        const findings = await rpcAuth('cashflow_insights', { p_from: _cfAnalyticsRange.from, p_to: _cfAnalyticsRange.to });
+        const list = Array.isArray(findings) ? findings : [];
+        if (!list.length) { section.style.display = 'none'; wrap.innerHTML = ''; return; } // quiet period -> no section at all, not an empty header
+        section.style.display = 'block';
+        wrap.innerHTML = list.map(f => {
+            const color = CF_INSIGHT_SEVERITY_COLOR[f.severity] || 'var(--text2)';
+            return `<div style="background:var(--card);border-left:3px solid ${color};border-radius:3px;padding:9px 12px;margin-bottom:8px;font-size:12px;">${escapeHtml(f.message)}</div>`;
+        }).join('');
+    } catch (err) {
+        section.style.display = 'block';
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;">Failed to load insights: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+async function loadCfCutSuggestions() {
+    if (!_cfAnalyticsRange) { cfStatus('Load a date range first.', true); return; }
+    const wrap = document.getElementById('cfCutSuggestions');
+    const btn = document.getElementById('cfCutSuggestBtn');
+    btn.disabled = true;
+    wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:8px 0;">Analyzing…</div>';
+    try {
+        const suggestions = await rpcAuth('cashflow_cut_suggestions', { p_from: _cfAnalyticsRange.from, p_to: _cfAnalyticsRange.to });
+        const list = Array.isArray(suggestions) ? suggestions : [];
+        if (!list.length) {
+            wrap.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:8px 0;">Nothing stood out in this range.</div>';
+            return;
+        }
+        wrap.innerHTML = list.map(s => `<div style="background:var(--card);border:1px solid var(--border);border-radius:3px;padding:9px 12px;margin-bottom:8px;font-size:12px;">${escapeHtml(s.message)}</div>`).join('');
+    } catch (err) {
+        wrap.innerHTML = `<div style="color:var(--red);font-size:12px;">${escapeHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.getElementById('cfModal').addEventListener('click', e => { if (e.target === document.getElementById('cfModal')) closeCashFlow(); });
 
 function toast(msg, isErr) {
     const t = document.getElementById('toast');
