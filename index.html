@@ -278,11 +278,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
         background:var(--card2);border:1px solid var(--border);border-radius:2px;}
 .mc-box .klbl{margin-bottom:4px;font-size:clamp(10px,1.1vw,14px);}
 .mc-box .kval{font-size:clamp(14px,1.6vw,20px);font-weight:800;}
-.mc-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(4px,0.5vw,7px);margin-bottom:clamp(5px,0.7vh,9px);}
-.mc-scenario{padding:clamp(6px,0.8vh,9px) clamp(7px,0.8vw,10px);
-             background:var(--card2);border:1px solid var(--border);border-radius:2px;}
-.mc-scenario-title{font-size:clamp(12px,1.2vw,16px);font-weight:700;margin-bottom:5px;}
-.mc-scenario-val{font-size:clamp(11px,1.1vw,15px);color:var(--text2);}
 
 /* ── Milestone ───────────────────────────────────────────────────────────── */
 .ms-outer{padding:4px 0;}
@@ -339,8 +334,8 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .gs-24>.grid-stack-item{width:4.1667%}.gs-24>.grid-stack-item[gs-x="1"]{left:4.1667%}.gs-24>.grid-stack-item[gs-w="2"]{width:8.3333%}.gs-24>.grid-stack-item[gs-x="2"]{left:8.3333%}.gs-24>.grid-stack-item[gs-w="3"]{width:12.5%}.gs-24>.grid-stack-item[gs-x="3"]{left:12.5%}.gs-24>.grid-stack-item[gs-w="4"]{width:16.6667%}.gs-24>.grid-stack-item[gs-x="4"]{left:16.6667%}.gs-24>.grid-stack-item[gs-w="5"]{width:20.8333%}.gs-24>.grid-stack-item[gs-x="5"]{left:20.8333%}.gs-24>.grid-stack-item[gs-w="6"]{width:25%}.gs-24>.grid-stack-item[gs-x="6"]{left:25%}.gs-24>.grid-stack-item[gs-w="7"]{width:29.1667%}.gs-24>.grid-stack-item[gs-x="7"]{left:29.1667%}.gs-24>.grid-stack-item[gs-w="8"]{width:33.3333%}.gs-24>.grid-stack-item[gs-x="8"]{left:33.3333%}.gs-24>.grid-stack-item[gs-w="9"]{width:37.5%}.gs-24>.grid-stack-item[gs-x="9"]{left:37.5%}.gs-24>.grid-stack-item[gs-w="10"]{width:41.6667%}.gs-24>.grid-stack-item[gs-x="10"]{left:41.6667%}.gs-24>.grid-stack-item[gs-w="11"]{width:45.8333%}.gs-24>.grid-stack-item[gs-x="11"]{left:45.8333%}.gs-24>.grid-stack-item[gs-w="12"]{width:50%}.gs-24>.grid-stack-item[gs-x="12"]{left:50%}.gs-24>.grid-stack-item[gs-w="13"]{width:54.1667%}.gs-24>.grid-stack-item[gs-x="13"]{left:54.1667%}.gs-24>.grid-stack-item[gs-w="14"]{width:58.3333%}.gs-24>.grid-stack-item[gs-x="14"]{left:58.3333%}.gs-24>.grid-stack-item[gs-w="15"]{width:62.5%}.gs-24>.grid-stack-item[gs-x="15"]{left:62.5%}.gs-24>.grid-stack-item[gs-w="16"]{width:66.6667%}.gs-24>.grid-stack-item[gs-x="16"]{left:66.6667%}.gs-24>.grid-stack-item[gs-w="17"]{width:70.8333%}.gs-24>.grid-stack-item[gs-x="17"]{left:70.8333%}.gs-24>.grid-stack-item[gs-w="18"]{width:75%}.gs-24>.grid-stack-item[gs-x="18"]{left:75%}.gs-24>.grid-stack-item[gs-w="19"]{width:79.1667%}.gs-24>.grid-stack-item[gs-x="19"]{left:79.1667%}.gs-24>.grid-stack-item[gs-w="20"]{width:83.3333%}.gs-24>.grid-stack-item[gs-x="20"]{left:83.3333%}.gs-24>.grid-stack-item[gs-w="21"]{width:87.5%}.gs-24>.grid-stack-item[gs-x="21"]{left:87.5%}.gs-24>.grid-stack-item[gs-w="22"]{width:91.6667%}.gs-24>.grid-stack-item[gs-x="22"]{left:91.6667%}.gs-24>.grid-stack-item[gs-w="23"]{width:95.8333%}.gs-24>.grid-stack-item[gs-x="23"]{left:95.8333%}.gs-24>.grid-stack-item[gs-w="24"]{width:100%}
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
-@media(max-width:860px){.mc-stats{grid-template-columns:repeat(2,1fr);}.mc-scenarios{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:600px){.mc-scenarios{grid-template-columns:1fr;}.krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}.header{gap:4px;}.ibtn{padding:0 5px;}}
+@media(max-width:860px){.mc-stats{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}.header{gap:4px;}.ibtn{padding:0 5px;}}
     </style>
 </head>
 <body data-filter="portfolio">
@@ -1239,19 +1234,29 @@ const WIDGET_HTML = {
             `<div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>` +
         `</div>`,
 
-    // ── MONTE CARLO ───────────────────────────────────────────────────────────
+    // ── FIRE PROJECTION (main-page summary — Phase C) ───────────────────────────
+    // Deliberately simple: headline numbers + one chart, no inputs/toggles/
+    // transparency panels (those stay in the Edit Assets modal). Reads
+    // whatever the user has actually saved to fire_plan (mode, expenses, SWR,
+    // etc.) via computeFireProjection() — the SAME shared engine the modal's
+    // renderFireOutputs() uses — so this can never silently disagree with the
+    // modal again. See loadMainFireSummary()/renderMainFireSummary()/
+    // renderFireSetupPrompt() in the RENDER section.
     'w-monte':
         `<div class="card-header">` +
             `<span class="card-label" id="monteFilter">Portfolio</span>` +
-            `<span class="card-title">Monte Carlo FIRE Simulation</span>` +
+            `<span class="card-title">FIRE Projection</span>` +
             `<span class="card-subtitle" id="mc-params"></span>` +
         `</div>` +
         `<div class="card-divider"></div>` +
         `<div class="card-body scrollable">` +
-            `<div class="mc-stats"   id="mc-stats"></div>` +
-            `<div class="mc-scenarios" id="mc-scenarios"></div>` +
-            `<div class="chwrap" style="min-height:140px;"><canvas id="mcChart"></canvas></div>` +
-            `<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>` +
+            `<div id="mc-empty" style="display:none;text-align:center;color:var(--text2);font-size:clamp(10px,1vw,12px);padding:20px 10px;line-height:1.6;"></div>` +
+            `<div id="mc-content">` +
+                `<div class="mc-stats" id="mc-stats"></div>` +
+                `<div class="chwrap" style="min-height:150px;"><canvas id="mcChart"></canvas></div>` +
+                `<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>` +
+            `</div>` +
+            `<div style="text-align:center;margin-top:8px;"><button class="mgray" style="padding:5px 12px;font-size:11px;" onclick="openEditAssets()">Configure FIRE Plan &rarr;</button></div>` +
         `</div>`,
 
     // ── ASSETS ────────────────────────────────────────────────────────────────
@@ -1999,100 +2004,134 @@ function renderMilestone() {
     gi('ms-status', `NW: ${fd(currentNW)} &bull; ${Math.min(100,(currentNW/1000000)*100).toFixed(1)}% of $1M goal${nextStr}`);
 }
 
-function renderMonteCarlo() {
-    const statsEl=document.getElementById('mc-stats'); if(!statsEl) return;
-    // Always use liquid assets only, excluding real estate & illiquid assets.
-    // Supabase has a real 'liquid' scope; the sheet only had crypto+tradfi as a proxy.
-    const sbLiquid = usingSupabase() ? ((dbData.scopes||{}).liquid || null) : null;
-    const currentNW = sbLiquid ? num(sbLiquid.net_worth) : N(32) + N(44);
-    const monthly = 0; // No monthly additions in Monte Carlo
-    let atPct;
-    if (sbLiquid) {
-        const gl = (dbData.gains || {}).liquid || {};
-        atPct = has(gl.alltime_pct) ? num(gl.alltime_pct) / 100 : 0;
-    } else {
-        const ci=N(30), ti=N(42), total=ci+ti;
-        atPct = total > 0 ? (N(38)*ci + N(50)*ti) / total : N(12);
-    }
-    const FIRE_TARGET=1000000, SIMS=800, YEARS=15;
-    // Always label as "Liquid" since we always use liquid assets here
-    const lbl=document.getElementById('monteFilter'); if(lbl) lbl.textContent='Liquid';
-    // Check liquid *assets* (not NW) — liquid NW can be negative when debt > assets
-    const liquidAssets = sbLiquid ? num(sbLiquid.total_assets) : N(27) + N(41);
-    if (liquidAssets <= 0) {
-        gi('mc-stats',`<div style="color:var(--text2);text-align:center;padding:20px;grid-column:1/-1">Insufficient data</div>`);
-        gi('mc-scenarios',''); return;
-    }
-    const annualReturn=Math.max(0.04,Math.min(0.5,Math.abs(atPct>0?atPct:0.08)));
-    const meanMonthly=annualReturn/12, vol=0.045;
-    const tracks=[], fireYrs=[];
-    for (let sim=0;sim<SIMS;sim++) {
-        let value=currentNW, fireYr=null;
-        const track=[value];
-        for (let mo=0;mo<YEARS*12;mo++) {
-            const u1=Math.random(), u2=Math.random();
-            const z=Math.sqrt(-2*Math.log(u1||1e-10))*Math.cos(2*Math.PI*u2);
-            value=value*(1+meanMonthly+z*vol)+monthly;
-            if((mo+1)%12===0) track.push(Math.max(0,value));
-            if(value>=FIRE_TARGET&&fireYr===null) fireYr=(mo+1)/12;
-        }
-        tracks.push(track);
-        if(fireYr!==null) fireYrs.push(fireYr);
-    }
-    function pct(arr,p){const s=[...arr].sort((a,b)=>a-b);return s[Math.floor(s.length*p)];}
-    const finals=tracks.map(t=>t[YEARS]);
-    const p10=pct(finals,.10),p25=pct(finals,.25),p50=pct(finals,.50),p75=pct(finals,.75),p90=pct(finals,.90);
-    const fireProb=(fireYrs.length/SIMS*100).toFixed(0);
-    const medianFire=fireYrs.length>0?pct(fireYrs,.5).toFixed(1):'--';
-    const bestFire=fireYrs.length>0?Math.min(...fireYrs).toFixed(1):'--';
-    gi('mc-stats',`
-        <div class="mc-box"><div class="klbl">Bear (P10)</div><div class="kval neg">${fd(p10)}</div></div>
-        <div class="mc-box"><div class="klbl">Cautious (P25)</div><div class="kval warn">${fd(p25)}</div></div>
-        <div class="mc-box"><div class="klbl">Median (P50)</div><div class="kval pos">${fd(p50)}</div></div>
-        <div class="mc-box"><div class="klbl">Bull (P90)</div><div class="kval" style="color:var(--accent)">${fd(p90)}</div></div>
-        <div class="mc-box"><div class="klbl">FIRE Probability</div><div class="kval ${parseFloat(fireProb)>50?'pos':'warn'}">${fireProb}%</div></div>
-        <div class="mc-box"><div class="klbl">Median FIRE</div><div class="kval">${medianFire==='--'?'—':medianFire+' yrs'}</div></div>
-        <div class="mc-box"><div class="klbl">Best-Case FIRE</div><div class="kval pos">${bestFire==='--'?'—':bestFire+' yrs'}</div></div>
-        <div class="mc-box"><div class="klbl">Simulations</div><div class="kval">${SIMS.toLocaleString()}</div></div>
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN-DASHBOARD FIRE SUMMARY WIDGET (Phase C — reconciled with the modal)
+// This used to be an independent, hand-rolled "Monte Carlo FIRE Simulation"
+// widget: liquid-assets-only (not fire_investment_total()'s correct
+// investment-only scoping), no loan-aware stepping, no salary-driven mode,
+// hardcoded $1M target and a fixed ~8% return guess — it predates the FIRE
+// calculator work in Edit Assets and had drifted completely out of sync with
+// it. It's now a thin, unauthenticated read of the user's actual saved
+// fire_plan, run through computeFireProjection() — the exact SAME engine
+// renderFireOutputs() (the modal) uses — so the two can never show different
+// numbers for the same inputs again. This widget is intentionally simple
+// (headline stats + one chart, no inputs) — full configuration stays in the
+// modal via the "Configure FIRE Plan" button.
+// ─────────────────────────────────────────────────────────────────────────────
+let _mainFirePlan = null;
+let _mainFireInvestmentTotal = 0;
+let _mainFireLoans = [];
+
+function renderFireSetupPrompt(message) {
+    const lbl = document.getElementById('monteFilter'); if (lbl) lbl.textContent = 'FIRE Plan';
+    gi('mc-params', '');
+    const empty = document.getElementById('mc-empty'), content = document.getElementById('mc-content');
+    if (empty) { empty.style.display = 'block'; empty.textContent = message; }
+    if (content) content.style.display = 'none';
+    if (charts.monte) { charts.monte.destroy(); charts.monte = null; }
+}
+
+function renderMainFireSummary(projection) {
+    const lbl = document.getElementById('monteFilter'); if (lbl) lbl.textContent = 'FIRE Plan';
+    const empty = document.getElementById('mc-empty'), content = document.getElementById('mc-content');
+    if (empty) empty.style.display = 'none';
+    if (content) content.style.display = '';
+
+    const progressPct = projection.fireNumber > 0 ? Math.min(100, (_mainFireInvestmentTotal / projection.fireNumber) * 100) : 0;
+    const fireProbStr = projection.fireProb.toFixed(0);
+    const medianStr = projection.medianFireYrs !== null ? projection.medianFireYrs.toFixed(1) + ' yrs' : '—';
+    gi('mc-stats', `
+        <div class="mc-box"><div class="klbl">FIRE Number</div><div class="kval">${fd(projection.fireNumber)}</div></div>
+        <div class="mc-box"><div class="klbl">Progress</div><div class="kval ${progressPct >= 100 ? 'pos' : ''}">${progressPct.toFixed(1)}%</div></div>
+        <div class="mc-box"><div class="klbl">FIRE Probability</div><div class="kval ${projection.fireProb > 50 ? 'pos' : 'warn'}">${fireProbStr}%</div></div>
+        <div class="mc-box"><div class="klbl">Median Time to FIRE</div><div class="kval">${medianStr}</div></div>
     `);
-    const bearAnnual=Math.max(0.01,annualReturn*0.4), bullAnnual=Math.min(0.6,annualReturn*1.8);
-    function projFinal(ar){let v=currentNW;const mm=ar/12;for(let mo=0;mo<YEARS*12;mo++)v=v*(1+mm)+monthly;return v;}
-    gi('mc-scenarios',`
-        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--red)">🐻 Bear (${(bearAnnual*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(bearAnnual))}</b></div></div>
-        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--green)">📈 Base (${(annualReturn*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(annualReturn))}</b></div></div>
-        <div class="mc-scenario"><div class="mc-scenario-title" style="color:var(--accent)">🚀 Bull (${(bullAnnual*100).toFixed(0)}%/yr)</div><div class="mc-scenario-val">Final: <b>${fd(projFinal(bullAnnual))}</b></div></div>
-    `);
-    gi('mc-footer',`${YEARS}-yr horizon &bull; Liquid assets only &bull; No monthly additions &bull; Base return: ~${(annualReturn*100).toFixed(0)}%/yr &bull; Vol: 4.5%/mo`);
-    gi('mc-params',`Target $1M`);
-    const yearLabels=Array.from({length:YEARS+1},(_,i)=>i===0?'Now':`Y${i}`);
-    const p10s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.10));
-    const p50s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.50));
-    const p90s=yearLabels.map((_,yi)=>pct(tracks.map(t=>t[yi]),.90));
-    const fireTargetLine=yearLabels.map(()=>FIRE_TARGET);
-    if(charts.monte) charts.monte.destroy();
-    const ctx=document.getElementById('mcChart');
-    if(ctx) {
-        charts.monte=new Chart(ctx,{
-            type:'line',
-            data:{labels:yearLabels,datasets:[
-                {label:'P90 (Bull)',data:p90s,borderColor:'rgba(124,111,239,.8)',backgroundColor:'rgba(124,111,239,.12)',fill:'+1',borderWidth:1.5,pointRadius:0,tension:0.4},
-                {label:'P50 (Median)',data:p50s,borderColor:'#00c896',backgroundColor:'rgba(0,200,150,.08)',fill:'+1',borderWidth:2.5,pointRadius:0,tension:0.4},
-                {label:'P10 (Bear)',data:p10s,borderColor:'rgba(255,77,109,.7)',backgroundColor:'transparent',fill:false,borderWidth:1.5,borderDash:[4,3],pointRadius:0,tension:0.4},
-                {label:'$1M FIRE Target',data:fireTargetLine,borderColor:'rgba(255,184,77,.6)',backgroundColor:'transparent',fill:false,borderWidth:1,borderDash:[6,4],pointRadius:0},
-            ]},
-            options:{
-                responsive:true,maintainAspectRatio:false,
-                interaction:{mode:'index',intersect:false},
-                plugins:{
-                    legend:{display:true,position:'bottom',labels:{color:'#b0b7d0',font:{size:13},boxWidth:16,padding:12}},
-                    tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}
+    const modeLabel = (_mainFirePlan && _mainFirePlan.contribution_mode === 'salary_driven') ? 'salary-driven' : 'manual';
+    gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations`);
+    gi('mc-params', `Target ${fd(projection.fireNumber)}`);
+
+    const targetLine = projection.yearLabels.map(() => projection.fireNumber);
+    if (charts.monte) charts.monte.destroy();
+    const ctx = document.getElementById('mcChart');
+    if (ctx) {
+        charts.monte = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: projection.yearLabels,
+                datasets: [
+                    { label: 'P90', data: projection.p90s, borderColor: 'rgba(124,111,239,.8)', backgroundColor: 'rgba(124,111,239,.12)', fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'Median', data: projection.p50s, borderColor: '#00c896', backgroundColor: 'rgba(0,200,150,.08)', fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'P10', data: projection.p10s, borderColor: 'rgba(255,77,109,.7)', backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
+                    { label: 'FIRE Number', data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
+                ],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                    tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw)}` } },
                 },
-                scales:{
-                    x:{ticks:{color:'#7b82a0',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
-                    y:{ticks:{color:'#7b82a0',maxTicksLimit:5,callback:v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'k':'$'+v},grid:{color:'rgba(255,255,255,.05)'}}
-                }
-            }
+                scales: {
+                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+                    y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: 'rgba(255,255,255,.05)' } },
+                },
+            },
         });
+    }
+}
+
+// Entry point (kept the historical name/call sites — renderAll(), setFilter(),
+// setTheme() — so no other code needed to change). Async: fetches the user's
+// saved fire_plan + supporting data itself (all anon-readable — no sign-in
+// required to VIEW the main-page summary, same as the rest of the read-only
+// dashboard), independent of whatever's cached inside the Edit Assets modal
+// (which may never have been opened this session).
+async function renderMonteCarlo() {
+    const statsEl = document.getElementById('mc-stats'); if (!statsEl) return;
+    if (!usingSupabase()) {
+        renderFireSetupPrompt('FIRE projection requires Supabase mode — switch it on in Settings to set up a FIRE plan.');
+        return;
+    }
+    try {
+        const [plan, invTotal, loanDetails, assets] = await Promise.all([
+            rpc('fire_plan_get'),
+            rpc('fire_investment_total'),
+            rpc('loan_details_list').catch(() => []),
+            rpc('manual_assets_list').catch(() => []),
+        ]);
+        const hasExpense = plan && has(plan.desired_annual_expense) && Number(plan.desired_annual_expense) > 0;
+        const hasSwr = plan && has(plan.safe_withdrawal_rate_pct) && Number(plan.safe_withdrawal_rate_pct) > 0;
+        if (!plan || !plan.is_saved || !hasExpense || !hasSwr) {
+            renderFireSetupPrompt("You haven't set up a FIRE plan yet — set your desired expenses and withdrawal rate in Edit Assets to see your projection here.");
+            return;
+        }
+        _mainFirePlan = plan;
+        _mainFireInvestmentTotal = Number(invTotal) || 0;
+        await ensureEurUsdRate();
+        _mainFireLoans = buildFireLoanModel(loanDetails || [], assets || []);
+
+        const mode = plan.contribution_mode === 'salary_driven' ? 'salary_driven' : 'manual';
+        let salaryHistory = [];
+        if (mode === 'salary_driven') salaryHistory = await rpc('salary_history_list').catch(() => []);
+
+        const f = {
+            mode,
+            expense: Number(plan.desired_annual_expense),
+            swr: Number(plan.safe_withdrawal_rate_pct),
+            contribution: has(plan.monthly_contribution) ? Number(plan.monthly_contribution) : 0,
+            returnPct: has(plan.nominal_return_pct) ? Number(plan.nominal_return_pct) : NaN,
+            inflationPct: has(plan.inflation_pct) ? Number(plan.inflation_pct) : NaN,
+            volPct: has(plan.volatility_pct) ? Number(plan.volatility_pct) : NaN,
+            curAge: has(plan.current_age) ? Number(plan.current_age) : NaN,
+            retAge: has(plan.retirement_age) ? Number(plan.retirement_age) : NaN,
+            essentialExp: has(plan.essential_monthly_expenses) ? Number(plan.essential_monthly_expenses) : NaN,
+            salaryGrowthPct: has(plan.salary_growth_pct) ? Number(plan.salary_growth_pct) : NaN,
+        };
+        const projection = computeFireProjection(f, _mainFireInvestmentTotal, _mainFireLoans, salaryHistory, 300);
+        renderMainFireSummary(projection);
+    } catch (err) {
+        renderFireSetupPrompt('Failed to load your FIRE plan — try refreshing.');
     }
 }
 
@@ -3071,11 +3110,14 @@ async function loadFireCalculator() {
 }
 
 // Most recent Salary History entry (by entry_date, ISO strings sort correctly
-// lexicographically) — the salary-driven mode's baseline. Returns null if the
-// user hasn't logged any salary entries yet.
-function latestSalaryEntry() {
-    if (!_eaFireSalaryHistory.length) return null;
-    return [..._eaFireSalaryHistory].sort((a, b) => (a.entry_date < b.entry_date ? 1 : (a.entry_date > b.entry_date ? -1 : 0)))[0];
+// lexicographically) — the salary-driven mode's baseline. Returns null if
+// there are no entries. Takes the salary history array explicitly (not a
+// global) so the SAME function works for both the Edit Assets modal (which
+// caches its own _eaFireSalaryHistory) and the main-dashboard FIRE summary
+// widget (which loads its own independent copy) — see computeFireProjection().
+function latestSalaryEntry(salaryHistory) {
+    if (!salaryHistory || !salaryHistory.length) return null;
+    return [...salaryHistory].sort((a, b) => (a.entry_date < b.entry_date ? 1 : (a.entry_date > b.entry_date ? -1 : 0)))[0];
 }
 
 // ── Loan payoff model for the FIRE contribution step-function (Phase 19) ──
@@ -3218,7 +3260,7 @@ function populateFireInputs(plan) {
 function renderFireSalaryBaseline() {
     const el = document.getElementById('eaFireSalaryBaseline');
     if (!el) return;
-    const latest = latestSalaryEntry();
+    const latest = latestSalaryEntry(_eaFireSalaryHistory);
     if (!latest) {
         el.textContent = 'No Salary History entries yet — add one above first.';
         el.style.color = 'var(--text2)';
@@ -3388,10 +3430,13 @@ function renderFireLoanPanel(includedSorted, excludedLoans, baseContribution, ho
 // once every 12 months, not smoothed month-to-month) per the spec. Clamped
 // at 0 per month — a month can't invest a negative amount; clampedCount/
 // firstClampedMonth are returned so the panel can surface an honest warning
-// instead of silently flooring a shortfall.
-function buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths) {
+// instead of silently flooring a shortfall. salaryHistory is passed in
+// explicitly (not read from a global) so this same function serves both the
+// Edit Assets modal and the main-dashboard summary widget — see
+// computeFireProjection(), the shared engine both callers go through.
+function buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths, salaryHistory) {
     const rate = eurUsdRate || EUR_USD_FALLBACK_RATE;
-    const latest = latestSalaryEntry();
+    const latest = latestSalaryEntry(salaryHistory);
     const latestAmountNative = latest ? (has(latest.net_amount) ? num(latest.net_amount) : num(latest.gross_amount)) : 0;
     const latestIsEur = latest ? latest.currency === 'EUR' : true;
     const latestUSD = latestIsEur ? latestAmountNative * rate : latestAmountNative;
@@ -3413,7 +3458,7 @@ function buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths) {
         values[m] = Math.max(0, raw);
         if (raw < 0) { clampedCount++; if (firstClampedMonth === null) firstClampedMonth = m; }
     }
-    return { values, clampedCount, firstClampedMonth, latestUSD, essentialExpUSD };
+    return { values, clampedCount, firstClampedMonth, latestUSD, essentialExpUSD, latestEntry: latest };
 }
 
 // Transparency panel for salary-driven mode — same purpose as
@@ -3427,7 +3472,7 @@ function renderFireSalaryPanel(f, includedLoans, excludedLoans, salaryModel, hor
     const panel = document.getElementById('eaFireSalaryPanel');
     if (!panel) return;
     const rate = eurUsdRate || EUR_USD_FALLBACK_RATE;
-    const latest = latestSalaryEntry();
+    const latest = salaryModel.latestEntry;
     if (!latest) {
         panel.innerHTML = '<div style="font-size:11px;color:var(--yellow);padding:4px 0;">&#9888; No Salary History entries — add one above to use salary-driven mode. Contribution defaults to $0/mo until then.</div>';
         return;
@@ -3489,6 +3534,95 @@ function renderFireSalaryPanel(f, includedLoans, excludedLoans, salaryModel, hor
     panel.innerHTML = html;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED FIRE PROJECTION ENGINE. The single source of truth for the Monte
+// Carlo math — BOTH the full, configurable calculator here in Edit Assets
+// (renderFireOutputs(), below) AND the simple summary widget on the main
+// dashboard (renderMonteCarlo(), in the RENDER section near the top of this
+// script) call this SAME function. They used to run two independently
+// hand-rolled simulations that drifted apart (different asset scoping, no
+// loan/salary awareness on the main page) — never inline the Monte Carlo
+// loop anywhere else again; extend this function instead.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Manual-mode contribution array: base_contribution (flat, user-entered)
+// plus each included loan's monthly_payment from its payoff month onward.
+function buildManualContributionByMonth(baseContribution, includedLoans, horizonMonths) {
+    const values = new Array(horizonMonths + 1).fill(baseContribution);
+    includedLoans.forEach(loan => {
+        for (let m = loan.payoffMonth; m <= horizonMonths; m++) values[m] += loan.monthlyPaymentUSD;
+    });
+    return values;
+}
+
+// f: {mode, expense, swr, contribution, returnPct, inflationPct, volPct,
+//     curAge, retAge, essentialExp, salaryGrowthPct} — same shape
+//     readFireInputs() produces. Callers not backed by a live form (e.g. the
+//     main-dashboard widget) build this object from a saved fire_plan row
+//     instead — see loadMainFireSummary().
+// investmentTotal: fire_investment_total() USD number.
+// loans: buildFireLoanModel() output array.
+// salaryHistory: salary_history_list() rows (only consulted in salary_driven mode).
+// simsOverride: defaults to 300 (the modal's existing count).
+function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOverride) {
+    const fireNumber = (f.expense > 0 && f.swr > 0) ? f.expense / (f.swr / 100) : null;
+
+    const returnPct = isNaN(f.returnPct) ? 6 : f.returnPct;
+    const volPct = isNaN(f.volPct) ? 15 : Math.max(0, f.volPct);
+    const baseContribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
+    let years = 30, horizonIsAssumed = true;
+    if (!isNaN(f.curAge) && !isNaN(f.retAge) && f.retAge > f.curAge) {
+        years = Math.min(60, f.retAge - f.curAge);
+        horizonIsAssumed = false;
+    }
+    const SIMS = simsOverride || 300;
+    const meanMonthly = (returnPct / 100) / 12;
+    const monthlyVol = (volPct / 100) / Math.sqrt(12);
+    const startCapital = investmentTotal || 0;
+    const horizonMonths = years * 12;
+
+    // Contribution step-function, shared setup for both modes: includedLoans
+    // sorted by payoff order. Deterministic — computed once, outside the
+    // Monte Carlo loop, then indexed per month inside it.
+    const includedLoans = (loans || []).filter(l => l.included).sort((a, b) => a.payoffMonth - b.payoffMonth);
+    const excludedLoans = (loans || []).filter(l => !l.included);
+
+    let contributionByMonth, salaryModel = null;
+    if (f.mode === 'salary_driven') {
+        // See buildSalaryDrivenContributionByMonth()/renderFireSalaryPanel():
+        // contribution(m) = projected_net_salary(m) − essential_monthly_expenses − active_loan_payments(m).
+        salaryModel = buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths, salaryHistory);
+        contributionByMonth = salaryModel.values;
+    } else {
+        contributionByMonth = buildManualContributionByMonth(baseContribution, includedLoans, horizonMonths);
+    }
+
+    const tracks = [], fireYrs = [];
+    for (let sim = 0; sim < SIMS; sim++) {
+        let value = startCapital, fireYr = null;
+        const track = [value];
+        for (let mo = 0; mo < horizonMonths; mo++) {
+            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contributionByMonth[mo]);
+            if ((mo + 1) % 12 === 0) track.push(value);
+            if (fireNumber !== null && value >= fireNumber && fireYr === null) fireYr = (mo + 1) / 12;
+        }
+        tracks.push(track);
+        if (fireYr !== null) fireYrs.push(fireYr);
+    }
+    const yearLabels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Now' : `Y${i}`);
+    const p10s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.10));
+    const p50s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.50));
+    const p90s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.90));
+    const fireProb = SIMS > 0 ? (fireYrs.length / SIMS * 100) : 0;
+    const medianFireYrs = fireYrs.length ? firePercentile(fireYrs, 0.5) : null;
+
+    return {
+        fireNumber, years, horizonMonths, horizonIsAssumed, SIMS, baseContribution,
+        startCapital, includedLoans, excludedLoans, contributionByMonth, salaryModel,
+        tracks, yearLabels, p10s, p50s, p90s, fireProb, medianFireYrs,
+    };
+}
+
 function renderFireOutputs() {
     const f = readFireInputs();
     const numEl = document.getElementById('eaFireNumber');
@@ -3532,77 +3666,31 @@ function renderFireOutputs() {
         </div>`;
     }).join('');
 
-    // ── Monte Carlo projection (300 simulated paths, monthly steps) ──
-    const returnPct = isNaN(f.returnPct) ? 6 : f.returnPct;
-    const volPct = isNaN(f.volPct) ? 15 : Math.max(0, f.volPct);
-    const baseContribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
-    let years = 30, horizonIsAssumed = true;
-    if (!isNaN(f.curAge) && !isNaN(f.retAge) && f.retAge > f.curAge) {
-        years = Math.min(60, f.retAge - f.curAge);
-        horizonIsAssumed = false;
-    }
-    const SIMS = 300;
-    const meanMonthly = (returnPct / 100) / 12;
-    const monthlyVol = (volPct / 100) / Math.sqrt(12);
-    const startCapital = _eaFireInvestmentTotal;
-    const horizonMonths = years * 12;
+    // ── Monte Carlo projection — delegates to the shared engine (computeFireProjection())
+    // that the main-dashboard summary widget also uses, so the two can never
+    // drift apart again. This function only handles the modal's own UI:
+    // panels, caption, chart.
+    const projection = computeFireProjection(f, _eaFireInvestmentTotal, _eaFireLoans, _eaFireSalaryHistory, 300);
 
-    // Contribution step-function, shared setup for both modes: includedLoans
-    // sorted by payoff order. Deterministic — computed once, outside the
-    // Monte Carlo loop, then indexed per month inside it.
-    const includedLoans = (_eaFireLoans || [])
-        .filter(l => l.included)
-        .sort((a, b) => a.payoffMonth - b.payoffMonth);
-    const excludedLoans = (_eaFireLoans || []).filter(l => !l.included);
-
-    let contributionByMonth;
     if (f.mode === 'salary_driven') {
-        // Salary-driven: contribution(m) = projected_net_salary(m) −
-        // essential_monthly_expenses − active_loan_payments(m). See
-        // buildSalaryDrivenContributionByMonth()/renderFireSalaryPanel().
-        const salaryModel = buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths);
-        contributionByMonth = salaryModel.values;
         const loanPanel = document.getElementById('eaFireLoanPanel');
         if (loanPanel) loanPanel.innerHTML = ''; // superseded by the salary panel's own loan lines in this mode
-        renderFireSalaryPanel(f, includedLoans, excludedLoans, salaryModel, horizonMonths);
+        renderFireSalaryPanel(f, projection.includedLoans, projection.excludedLoans, projection.salaryModel, projection.horizonMonths);
     } else {
-        // Manual: base_contribution (the flat number the user types in —
-        // already excludes money currently going to loans, so this is
-        // additive) plus each included loan's monthly_payment from the month
-        // it's computed to pay off onward.
-        contributionByMonth = new Array(horizonMonths + 1).fill(baseContribution);
-        includedLoans.forEach(loan => {
-            for (let m = loan.payoffMonth; m <= horizonMonths; m++) contributionByMonth[m] += loan.monthlyPaymentUSD;
-        });
-        renderFireLoanPanel(includedLoans, excludedLoans, baseContribution, horizonMonths);
+        renderFireLoanPanel(projection.includedLoans, projection.excludedLoans, projection.baseContribution, projection.horizonMonths);
         const salaryPanel = document.getElementById('eaFireSalaryPanel');
         if (salaryPanel) salaryPanel.innerHTML = '';
     }
 
-    const tracks = [], fireYrs = [];
-    for (let sim = 0; sim < SIMS; sim++) {
-        let value = startCapital, fireYr = null;
-        const track = [value];
-        for (let mo = 0; mo < horizonMonths; mo++) {
-            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contributionByMonth[mo]);
-            if ((mo + 1) % 12 === 0) track.push(value);
-            if (value >= fireNumber && fireYr === null) fireYr = (mo + 1) / 12;
-        }
-        tracks.push(track);
-        if (fireYr !== null) fireYrs.push(fireYr);
-    }
-    const yearLabels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Now' : `Y${i}`);
-    const p10s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.10));
-    const p50s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.50));
-    const p90s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.90));
+    const { years, horizonIsAssumed, SIMS, yearLabels, p10s, p50s, p90s, fireProb, medianFireYrs } = projection;
     const targetLine = yearLabels.map(() => fireNumber);
-    const fireProb = (fireYrs.length / SIMS * 100).toFixed(0);
-    const medianFireYrs = fireYrs.length ? firePercentile(fireYrs, 0.5).toFixed(1) : null;
+    const fireProbStr = fireProb.toFixed(0);
+    const medianFireYrsStr = medianFireYrs !== null ? medianFireYrs.toFixed(1) : null;
 
     if (captionEl) {
         captionEl.textContent = `${years}-yr horizon${horizonIsAssumed ? ' (assumed — set current/retirement age for a real one)' : ''} · `
-            + `${SIMS} simulations · FIRE probability by year ${years}: ${fireProb}% · `
-            + `Median time to FIRE: ${medianFireYrs ? medianFireYrs + ' yrs' : 'not reached in horizon'}`;
+            + `${SIMS} simulations · FIRE probability by year ${years}: ${fireProbStr}% · `
+            + `Median time to FIRE: ${medianFireYrsStr ? medianFireYrsStr + ' yrs' : 'not reached in horizon'}`;
     }
 
     if (charts.fire) charts.fire.destroy();
