@@ -371,7 +371,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <button class="ibtn"                 onclick="doRefresh()"     aria-label="Refresh data">&#8635; Refresh</button>
         <a class="ibtn" href="https://bot-dashboard-weld.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open bot performance dashboard" style="text-decoration:none;display:inline-flex;align-items:center;">&#129302; Bots</a>
         <button class="ibtn" id="editAssetsBtn" onclick="openEditAssets()" aria-label="Edit manual assets">&#128273; Edit Assets</button>
-        <button class="ibtn" id="taxSummaryBtn" onclick="openTaxSummary()" aria-label="Open PT tax summary estimate">&#128220; Tax Summary</button>
         <button class="ibtn" id="cashFlowBtn" onclick="openCashFlow()" aria-label="Open cash flow ledger">&#128181; Cash Flow</button>
         <button class="ibtn"                 onclick="openSettings()"  aria-label="Open settings">&#9881; Settings</button>
     </div>
@@ -549,6 +548,15 @@ tr:hover td{background:rgba(255,255,255,.03);}
             <label class="mlabel">FIRE Calculator <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— Financial Independence / Retire Early</span></label>
             <div id="eaFireStatusNote" style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">Loading…</div>
             <div class="mrow-row">
+                <div style="flex:1;min-width:220px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Contribution Mode</label>
+                    <select class="minput" id="eaFireMode" onchange="onFireModeChange()">
+                        <option value="manual">Manual — flat monthly contribution</option>
+                        <option value="salary_driven">Salary-Driven — computed from salary, expenses &amp; loans</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mrow-row" style="margin-top:8px;">
                 <div style="flex:1;min-width:150px;">
                     <label class="mlabel" style="margin-bottom:3px;">Desired Annual Expense (USD)</label>
                     <input class="minput" id="eaFireExpense" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
@@ -557,10 +565,30 @@ tr:hover td{background:rgba(255,255,255,.03);}
                     <label class="mlabel" style="margin-bottom:3px;">Safe Withdrawal Rate %</label>
                     <input class="minput" id="eaFireSwr" type="number" step="0.1" min="0.1" max="100" oninput="renderFireOutputs()">
                 </div>
-                <div style="flex:1;min-width:120px;">
+                <div style="flex:1;min-width:120px;" id="eaFireContributionCol">
                     <label class="mlabel" style="margin-bottom:3px;">Monthly Contribution</label>
                     <input class="minput" id="eaFireContribution" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
                 </div>
+            </div>
+            <div id="eaFireSalaryGroup" style="display:none;margin-top:8px;">
+                <div class="mrow-row">
+                    <div style="flex:1;min-width:220px;">
+                        <label class="mlabel" style="margin-bottom:3px;">Latest Salary (from Salary History)</label>
+                        <div id="eaFireSalaryBaseline" style="font-size:12.5px;font-weight:700;padding:8px 0;">—</div>
+                    </div>
+                    <div style="flex:1;min-width:110px;">
+                        <label class="mlabel" style="margin-bottom:3px;">Salary Growth %/yr <span style="font-weight:400;color:var(--text2);">(optional)</span></label>
+                        <input class="minput" id="eaFireSalaryGrowth" type="number" step="0.1" placeholder="blank = flat" oninput="renderFireOutputs()">
+                    </div>
+                </div>
+                <div class="mrow-row" style="margin-top:8px;">
+                    <div style="flex:1;min-width:220px;">
+                        <label class="mlabel" style="margin-bottom:3px;">Essential Monthly Expenses (EUR)</label>
+                        <input class="minput" id="eaFireEssentialExp" type="number" step="0.01" min="0" oninput="renderFireOutputs()">
+                        <div style="margin-top:5px;"><button class="mgray" style="padding:4px 9px;font-size:10px;" onclick="refreshFireEssentialExpenses()">&#8635; Re-suggest from Cash Flow</button></div>
+                    </div>
+                </div>
+                <div id="eaFireEssentialExpNote" style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.5;"></div>
             </div>
             <div class="mrow-row" style="margin-top:8px;">
                 <div style="flex:1;min-width:110px;">
@@ -603,92 +631,12 @@ tr:hover td{background:rgba(255,255,255,.03);}
             <div id="eaFireTiers" style="margin-top:12px;"></div>
             <div style="margin-top:12px;"><div class="chwrap" style="min-height:190px;"><canvas id="eaFireChart"></canvas></div></div>
             <div id="eaFireChartCaption" style="font-size:10px;color:var(--text2);margin-top:4px;"></div>
+            <div id="eaFireSalaryPanel" style="margin-top:10px;"></div>
+            <div id="eaFireLoanPanel" style="margin-top:10px;"></div>
 
             <div class="mactions">
                 <button class="mcancel" onclick="closeEditAssets()">Close</button>
                 <button class="mprimary" onclick="addEditAsset()">+ Add Asset</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- TAX SUMMARY MODAL (Supabase mode only) — separate section/modal from Edit
-     Assets: read-mostly (one required input for the englobamento advisor),
-     large enough (5 RPCs, a disclaimer, a per-disposal table) to deserve its
-     own space rather than being one more collapsible block in an already-long
-     Edit Assets panel. Shares the SAME login/session (authToken/sessionStorage)
-     as Edit Assets — sign in once via either modal, both unlock together. -->
-<div class="modal" id="taxModal">
-    <div class="mbox" style="width:920px;">
-        <div class="mtitle">PT Tax Summary — Estimate</div>
-
-        <!-- Disclaimer — always visible, loads even before sign-in (tax_disclaimer()
-             is anon-readable, and this must never be hidden behind login/a tooltip). -->
-        <div id="taxDisclaimerBox" style="border:1px solid var(--yellow);background:rgba(255,204,0,0.06);border-radius:4px;padding:12px 14px;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--yellow);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Not tax advice — informative estimate only</div>
-            <div id="taxDisclaimerText" style="font-size:clamp(10px,0.9vw,12px);color:var(--text);line-height:1.5;margin-bottom:8px;">Loading disclaimer…</div>
-            <div id="taxDisclaimerTextEn" style="font-size:clamp(10px,0.9vw,12px);color:var(--text2);line-height:1.5;margin-bottom:10px;font-style:italic;"></div>
-            <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">This estimate does NOT account for:</div>
-            <ul id="taxAssumptionsList" style="margin:0;padding-left:18px;font-size:10.5px;color:var(--text2);line-height:1.6;"></ul>
-        </div>
-
-        <!-- Login form — shown until signed in -->
-        <div id="taxLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see your personal tax estimate (income, capital gains, dividends). Already signed in via Edit Assets in this session? This unlocks automatically — no need to sign in twice.</div>
-            <div class="mrow">
-                <label class="mlabel">Email</label>
-                <input class="minput" id="taxEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('taxPassword').focus()">
-            </div>
-            <div class="mrow">
-                <label class="mlabel">Password</label>
-                <input class="minput" id="taxPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginTaxSummary()">
-            </div>
-            <div id="taxLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
-            <div class="mactions">
-                <button class="mcancel" onclick="closeTaxSummary()">Cancel</button>
-                <button class="mprimary" id="taxLoginBtn" onclick="loginTaxSummary()">Sign In</button>
-            </div>
-        </div>
-
-        <!-- Panel — shown once signed in -->
-        <div id="taxPanel" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <label class="mlabel" style="margin-bottom:0;">Tax Year</label>
-                    <input class="minput" id="taxYearInput" type="number" step="1" style="width:90px;padding:6px 8px;" onchange="loadTaxSummary()">
-                </div>
-                <button class="mgray" style="padding:6px 12px;" onclick="logoutTaxSummary()">Sign Out</button>
-            </div>
-            <div style="font-size:10px;color:var(--text2);margin-bottom:10px;">Figures below are raw sums of amounts already entered in Salary History / Portfolios, in whatever currency each entry used (EUR or USD) — <b>no currency conversion is applied here</b>. Keep entries in one consistent currency for these totals to be meaningful.</div>
-            <div id="taxStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
-
-            <div class="card-divider" style="margin:14px 0;"></div>
-            <label class="mlabel">Category A — Employment Income</label>
-            <div id="taxCatA" style="margin-top:8px;"></div>
-
-            <div class="card-divider" style="margin:16px 0;"></div>
-            <label class="mlabel">Category G — Capital Gains (FIFO)</label>
-            <div id="taxCgSummary" style="margin-top:8px;"></div>
-            <div class="twrap" id="taxCgDisposals" style="max-height:280px;overflow:auto;margin-top:10px;"></div>
-
-            <div class="card-divider" style="margin:16px 0;"></div>
-            <label class="mlabel">Category E — Dividends</label>
-            <div id="taxCatE" style="margin-top:8px;"></div>
-
-            <div class="card-divider" style="margin:16px 0;"></div>
-            <label class="mlabel">Englobamento Advisor <span style="color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;">— flat rate vs. aggregation, what-if</span></label>
-            <div style="font-size:10px;color:var(--text2);margin:-2px 0 8px;">Requires your TOTAL other taxable income for the year (not just what's in Salary History — include any other Category A/B/F/H income you have). This tool cannot assume salary history alone is the complete picture, so it won't compute anything until you enter this.</div>
-            <div class="mrow-row">
-                <input class="minput" id="taxOtherIncome" type="number" step="0.01" min="0" placeholder="Your other taxable income, required" style="flex:1;min-width:220px;">
-                <button class="mgray" onclick="runEnglobamentoAdvisor()">Calculate</button>
-            </div>
-            <div id="taxEnglobamento" style="margin-top:10px;"></div>
-
-            <div class="card-divider" style="margin:16px 0;"></div>
-            <div id="taxYearConfigFooter" style="font-size:10px;color:var(--text2);"></div>
-
-            <div class="mactions">
-                <button class="mcancel" onclick="closeTaxSummary()">Close</button>
             </div>
         </div>
     </div>
@@ -699,14 +647,14 @@ tr:hover td{background:rgba(255,255,255,.03);}
      bills, budgets, bills calendar, goals, analytics all land here in later
      phases), so it gets its own tabbed area from the start rather than a
      layout that would need reworking once those arrive. Shares the SAME
-     login/session as Edit Assets & Tax Summary. -->
+     login/session as Edit Assets. -->
 <div class="modal" id="cfModal">
     <div class="mbox" style="width:980px;">
         <div class="mtitle">Cash Flow</div>
 
         <!-- Login form -->
         <div id="cfLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see and manage your everyday income/expense ledger. Already signed in via Edit Assets or Tax Summary in this session? This unlocks automatically.</div>
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see and manage your everyday income/expense ledger. Already signed in via Edit Assets in this session? This unlocks automatically.</div>
             <div class="mrow">
                 <label class="mlabel">Email</label>
                 <input class="minput" id="cfEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('cfPassword').focus()">
@@ -1081,6 +1029,13 @@ let _eaPfTransactions = {};      // Edit Assets: portfolio_id -> cached portfoli
 let _eaSalaryItems = [];         // Edit Assets: cache of salary_history_list() rows
 let _eaFirePlan = null;          // Edit Assets: cache of fire_plan_get() result
 let _eaFireInvestmentTotal = 0;  // Edit Assets: cache of fire_investment_total() result
+let _eaFireLoans = [];           // Edit Assets: FIRE calculator's computed per-loan payoff model
+                                  // (label, included, payoffMonth, monthlyPaymentUSD, nativePayment,
+                                  // currency, tier, reason) — built by buildFireLoanModel() from
+                                  // loan_details_list() + manual_assets_list(), refreshed on every
+                                  // loadFireCalculator().
+let _eaFireSalaryHistory = [];      // Edit Assets: cache of salary_history_list() rows, for FIRE's salary-driven mode (Phase B)
+let _eaFireEssentialExpenses = null; // Edit Assets: cache of fire_essential_expenses() result (average_monthly/months_with_data/low_confidence/etc.)
 let eurUsdRate = null;      // Edit Assets: cached EUR->USD rate, fetched once per session
 let eurRatePromise = null;  // Edit Assets: in-flight rate fetch (avoids duplicate calls)
 let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback rate
@@ -1180,6 +1135,11 @@ function initSectionResizeObserver() {
 function fd(n){const a=Math.abs(n);const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-$':'$')+s;}
 function fp(n){if(typeof n==='string')return n;const p=(n>-2&&n<2)?n*100:n;return(p>=0?'+':'')+p.toFixed(2)+'%';}
 function fq(n){return n.toLocaleString(undefined,{maximumFractionDigits:6});}
+// EUR sibling of fd() — display-only helper for the FIRE salary-driven panel
+// (Cash Flow / Salary History figures are EUR-native; the Monte Carlo math
+// itself stays USD-based like the rest of the calculator, see
+// buildSalaryDrivenContributionByMonth()).
+function fdEur(n){const a=Math.abs(n);const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-€':'€')+s;}
 function cc(n){return n>0?'pos':n<0?'neg':'';}
 function kpi(label,val,sub,cls){return`<div class="kpi"><div class="klbl">${label}</div><div class="kval ${cls||''} sensitive">${val}</div>${sub?`<div class="ksub">${sub}</div>`:''}</div>`;}
 function gi(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
@@ -3082,17 +3042,136 @@ async function addSalaryEntry() {
 async function loadFireCalculator() {
     const note = document.getElementById('eaFireStatusNote');
     try {
-        const [plan, invTotal] = await Promise.all([
+        // fire_essential_expenses() is authenticated-only (reads real Cash Flow
+        // transactions); Edit Assets is already behind sign-in by the time this
+        // runs, so rpcAuth() is safe here. .catch(()=>null) so a Cash Flow-side
+        // failure never blocks the rest of the calculator from loading.
+        const [plan, invTotal, loanDetails, assets, salaryHistory, essentialExp] = await Promise.all([
             rpc('fire_plan_get'),
             rpc('fire_investment_total'),
+            rpc('loan_details_list').catch(() => []),
+            rpc('manual_assets_list').catch(() => []),
+            rpc('salary_history_list').catch(() => []),
+            rpcAuth('fire_essential_expenses', { p_months: 3 }).catch(() => null),
         ]);
         _eaFirePlan = plan;
         _eaFireInvestmentTotal = Number(invTotal) || 0;
+        _eaFireSalaryHistory = Array.isArray(salaryHistory) ? salaryHistory : [];
+        _eaFireEssentialExpenses = essentialExp;
+        // Loan payoff math needs the EUR->USD rate ready (loan_details.monthly_payment
+        // is entered in the loan's native currency; the FIRE projection is USD-based).
+        // ensureEurUsdRate() is idempotent/cached, so this is a no-op if it already ran.
+        await ensureEurUsdRate();
+        _eaFireLoans = buildFireLoanModel(loanDetails || [], assets || []);
         populateFireInputs(plan);
         renderFireOutputs();
     } catch (err) {
         if (note) { note.textContent = `Failed to load: ${err.message}`; note.style.color = 'var(--red)'; }
     }
+}
+
+// Most recent Salary History entry (by entry_date, ISO strings sort correctly
+// lexicographically) — the salary-driven mode's baseline. Returns null if the
+// user hasn't logged any salary entries yet.
+function latestSalaryEntry() {
+    if (!_eaFireSalaryHistory.length) return null;
+    return [..._eaFireSalaryHistory].sort((a, b) => (a.entry_date < b.entry_date ? 1 : (a.entry_date > b.entry_date ? -1 : 0)))[0];
+}
+
+// ── Loan payoff model for the FIRE contribution step-function (Phase 19) ──
+// computeLoanPayoffMonth(loan, currentBalance) — loan is a loan_details_list()
+// row (or {} if none exists yet), currentBalance is the loan's balance as a
+// positive number, in whatever currency `loan.monthly_payment` is denominated
+// in (native currency — conversion to USD happens in buildFireLoanModel, after
+// this returns, so this function stays currency-agnostic; N is a month count,
+// not a money amount, so it's valid regardless of currency as long as balance
+// and payment share one). 4-tier fallback per the brief:
+//   1. balance + rate + payment all present -> solve N from amortization math
+//   2. rate missing, remaining_months present -> use it directly
+//   3. neither, but start_date + term_months present -> N = term - elapsed
+//   4. none of the above (or no payment at all) -> exclude, explain why
+// Negative amortization (payment doesn't cover interest) resolves to
+// months:null with a reason, same shape as tier 4, so callers can treat both
+// as "not included" without a separate branch.
+function computeLoanPayoffMonth(loan, currentBalance) {
+    const details = loan || {};
+    const P = has(details.monthly_payment) ? num(details.monthly_payment) : null;
+    if (!P || P <= 0) {
+        return { months: null, tier: 4, payment: null, reason: 'no monthly payment recorded' };
+    }
+    const B = Math.abs(num(currentBalance));
+    const ratePct = has(details.interest_rate_pct) ? num(details.interest_rate_pct) : null;
+
+    // Tier 1 — preferred: self-corrects whenever the balance is edited.
+    if (B > 0 && ratePct !== null) {
+        const r = ratePct / 12 / 100;
+        if (r === 0) {
+            const N = B / P;
+            if (isFinite(N) && N > 0) return { months: N, tier: 1, payment: P };
+        } else {
+            const interestPortion = P - B * r;
+            if (interestPortion > 0) {
+                const N = Math.log(P / interestPortion) / Math.log(1 + r);
+                if (isFinite(N) && N > 0) return { months: N, tier: 1, payment: P };
+            }
+            // Negative amortization — the payment doesn't even cover the
+            // interest, so this loan never pays off on its own. Don't error;
+            // just leave its payoff-boost out of the projection.
+            return { months: null, tier: 1, payment: P, reason: "payment doesn't cover interest — won't pay off within any horizon" };
+        }
+    }
+    // Tier 2
+    if (has(details.remaining_months) && num(details.remaining_months) > 0) {
+        return { months: num(details.remaining_months), tier: 2, payment: P };
+    }
+    // Tier 3
+    if (details.start_date && has(details.term_months) && num(details.term_months) > 0) {
+        const start = new Date(details.start_date);
+        if (!isNaN(start.getTime())) {
+            const now = new Date();
+            const monthsElapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+            return { months: num(details.term_months) - monthsElapsed, tier: 3, payment: P };
+        }
+    }
+    // Tier 4 — payment is known but there's no way to time the payoff.
+    return { months: null, tier: 4, payment: P, reason: 'add rate/payment in Loan Details to include it' };
+}
+
+// Builds the per-loan model the FIRE projection consumes: matches
+// manual_assets_list() loan rows to loan_details_list() rows by label
+// (case-insensitive, same convention as _eaLoanDetails elsewhere in Edit
+// Assets), runs computeLoanPayoffMonth() for each, and converts the payment
+// to USD (the FIRE calculator's base currency) when the loan is EUR-native.
+function buildFireLoanModel(loanDetails, assets) {
+    const detailsByLabel = {};
+    (loanDetails || []).forEach(r => { detailsByLabel[String(r.label).toLowerCase()] = r; });
+    const loanAssets = (assets || []).filter(a => a.kind === 'loan');
+    const rate = eurUsdRate || EUR_USD_FALLBACK_RATE;
+    return loanAssets.map(a => {
+        const details = detailsByLabel[String(a.label).toLowerCase()] || {};
+        const isEur = a.currency === 'EUR';
+        // Use the same currency for balance and payment so the month-count
+        // formula stays valid (see computeLoanPayoffMonth's comment above).
+        const nativeBalance = isEur && has(a.original_value) ? Math.abs(num(a.original_value)) : Math.abs(num(a.value));
+        const result = computeLoanPayoffMonth(details, nativeBalance);
+        const paymentUSD = has(result.payment) ? (isEur ? result.payment * rate : result.payment) : null;
+        const included = result.months !== null && isFinite(result.months) && paymentUSD !== null;
+        return {
+            label: a.label,
+            included,
+            payoffMonth: included ? Math.max(0, Math.round(result.months)) : null,
+            monthlyPaymentUSD: paymentUSD,
+            // Native-currency payment + its currency, additive fields kept
+            // alongside monthlyPaymentUSD (not a replacement for it) so the
+            // salary-driven panel (Phase B) can show EUR-native figures
+            // without re-deriving anything — monthlyPaymentUSD stays the
+            // single source of truth actually fed into the Monte Carlo loop.
+            nativePayment: has(result.payment) ? result.payment : null,
+            currency: isEur ? 'EUR' : 'USD',
+            tier: result.tier,
+            reason: result.reason || null,
+        };
+    });
 }
 
 function populateFireInputs(plan) {
@@ -3104,6 +3183,26 @@ function populateFireInputs(plan) {
     document.getElementById('eaFireVol').value = plan.volatility_pct ?? 15;
     document.getElementById('eaFireCurAge').value = plan.current_age ?? '';
     document.getElementById('eaFireRetAge').value = plan.retirement_age ?? '';
+
+    // Phase B fields. contribution_mode always comes back non-null from
+    // fire_plan_get() (defaults to 'manual' even pre-save). essential_monthly_expenses
+    // is genuinely nullable — when the user hasn't set/saved one yet, pre-fill
+    // the auto-calc suggestion as a STARTING POINT only (never silently locks
+    // in the auto number — it's a normal editable field from here on, and
+    // saving always writes back whatever's actually in the input).
+    const mode = plan.contribution_mode === 'salary_driven' ? 'salary_driven' : 'manual';
+    document.getElementById('eaFireMode').value = mode;
+    document.getElementById('eaFireSalaryGrowth').value = has(plan.salary_growth_pct) ? plan.salary_growth_pct : '';
+    let essentialVal = plan.essential_monthly_expenses;
+    if (!has(essentialVal)) {
+        essentialVal = _eaFireEssentialExpenses ? (Number(_eaFireEssentialExpenses.average_monthly) || 0) : '';
+    }
+    document.getElementById('eaFireEssentialExp').value = essentialVal;
+
+    renderFireSalaryBaseline();
+    renderFireEssentialExpNote();
+    onFireModeChange(); // syncs manual-vs-salary-driven field visibility; also triggers a render
+
     const note = document.getElementById('eaFireStatusNote');
     if (note) {
         note.style.color = 'var(--text2)';
@@ -3113,7 +3212,81 @@ function populateFireInputs(plan) {
     }
 }
 
+// Read-only display of the salary-driven mode's baseline figure — sourced
+// from Salary History (already loaded via loadFireCalculator()), not
+// editable here directly (edit it via the Salary History section above).
+function renderFireSalaryBaseline() {
+    const el = document.getElementById('eaFireSalaryBaseline');
+    if (!el) return;
+    const latest = latestSalaryEntry();
+    if (!latest) {
+        el.textContent = 'No Salary History entries yet — add one above first.';
+        el.style.color = 'var(--text2)';
+        return;
+    }
+    const usesNet = has(latest.net_amount);
+    const amt = usesNet ? num(latest.net_amount) : num(latest.gross_amount);
+    const symbol = latest.currency === 'EUR' ? '€' : '$';
+    el.style.color = 'var(--text)';
+    el.textContent = `${symbol}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${usesNet ? 'net' : 'gross (no net amount recorded)'}`
+        + `${latest.employer ? ' · ' + latest.employer : ''} (dated ${latest.entry_date})`;
+}
+
+// Honest confidence indicator for the auto-derived essential-expenses figure
+// — per the spec, low_confidence must always be shown plainly, never hidden
+// behind a confident-looking number.
+function renderFireEssentialExpNote() {
+    const el = document.getElementById('eaFireEssentialExpNote');
+    if (!el) return;
+    const d = _eaFireEssentialExpenses;
+    if (!d) {
+        el.textContent = 'Could not load an auto-suggestion from Cash Flow — enter your own estimate.';
+        el.style.color = 'var(--text2)';
+        return;
+    }
+    const base = `Auto-suggested from your last ${d.months_requested} month(s) of categorized Cash Flow data: `
+        + `${d.months_with_data} of ${d.months_requested} month(s) have data, ${d.transaction_count} transaction(s), averaging ${fdEur(Number(d.average_monthly) || 0)}/mo.`;
+    if (d.low_confidence) {
+        el.style.color = 'var(--yellow)';
+        el.textContent = `${base} ⚠ Low confidence — based on limited categorized data — consider entering your own estimate instead.`;
+    } else {
+        el.style.color = 'var(--text2)';
+        el.textContent = base;
+    }
+}
+
+// Explicit user action (button) to re-pull fire_essential_expenses() and
+// refresh both the suggestion note and the input field — a deliberate
+// overwrite (unlike the load-time pre-fill, which only fills an empty/unsaved
+// field), since clicking this button IS the user asking for the latest number.
+async function refreshFireEssentialExpenses() {
+    const note = document.getElementById('eaFireEssentialExpNote');
+    if (note) { note.textContent = 'Refreshing…'; note.style.color = 'var(--text2)'; }
+    try {
+        _eaFireEssentialExpenses = await rpcAuth('fire_essential_expenses', { p_months: 3 });
+        document.getElementById('eaFireEssentialExp').value = Number(_eaFireEssentialExpenses.average_monthly) || 0;
+        renderFireEssentialExpNote();
+        renderFireOutputs();
+    } catch (err) {
+        if (note) { note.textContent = `Failed to refresh: ${err.message}`; note.style.color = 'var(--red)'; }
+    }
+}
+
+// Toggles the manual-only vs salary-driven-only input groups and re-renders.
+function onFireModeChange() {
+    const modeEl = document.getElementById('eaFireMode');
+    const mode = modeEl ? modeEl.value : 'manual';
+    const manualCol = document.getElementById('eaFireContributionCol');
+    const salaryGroup = document.getElementById('eaFireSalaryGroup');
+    if (manualCol) manualCol.style.display = mode === 'manual' ? '' : 'none';
+    if (salaryGroup) salaryGroup.style.display = mode === 'salary_driven' ? 'block' : 'none';
+    renderFireOutputs();
+}
+
 function readFireInputs() {
+    const modeEl = document.getElementById('eaFireMode');
+    const growthEl = document.getElementById('eaFireSalaryGrowth');
+    const essentialEl = document.getElementById('eaFireEssentialExp');
     return {
         expense: parseFloat(document.getElementById('eaFireExpense').value),
         swr: parseFloat(document.getElementById('eaFireSwr').value),
@@ -3123,6 +3296,9 @@ function readFireInputs() {
         volPct: parseFloat(document.getElementById('eaFireVol').value),
         curAge: parseInt(document.getElementById('eaFireCurAge').value, 10),
         retAge: parseInt(document.getElementById('eaFireRetAge').value, 10),
+        mode: (modeEl && modeEl.value === 'salary_driven') ? 'salary_driven' : 'manual',
+        essentialExp: essentialEl ? parseFloat(essentialEl.value) : NaN,
+        salaryGrowthPct: growthEl ? parseFloat(growthEl.value) : NaN,
     };
 }
 
@@ -3140,6 +3316,9 @@ async function saveFirePlan() {
             p_volatility_pct: isNaN(f.volPct) ? null : f.volPct,
             p_current_age: isNaN(f.curAge) ? null : f.curAge,
             p_retirement_age: isNaN(f.retAge) ? null : f.retAge,
+            p_contribution_mode: f.mode,
+            p_essential_monthly_expenses: isNaN(f.essentialExp) ? null : f.essentialExp,
+            p_salary_growth_pct: isNaN(f.salaryGrowthPct) ? null : f.salaryGrowthPct,
         });
         _eaFirePlan = { ...saved, is_saved: true };
         if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = `Plan saved (${new Date().toLocaleDateString()}).`; }
@@ -3164,6 +3343,152 @@ function firePercentile(arr, p) {
     return s[Math.max(0, Math.min(s.length - 1, Math.floor(s.length * p)))];
 }
 
+// Transparency panel — the whole point of the loan-aware contribution model
+// is that the user can see *why* the projection changes shape, not just
+// trust a black box. One line per included loan in payoff order (showing the
+// contribution before/after), then one line per excluded loan with a plain
+// reason so nothing is silently dropped.
+function renderFireLoanPanel(includedSorted, excludedLoans, baseContribution, horizonMonths) {
+    const panel = document.getElementById('eaFireLoanPanel');
+    if (!panel) return;
+    if (!includedSorted.length && !excludedLoans.length) { panel.innerHTML = ''; return; }
+
+    let html = '<div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Loan Payoff Effect on Contribution</div>';
+    if (includedSorted.length) {
+        let running = baseContribution;
+        html += includedSorted.map(l => {
+            const before = running;
+            running += l.monthlyPaymentUSD;
+            const beyondHorizon = l.payoffMonth > horizonMonths;
+            const yrs = (l.payoffMonth / 12).toFixed(1);
+            return `<div style="font-size:11px;color:var(--text);padding:4px 0;border-bottom:1px dashed var(--border);">
+                <span style="color:var(--green);">&#9679;</span> <b>${escapeHtml(l.label)}</b> paid off month ${l.payoffMonth} (~${yrs} yrs)${beyondHorizon ? ' <span style="color:var(--text2);">— beyond this horizon, shown for reference</span>' : ''} &rarr;
+                contribution rises from ${fd(before)} to ${fd(running)}/mo
+            </div>`;
+        }).join('');
+    } else {
+        html += `<div style="font-size:11px;color:var(--text2);padding:4px 0;">No loans currently modeled — base contribution of ${fd(baseContribution)}/mo stays flat.</div>`;
+    }
+    if (excludedLoans.length) {
+        html += excludedLoans.map(l => `<div style="font-size:10px;color:var(--yellow);padding:4px 0;">
+            &#9888; <b>${escapeHtml(l.label)}</b> excluded from projection — ${escapeHtml(l.reason || 'insufficient data')}.
+        </div>`).join('');
+    }
+    panel.innerHTML = html;
+}
+
+// Salary-driven contribution model (Phase B). Monthly investable surplus at
+// month m = projected net salary at m − essential monthly expenses − whatever
+// included loans are still active at m. Everything is computed in USD (the
+// calculator's base currency, matching fire_investment_total()/fd()) so it
+// can feed the SAME Monte Carlo loop manual mode uses — only this one array
+// differs between the two modes. Reuses Phase A's includedLoans (built by
+// buildFireLoanModel()/computeLoanPayoffMonth()) for the loan-payment term,
+// no separate amortization logic. Salary growth compounds ANNUALLY (steps
+// once every 12 months, not smoothed month-to-month) per the spec. Clamped
+// at 0 per month — a month can't invest a negative amount; clampedCount/
+// firstClampedMonth are returned so the panel can surface an honest warning
+// instead of silently flooring a shortfall.
+function buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths) {
+    const rate = eurUsdRate || EUR_USD_FALLBACK_RATE;
+    const latest = latestSalaryEntry();
+    const latestAmountNative = latest ? (has(latest.net_amount) ? num(latest.net_amount) : num(latest.gross_amount)) : 0;
+    const latestIsEur = latest ? latest.currency === 'EUR' : true;
+    const latestUSD = latestIsEur ? latestAmountNative * rate : latestAmountNative;
+    const growthPct = isNaN(f.salaryGrowthPct) ? 0 : f.salaryGrowthPct;
+    // essential_monthly_expenses is sourced from Cash Flow, which is EUR-only
+    // bank data (same assumption the CSV importer already makes elsewhere in
+    // this app) — convert to USD here to match the rest of the projection.
+    const essentialExpNative = isNaN(f.essentialExp) || f.essentialExp < 0 ? 0 : f.essentialExp;
+    const essentialExpUSD = essentialExpNative * rate;
+
+    const values = new Array(horizonMonths + 1);
+    let clampedCount = 0, firstClampedMonth = null;
+    for (let m = 0; m <= horizonMonths; m++) {
+        const yearsElapsed = Math.floor(m / 12);
+        const salaryUSD = latestUSD * Math.pow(1 + growthPct / 100, yearsElapsed);
+        let activeLoansUSD = 0;
+        includedLoans.forEach(loan => { if (m < loan.payoffMonth) activeLoansUSD += loan.monthlyPaymentUSD; });
+        const raw = salaryUSD - essentialExpUSD - activeLoansUSD;
+        values[m] = Math.max(0, raw);
+        if (raw < 0) { clampedCount++; if (firstClampedMonth === null) firstClampedMonth = m; }
+    }
+    return { values, clampedCount, firstClampedMonth, latestUSD, essentialExpUSD };
+}
+
+// Transparency panel for salary-driven mode — same purpose as
+// renderFireLoanPanel() (show the reasoning, not a black box) but framed
+// around the salary − expenses − loans subtraction instead of a flat base +
+// step-ups. Displayed in EUR (matching how the user actually tracks salary
+// and Cash Flow) even though the figures feeding the Monte Carlo loop are
+// USD internally — a display-only back-conversion; buildSalaryDrivenContributionByMonth()
+// stays the single source of truth for the actual numbers used.
+function renderFireSalaryPanel(f, includedLoans, excludedLoans, salaryModel, horizonMonths) {
+    const panel = document.getElementById('eaFireSalaryPanel');
+    if (!panel) return;
+    const rate = eurUsdRate || EUR_USD_FALLBACK_RATE;
+    const latest = latestSalaryEntry();
+    if (!latest) {
+        panel.innerHTML = '<div style="font-size:11px;color:var(--yellow);padding:4px 0;">&#9888; No Salary History entries — add one above to use salary-driven mode. Contribution defaults to $0/mo until then.</div>';
+        return;
+    }
+    const latestAmountNative = has(latest.net_amount) ? num(latest.net_amount) : num(latest.gross_amount);
+    const latestIsEur = latest.currency === 'EUR';
+    const latestEUR = latestIsEur ? latestAmountNative : latestAmountNative / rate;
+    const essentialExpEUR = isNaN(f.essentialExp) || f.essentialExp < 0 ? 0 : f.essentialExp;
+    const growthPct = isNaN(f.salaryGrowthPct) ? 0 : f.salaryGrowthPct;
+
+    let html = '<div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Salary-Driven Contribution</div>';
+
+    // One line at month 0, then one line per loan-payoff event (surplus
+    // before/after) — same step-function idea as renderFireLoanPanel(), just
+    // subtraction-framed instead of addition-framed.
+    const events = [{ month: 0 }, ...includedLoans.map(l => ({ month: l.payoffMonth, loan: l }))]
+        .filter(e => e.month <= horizonMonths)
+        .sort((a, b) => a.month - b.month);
+
+    html += events.map((e, idx) => {
+        const yearsElapsed = Math.floor(e.month / 12);
+        const salaryEURatM = latestEUR * Math.pow(1 + growthPct / 100, yearsElapsed);
+        let activeLoansEUR = 0;
+        const activeLabels = [];
+        includedLoans.forEach(l => {
+            if (e.month < l.payoffMonth) {
+                // monthlyPaymentUSD is the single source of truth (Phase A);
+                // convert back to EUR here purely for display consistency.
+                activeLoansEUR += l.monthlyPaymentUSD / rate;
+                activeLabels.push(l.label);
+            }
+        });
+        const surplusEUR = Math.max(0, salaryEURatM - essentialExpEUR - activeLoansEUR);
+        const loanClause = activeLabels.length ? ` and ${fdEur(activeLoansEUR)} loan payments (${escapeHtml(activeLabels.join(' + '))})` : '';
+        const intro = idx === 0
+            ? `${fdEur(salaryEURatM)} salary`
+            : `<span style="color:var(--green);">&#9679;</span> <b>${escapeHtml(e.loan.label)}</b> paid off month ${e.month} (~${(e.month / 12).toFixed(1)} yrs) &rarr; ${fdEur(salaryEURatM)} salary`;
+        return `<div style="font-size:11px;color:var(--text);padding:4px 0;border-bottom:1px dashed var(--border);">
+            ${intro} &minus; ${fdEur(essentialExpEUR)} essential expenses${loanClause} &rarr; <b>${fdEur(surplusEUR)}/mo invested</b>
+        </div>`;
+    }).join('');
+
+    if (growthPct) {
+        html += `<div style="font-size:10px;color:var(--text2);padding:4px 0;">Salary assumed to grow ${growthPct}%/yr, compounding annually.</div>`;
+    } else {
+        html += `<div style="font-size:10px;color:var(--text2);padding:4px 0;">No salary growth assumed (flat) — set "Salary Growth %/yr" above to model raises.</div>`;
+    }
+
+    if (salaryModel.clampedCount > 0) {
+        html += `<div style="font-size:10px;color:var(--red);padding:4px 0;">&#9888; In ${salaryModel.clampedCount} month(s) of this horizon (starting month ${salaryModel.firstClampedMonth}), projected salary doesn't cover essential expenses + loan payments — contribution floored at $0 those months instead of going negative.</div>`;
+    }
+
+    if (excludedLoans.length) {
+        html += excludedLoans.map(l => `<div style="font-size:10px;color:var(--yellow);padding:4px 0;">
+            &#9888; <b>${escapeHtml(l.label)}</b> excluded from projection — ${escapeHtml(l.reason || 'insufficient data')}.
+        </div>`).join('');
+    }
+
+    panel.innerHTML = html;
+}
+
 function renderFireOutputs() {
     const f = readFireInputs();
     const numEl = document.getElementById('eaFireNumber');
@@ -3179,6 +3504,10 @@ function renderFireOutputs() {
         tiersEl.innerHTML = '<div style="color:var(--text2);font-size:11px;">Enter a desired annual expense and a safe withdrawal rate to see your FIRE number.</div>';
         if (charts.fire) { charts.fire.destroy(); charts.fire = null; }
         if (captionEl) captionEl.textContent = '';
+        const loanPanel = document.getElementById('eaFireLoanPanel');
+        if (loanPanel) loanPanel.innerHTML = '';
+        const salaryPanel = document.getElementById('eaFireSalaryPanel');
+        if (salaryPanel) salaryPanel.innerHTML = '';
         return;
     }
 
@@ -3206,7 +3535,7 @@ function renderFireOutputs() {
     // ── Monte Carlo projection (300 simulated paths, monthly steps) ──
     const returnPct = isNaN(f.returnPct) ? 6 : f.returnPct;
     const volPct = isNaN(f.volPct) ? 15 : Math.max(0, f.volPct);
-    const contribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
+    const baseContribution = isNaN(f.contribution) || f.contribution < 0 ? 0 : f.contribution;
     let years = 30, horizonIsAssumed = true;
     if (!isNaN(f.curAge) && !isNaN(f.retAge) && f.retAge > f.curAge) {
         years = Math.min(60, f.retAge - f.curAge);
@@ -3216,12 +3545,46 @@ function renderFireOutputs() {
     const meanMonthly = (returnPct / 100) / 12;
     const monthlyVol = (volPct / 100) / Math.sqrt(12);
     const startCapital = _eaFireInvestmentTotal;
+    const horizonMonths = years * 12;
+
+    // Contribution step-function, shared setup for both modes: includedLoans
+    // sorted by payoff order. Deterministic — computed once, outside the
+    // Monte Carlo loop, then indexed per month inside it.
+    const includedLoans = (_eaFireLoans || [])
+        .filter(l => l.included)
+        .sort((a, b) => a.payoffMonth - b.payoffMonth);
+    const excludedLoans = (_eaFireLoans || []).filter(l => !l.included);
+
+    let contributionByMonth;
+    if (f.mode === 'salary_driven') {
+        // Salary-driven: contribution(m) = projected_net_salary(m) −
+        // essential_monthly_expenses − active_loan_payments(m). See
+        // buildSalaryDrivenContributionByMonth()/renderFireSalaryPanel().
+        const salaryModel = buildSalaryDrivenContributionByMonth(f, includedLoans, horizonMonths);
+        contributionByMonth = salaryModel.values;
+        const loanPanel = document.getElementById('eaFireLoanPanel');
+        if (loanPanel) loanPanel.innerHTML = ''; // superseded by the salary panel's own loan lines in this mode
+        renderFireSalaryPanel(f, includedLoans, excludedLoans, salaryModel, horizonMonths);
+    } else {
+        // Manual: base_contribution (the flat number the user types in —
+        // already excludes money currently going to loans, so this is
+        // additive) plus each included loan's monthly_payment from the month
+        // it's computed to pay off onward.
+        contributionByMonth = new Array(horizonMonths + 1).fill(baseContribution);
+        includedLoans.forEach(loan => {
+            for (let m = loan.payoffMonth; m <= horizonMonths; m++) contributionByMonth[m] += loan.monthlyPaymentUSD;
+        });
+        renderFireLoanPanel(includedLoans, excludedLoans, baseContribution, horizonMonths);
+        const salaryPanel = document.getElementById('eaFireSalaryPanel');
+        if (salaryPanel) salaryPanel.innerHTML = '';
+    }
+
     const tracks = [], fireYrs = [];
     for (let sim = 0; sim < SIMS; sim++) {
         let value = startCapital, fireYr = null;
         const track = [value];
-        for (let mo = 0; mo < years * 12; mo++) {
-            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contribution);
+        for (let mo = 0; mo < horizonMonths; mo++) {
+            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contributionByMonth[mo]);
             if ((mo + 1) % 12 === 0) track.push(value);
             if (value >= fireNumber && fireYr === null) fireYr = (mo + 1) / 12;
         }
@@ -3450,19 +3813,6 @@ async function addEditAsset() {
 
 document.getElementById('eaModal').addEventListener('click', e => { if (e.target === document.getElementById('eaModal')) closeEditAssets(); });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAX SUMMARY (Phase 19, Supabase mode only) — PT IRS/Modelo 3 estimate.
-// Separate modal from Edit Assets (read-mostly, one required input, large
-// enough to deserve its own space) but shares the SAME authToken/session as
-// Edit Assets — sign in once via either, both unlock together. Backend
-// contract: tax_disclaimer()/tax_year_config_get() (anon-readable, reference
-// data only); tax_category_a_income()/tax_capital_gains_summary()/
-// tax_capital_gains_disposals()/tax_category_e_dividends()/
-// tax_englobamento_advisor() (authenticated-only, real personal figures).
-// All under {SUPABASE_URL}/rest/v1/rpc/.
-// ─────────────────────────────────────────────────────────────────────────────
-let _taxDisclaimerLoaded = false;
-
 // ── Cash Flow (Phase 20) state ──────────────────────────────────────────────
 let _cfAccounts = [];        // cache of accounts_list() rows ({id, label, type, account_subtype})
 let _cfCategories = [];      // cache of category_list() rows
@@ -3489,248 +3839,13 @@ let _cfAnalyticsRange = null;       // {from, to} currently shown
 let _cfAnalyticsMonthly = [];       // cache of cashflow_monthly() rows
 let _cfAnalyticsCategoryGrid = [];  // cache of cashflow_by_category() rows
 
-function openTaxSummary() {
-    const source = localStorage.getItem(LS.source) || 'sheets';
-    if (source !== 'supabase') {
-        toast('Tax Summary requires Supabase mode — switch it on in Settings first.', true);
-        return;
-    }
-    if (!authToken) {
-        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
-        if (saved) authToken = saved;
-    }
-    document.getElementById('taxModal').classList.add('open');
-    loadTaxDisclaimer();
-    updateTaxSummaryView();
-}
-
-function closeTaxSummary() {
-    document.getElementById('taxModal').classList.remove('open');
-    const err = document.getElementById('taxLoginErr'); if (err) err.textContent = '';
-}
-
-function updateTaxSummaryView() {
-    const loginBox = document.getElementById('taxLoginBox');
-    const panel = document.getElementById('taxPanel');
-    if (authToken) {
-        loginBox.style.display = 'none';
-        panel.style.display = 'block';
-        const yearEl = document.getElementById('taxYearInput');
-        if (!yearEl.value) yearEl.value = new Date().getFullYear();
-        taxStatus('', false);
-        loadTaxSummary();
-    } else {
-        loginBox.style.display = 'block';
-        panel.style.display = 'none';
-    }
-}
-
-async function loginTaxSummary() {
-    const email = document.getElementById('taxEmail').value.trim();
-    const password = document.getElementById('taxPassword').value;
-    const errEl = document.getElementById('taxLoginErr');
-    const btn = document.getElementById('taxLoginBtn');
-    errEl.textContent = '';
-    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
-    btn.disabled = true; btn.textContent = 'Signing in…';
-    try {
-        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-            method: 'POST',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.access_token) {
-            errEl.textContent = 'Invalid credentials.';
-            return;
-        }
-        authToken = data.access_token;
-        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
-        sessionStorage.setItem(SS_EMAIL_KEY, email);
-        document.getElementById('taxPassword').value = '';
-        errEl.textContent = '';
-        updateTaxSummaryView();
-    } catch (err) {
-        errEl.textContent = 'Sign-in failed — check your connection and try again.';
-    } finally {
-        btn.disabled = false; btn.textContent = 'Sign In';
-    }
-}
-
-function logoutTaxSummary() {
-    // Shared session with Edit Assets (same authToken/sessionStorage keys) —
-    // reuse its logout so both panels sign out together, no separate state.
-    logoutEditAssets();
-    updateTaxSummaryView();
-}
-
-function taxStatus(msg, isErr) {
-    const el = document.getElementById('taxStatusMsg');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = isErr ? 'var(--red)' : 'var(--green)';
-}
-
-async function loadTaxDisclaimer() {
-    if (_taxDisclaimerLoaded) return;
-    try {
-        const d = await rpc('tax_disclaimer');
-        document.getElementById('taxDisclaimerText').textContent = d.pt || '';
-        document.getElementById('taxDisclaimerTextEn').textContent = d.en || '';
-        const list = document.getElementById('taxAssumptionsList');
-        list.innerHTML = (d.assumptions || []).map(a => `<li style="margin-bottom:3px;">${escapeHtml(a)}</li>`).join('');
-        _taxDisclaimerLoaded = true;
-    } catch (err) {
-        const el = document.getElementById('taxDisclaimerText');
-        el.textContent = 'Failed to load the disclaimer — do not rely on any figures below until this loads correctly.';
-        el.style.color = 'var(--red)';
-    }
-}
-
-async function loadTaxSummary() {
-    if (!authToken) return;
-    const year = parseInt(document.getElementById('taxYearInput').value, 10) || new Date().getFullYear();
-    taxStatus('Loading…', false);
-    document.getElementById('taxEnglobamento').innerHTML = ''; // stale from a prior year, clear it
-    try {
-        const [catA, cgSummary, disposals, catE, yearConfig] = await Promise.all([
-            rpcAuth('tax_category_a_income', { p_tax_year: year }),
-            rpcAuth('tax_capital_gains_summary', { p_tax_year: year }),
-            rpcAuth('tax_capital_gains_disposals', { p_tax_year: year }),
-            rpcAuth('tax_category_e_dividends', { p_tax_year: year }),
-            rpc('tax_year_config_get', { p_tax_year: year }),
-        ]);
-        renderTaxCategoryA(catA);
-        renderTaxCapitalGains(cgSummary, Array.isArray(disposals) ? disposals : []);
-        renderTaxCategoryE(catE);
-        renderTaxYearConfigFooter(yearConfig, year);
-        taxStatus('', false);
-    } catch (err) {
-        taxStatus(err.message, true);
-    }
-}
-
-function renderTaxCategoryA(catA) {
-    const el = document.getElementById('taxCatA');
-    if (!catA) { el.innerHTML = '<div style="color:var(--text2);font-size:11px;">No data.</div>'; return; }
-    el.innerHTML = `
-        <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div><div class="mlabel" style="margin-bottom:3px;">Gross</div><div style="font-size:16px;font-weight:700;">${fd(Number(catA.gross_amount) || 0)}</div></div>
-            <div><div class="mlabel" style="margin-bottom:3px;">Net</div><div style="font-size:16px;font-weight:700;">${fd(Number(catA.net_amount) || 0)}</div></div>
-        </div>
-        <div style="font-size:10px;color:var(--text2);margin-top:6px;">Sum of Salary History entries dated in ${catA.tax_year}.</div>
-    `;
-}
-
-function renderTaxCapitalGains(summary, disposals) {
-    const sumEl = document.getElementById('taxCgSummary');
-    const taxable = Number(summary.taxable_balance) || 0;
-    const exempt = Number(summary.exempt_balance) || 0;
-    const taxDue = Number(summary.tax_at_flat_rate) || 0;
-    sumEl.innerHTML = `
-        <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div><div class="mlabel" style="margin-bottom:3px;">Taxable Balance</div><div style="font-size:16px;font-weight:700;" class="${taxable < 0 ? 'neg' : taxable > 0 ? 'pos' : ''}">${fd(taxable)}</div><div style="font-size:9px;color:var(--text2);">${summary.taxable_disposal_count || 0} disposal(s)</div></div>
-            <div><div class="mlabel" style="margin-bottom:3px;">Exempt Balance</div><div style="font-size:16px;font-weight:700;color:var(--text2);">${fd(exempt)}</div><div style="font-size:9px;color:var(--text2);">${summary.exempt_disposal_count || 0} disposal(s) — still declarable (Anexo G1)</div></div>
-            <div><div class="mlabel" style="margin-bottom:3px;">Tax at ${summary.flat_rate_pct ?? '—'}% flat rate</div><div style="font-size:16px;font-weight:700;color:var(--yellow);">${fd(taxDue)}</div></div>
-        </div>
-        ${summary.has_loss_carryforward_candidate ? `<div style="font-size:10px;color:var(--yellow);margin-top:8px;background:rgba(255,204,0,0.08);border:1px solid var(--yellow);border-radius:3px;padding:8px 10px;">${escapeHtml(summary.loss_carryforward_note || '')}</div>` : ''}
-    `;
-
-    const disEl = document.getElementById('taxCgDisposals');
-    if (!disposals.length) {
-        disEl.innerHTML = '<div style="color:var(--text2);font-size:11px;padding:8px 0;">No disposals recorded for this year.</div>';
-        return;
-    }
-    const rowsHtml = disposals.map(d => {
-        const badge = d.exempt
-            ? `<span style="font-size:9px;padding:2px 7px;border-radius:8px;border:1px solid var(--text2);color:var(--text2);white-space:nowrap;">EXEMPT</span>`
-            : `<span style="font-size:9px;padding:2px 7px;border-radius:8px;border:1px solid var(--yellow);color:var(--yellow);white-space:nowrap;">TAXABLE</span>`;
-        const gl = Number(d.gain_loss) || 0;
-        return `<tr style="${d.exempt ? 'opacity:0.65;' : ''}">
-            <td>${escapeHtml(d.portfolio_name)}</td>
-            <td>${escapeHtml(d.asset)}${d.is_crypto ? ' <span style="font-size:9px;color:var(--text2);">(crypto)</span>' : ''}</td>
-            <td>${fq(Number(d.quantity) || 0)}</td>
-            <td>${escapeHtml(d.acquisition_date)}</td>
-            <td>${escapeHtml(d.disposal_date)}</td>
-            <td>${d.days_held}d</td>
-            <td>${fd(Number(d.cost_basis) || 0)}</td>
-            <td>${fd(Number(d.proceeds) || 0)}</td>
-            <td class="${gl < 0 ? 'neg' : gl > 0 ? 'pos' : ''}">${fd(gl)}</td>
-            <td>${badge}</td>
-            <td>${fd(Number(d.taxable_gain_loss) || 0)}</td>
-        </tr>`;
-    }).join('');
-    disEl.innerHTML = `<table><thead><tr>
-        <th>Portfolio</th><th>Asset</th><th>Qty</th><th>Acquired</th><th>Disposed</th><th>Held</th>
-        <th>Cost Basis</th><th>Proceeds</th><th>Gain/Loss</th><th>Status</th><th>Taxable</th>
-    </tr></thead><tbody>${rowsHtml}</tbody></table>`;
-}
-
-function renderTaxCategoryE(catE) {
-    const el = document.getElementById('taxCatE');
-    const total = Number(catE.total_dividend_income) || 0;
-    const taxDue = Number(catE.tax_at_flat_rate) || 0;
-    const byPortfolio = Array.isArray(catE.by_portfolio) ? catE.by_portfolio : [];
-    el.innerHTML = `
-        <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div><div class="mlabel" style="margin-bottom:3px;">Total Dividend Income</div><div style="font-size:16px;font-weight:700;">${fd(total)}</div></div>
-            <div><div class="mlabel" style="margin-bottom:3px;">Tax at ${catE.flat_rate_pct ?? '—'}% flat rate</div><div style="font-size:16px;font-weight:700;color:var(--yellow);">${fd(taxDue)}</div></div>
-        </div>
-        ${byPortfolio.length
-            ? `<div style="margin-top:8px;">` + byPortfolio.map(p => `<div style="font-size:11px;color:var(--text2);">${escapeHtml(p.portfolio_name)}: ${fd(Number(p.amount) || 0)}</div>`).join('') + `</div>`
-            : '<div style="font-size:11px;color:var(--text2);margin-top:6px;">No dividend transactions recorded for this year.</div>'}
-    `;
-}
-
-async function runEnglobamentoAdvisor() {
-    const year = parseInt(document.getElementById('taxYearInput').value, 10) || new Date().getFullYear();
-    const otherIncomeRaw = document.getElementById('taxOtherIncome').value;
-    const otherIncome = parseFloat(otherIncomeRaw);
-    const outEl = document.getElementById('taxEnglobamento');
-    if (otherIncomeRaw === '' || isNaN(otherIncome) || otherIncome < 0) {
-        outEl.innerHTML = '<div style="color:var(--red);font-size:11px;">Enter your total other taxable income (0 or more) first — this is required, the tool cannot assume salary history alone is complete.</div>';
-        return;
-    }
-    outEl.innerHTML = '<div style="color:var(--text2);font-size:11px;">Calculating…</div>';
-    try {
-        const result = await rpcAuth('tax_englobamento_advisor', { p_tax_year: year, p_other_taxable_income: otherIncome });
-        const flat = result.flat_rate_scenario || {}, eng = result.englobamento_scenario || {};
-        const recLabel = result.recommendation === 'flat_rate' ? 'Flat Rate (28%)' : 'Englobamento (aggregation)';
-        outEl.innerHTML = `
-            <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:220px;background:var(--card);border:1px solid ${result.recommendation === 'flat_rate' ? 'var(--green)' : 'var(--border)'};border-radius:4px;padding:10px 12px;">
-                    <div class="mlabel" style="margin-bottom:4px;">Flat Rate Scenario</div>
-                    <div style="font-size:18px;font-weight:800;">${fd(Number(flat.total_tax) || 0)}</div>
-                    <div style="font-size:10px;color:var(--text2);margin-top:4px;">${escapeHtml(flat.note || '')}</div>
-                </div>
-                <div style="flex:1;min-width:220px;background:var(--card);border:1px solid ${result.recommendation === 'englobamento' ? 'var(--green)' : 'var(--border)'};border-radius:4px;padding:10px 12px;">
-                    <div class="mlabel" style="margin-bottom:4px;">Englobamento Scenario</div>
-                    <div style="font-size:18px;font-weight:800;">${fd(Number(eng.total_tax) || 0)}</div>
-                    <div style="font-size:10px;color:var(--text2);margin-top:4px;">${escapeHtml(eng.note || '')}</div>
-                </div>
-            </div>
-            <div style="margin-top:10px;font-size:12px;">Lower estimated tax: <b style="color:var(--green);">${recLabel}</b> — by ${fd(Number(result.savings) || 0)} vs. the other option (both are estimates; see disclaimer above).</div>
-            <div style="font-size:10px;color:var(--text2);margin-top:6px;">${escapeHtml(result.other_reason_to_consider_englobamento || '')}</div>
-        `;
-    } catch (err) {
-        outEl.innerHTML = `<div style="color:var(--red);font-size:11px;">${escapeHtml(err.message)}</div>`;
-    }
-}
-
-function renderTaxYearConfigFooter(cfg, year) {
-    const el = document.getElementById('taxYearConfigFooter');
-    if (!cfg) { el.textContent = `No configured tax rules found for ${year} — figures above may have failed to load.`; return; }
-    el.innerHTML = `Rules and values for ${cfg.tax_year || year} (${escapeHtml(cfg.region || 'continente')}) — capital gains ${cfg.capital_gains_flat_rate_pct}% flat, dividends ${cfg.dividend_flat_rate_pct}% flat, crypto exemption at ${cfg.crypto_exemption_days}+ days held. ${escapeHtml(cfg.source_note || '')}`;
-}
-
-document.getElementById('taxModal').addEventListener('click', e => { if (e.target === document.getElementById('taxModal')) closeTaxSummary(); });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CASH FLOW (Phase 20/21/22, Supabase mode only) — everyday income/expense
 // ledger, completely separate from the investment Portfolios ledger built
 // earlier. Own modal (not folded into Edit Assets) with an internal tab bar
 // so later phases (budgets, goals, analytics) have somewhere to land without
-// a redesign. Shares the SAME authToken/session as Edit Assets & Tax Summary.
+// a redesign. Shares the SAME authToken/session as Edit Assets.
 //
 // Account picker sourced from accounts_list() (id/label/type/account_subtype,
 // anon+authenticated) — this closed a real gap the first version of this
