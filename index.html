@@ -1293,15 +1293,22 @@ const WIDGET_HTML = {
             `<div class="twrap" id="yearTable"></div>` +
         `</div>`,
 
-    // ── AERODROME POOL WATCH (Base, USDC/msUSD) ──────────────────────────────
+    // ── AERODROME POSITION WATCH (Base, msUSD/USDC Slipstream LP) ────────────
     // Reads aerodrome_pool_watch_latest() directly (Supabase-only data, no
     // sheets fallback) -- see loadAerodromePool()/renderAerodromePool() in the
     // DATA FETCH section. Not tied to the sheets/supabase source toggle since
     // this data has no spreadsheet equivalent.
+    //
+    // Phase 34 correction: this now shows the USER'S OWN LP position value
+    // (msUSD amount, USDC amount, total), not the pool's whole TVL -- the
+    // usdc_value_usd/msusd_value_usd/total_value_usd fields from the RPC mean
+    // "the user's position" as of Phase 34, so the split-bar percentages
+    // below (usdcVal/total, msusdVal/total) are automatically the user's own
+    // position composition, not a pool-wide TVL ratio -- no JS math changed.
     'w-aero-pool':
         `<div class="card-header">` +
             `<span class="card-label">Market</span>` +
-            `<span class="card-title">Aerodrome USDC/msUSD Pool</span>` +
+            `<span class="card-title">Aerodrome LP Position (msUSD/USDC)</span>` +
             `<span class="card-subtitle" id="aero-updated"></span>` +
         `</div>` +
         `<div class="card-divider"></div>` +
@@ -1313,8 +1320,9 @@ const WIDGET_HTML = {
                 `<span>msUSD: <b class="sensitive" id="aero-msusd-val">--</b> <span class="card-secondary-value" id="aero-msusd-pct"></span></span>` +
             `</div>` +
             `<div style="display:flex;justify-content:space-between;font-size:clamp(10px,1vw,12px);color:var(--text2);">` +
-                `<span>Pool TVL: <b class="sensitive" id="aero-total-val">--</b></span>` +
+                `<span>Position Value: <b class="sensitive" id="aero-total-val">--</b></span>` +
                 `<span>APY: <b id="aero-apy">--</b></span>` +
+                `<span title="Reward tracking isn't available yet -- the pool's gauge doesn't expose the depositor account VFAT's automation uses, so rewards can't be read from outside. Check VFAT.tools directly for current AERO rewards." style="cursor:help;">Rewards: <b>not tracked yet</b></span>` +
             `</div>` +
         `</div>`,
 };
@@ -1559,9 +1567,16 @@ async function loadData() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AERODROME POOL WATCH (Base, USDC/msUSD) — reads aerodrome_pool_watch_latest()
-// via the same rpc() PostgREST helper every other Supabase-backed widget uses.
-// Never throws into loadData(); on any failure the card shows "--"/"no data".
+// AERODROME POSITION WATCH (Base, msUSD/USDC Slipstream LP) — reads
+// aerodrome_pool_watch_latest() via the same rpc() PostgREST helper every
+// other Supabase-backed widget uses. Never throws into loadData(); on any
+// failure the card shows "--"/"no data".
+//
+// Phase 34: usdc_value_usd/msusd_value_usd/total_value_usd now represent the
+// USER'S OWN LP position (not pool-wide TVL) -- see collectors/
+// aerodrome_pool_watch.py. The percentage split below is computed the exact
+// same way as before (each token's value / total), so it automatically
+// becomes "the user's own position composition" without any code change here.
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadAerodromePool() {
     let data = null;
@@ -1606,7 +1621,7 @@ function renderAerodromePool(d) {
     if (alertEl) {
         if (d.is_lopsided) {
             alertEl.style.display = 'block';
-            alertEl.textContent = '⚠ Pool imbalanced — one side near zero';
+            alertEl.textContent = '⚠ Underlying pool imbalanced — one side near zero';
         } else {
             alertEl.style.display = 'none';
         }
