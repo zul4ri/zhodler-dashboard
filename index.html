@@ -1641,17 +1641,25 @@ function computeStaleness(data) {
     if (!data || !data.staleness || !Object.keys(data.staleness).length) {
         return {level: 'red', text: 'no data'};
     }
-    let anyStale = false, anyNull = false, worstHours = 0;
+    // is_stale is computed server-side per collector against ITS OWN
+    // expected cadence (see dashboard_bootstrap() phase 36) — a monthly
+    // vehicle-depreciation sync being 9 days old is not "stale", so the
+    // badge must key off is_stale, not raw elapsed hours, for every
+    // source including the ones with a long natural cadence. Raw hours
+    // only decide badge TEXT among the sources actually flagged stale
+    // (worst offender) or, when nothing is stale, the freshest sync
+    // (most reassuring number to show, not the slowest-but-healthy one).
+    let anyNull = false, worstStaleHours = 0, freshestHours = null;
     Object.values(data.staleness).forEach(info => {
         if (!info || !info.last_success) { anyNull = true; return; }
         const hrs = (Date.now() - new Date(info.last_success).getTime()) / 3.6e6;
-        worstHours = Math.max(worstHours, hrs);
-        if (info.is_stale) anyStale = true;
+        if (freshestHours === null || hrs < freshestHours) freshestHours = hrs;
+        if (info.is_stale) worstStaleHours = Math.max(worstStaleHours, hrs);
     });
     if (anyNull) return {level: 'red', text: 'no successful sync'};
-    if (worstHours > 24) return {level: 'red', text: `stale · ${fmtAgo(worstHours)} ago`};
-    if (anyStale)        return {level: 'amber', text: `as of ${fmtAgo(worstHours)} ago`};
-    return {level: 'green', text: `live · ${fmtAgo(worstHours)} ago`};
+    if (worstStaleHours > 24) return {level: 'red', text: `stale · ${fmtAgo(worstStaleHours)} ago`};
+    if (worstStaleHours > 0)  return {level: 'amber', text: `as of ${fmtAgo(worstStaleHours)} ago`};
+    return {level: 'green', text: `live · ${fmtAgo(freshestHours)} ago`};
 }
 function updateStalenessBadge() {
     const el = document.getElementById('staleBadge');
