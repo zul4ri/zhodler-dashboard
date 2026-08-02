@@ -296,12 +296,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
 .ms-name{font-size:clamp(6px,0.68vw,9px);color:var(--text2);text-align:center;white-space:nowrap;}
 .ms-eta{font-size:clamp(5px,0.62vw,8px);margin-top:1px;text-align:center;}
 
-/* ── Aerodrome Pool Watch (USDC/msUSD composition split bar) ────────────── */
-.aero-split-bar{display:flex;height:clamp(8px,1vh,12px);border-radius:5px;overflow:hidden;background:var(--card2);border:1px solid var(--border);}
-.aero-bar-usdc{background:var(--f-liq);height:100%;transition:width .3s;}
-.aero-bar-msusd{background:var(--accent);height:100%;transition:width .3s;}
-.aero-alert{display:none;text-align:center;color:var(--red);font-weight:700;font-size:clamp(10px,1.05vw,12px);padding:4px 6px;border:1px solid var(--red);border-radius:3px;}
-
 /* ── Toast ───────────────────────────────────────────────────────────────── */
 #toast{
     position:fixed;bottom:20px;right:20px;
@@ -1292,39 +1286,6 @@ const WIDGET_HTML = {
             `<div class="chwrap"><canvas id="yearChart"></canvas></div>` +
             `<div class="twrap" id="yearTable"></div>` +
         `</div>`,
-
-    // ── AERODROME POSITION WATCH (Base, msUSD/USDC Slipstream LP) ────────────
-    // Reads aerodrome_pool_watch_latest() directly (Supabase-only data, no
-    // sheets fallback) -- see loadAerodromePool()/renderAerodromePool() in the
-    // DATA FETCH section. Not tied to the sheets/supabase source toggle since
-    // this data has no spreadsheet equivalent.
-    //
-    // Phase 34 correction: this now shows the USER'S OWN LP position value
-    // (msUSD amount, USDC amount, total), not the pool's whole TVL -- the
-    // usdc_value_usd/msusd_value_usd/total_value_usd fields from the RPC mean
-    // "the user's position" as of Phase 34, so the split-bar percentages
-    // below (usdcVal/total, msusdVal/total) are automatically the user's own
-    // position composition, not a pool-wide TVL ratio -- no JS math changed.
-    'w-aero-pool':
-        `<div class="card-header">` +
-            `<span class="card-label">Market</span>` +
-            `<span class="card-title">Aerodrome LP Position (msUSD/USDC)</span>` +
-            `<span class="card-subtitle" id="aero-updated"></span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable" style="gap:10px;">` +
-            `<div class="aero-alert" id="aero-alert"></div>` +
-            `<div class="aero-split-bar"><div class="aero-bar-usdc" id="aero-bar-usdc"></div><div class="aero-bar-msusd" id="aero-bar-msusd"></div></div>` +
-            `<div style="display:flex;justify-content:space-between;font-size:clamp(11px,1.1vw,13px);">` +
-                `<span>USDC: <b class="sensitive" id="aero-usdc-val">--</b> <span class="card-secondary-value" id="aero-usdc-pct"></span></span>` +
-                `<span>msUSD: <b class="sensitive" id="aero-msusd-val">--</b> <span class="card-secondary-value" id="aero-msusd-pct"></span></span>` +
-            `</div>` +
-            `<div style="display:flex;justify-content:space-between;font-size:clamp(10px,1vw,12px);color:var(--text2);">` +
-                `<span>Position Value: <b class="sensitive" id="aero-total-val">--</b></span>` +
-                `<span>APY: <b id="aero-apy">--</b></span>` +
-                `<span title="Reward tracking isn't available yet -- the pool's gauge doesn't expose the depositor account VFAT's automation uses, so rewards can't be read from outside. Check VFAT.tools directly for current AERO rewards." style="cursor:help;">Rewards: <b>not tracked yet</b></span>` +
-            `</div>` +
-        `</div>`,
 };
 
 const DEFAULT_LAYOUT = [
@@ -1360,8 +1321,6 @@ const DEFAULT_LAYOUT = [
     {id:'w-assets',         x:0,  y:22, w:14, h:7},
     {id:'w-yearly',         x:14, y:22, w:10, h:7},
     {id:'w-monte',          x:0,  y:29, w:24, h:11},
-
-    {id:'w-aero-pool',      x:0,  y:40, w:8,  h:5},
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1560,72 +1519,6 @@ async function loadData() {
     try { renderAll(); } catch(err) { console.error('renderAll error:', err); }
     if (isFirstLoad) document.getElementById('loadOverlay').style.display = 'none';
     toast('Data refreshed', false);
-    // Independent of the sheets/supabase source toggle above -- this widget's
-    // data only ever lives in Supabase. Fire-and-forget: a failure here must
-    // never break the rest of the dashboard load.
-    loadAerodromePool();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AERODROME POSITION WATCH (Base, msUSD/USDC Slipstream LP) — reads
-// aerodrome_pool_watch_latest() via the same rpc() PostgREST helper every
-// other Supabase-backed widget uses. Never throws into loadData(); on any
-// failure the card shows "--"/"no data".
-//
-// Phase 34: usdc_value_usd/msusd_value_usd/total_value_usd now represent the
-// USER'S OWN LP position (not pool-wide TVL) -- see collectors/
-// aerodrome_pool_watch.py. The percentage split below is computed the exact
-// same way as before (each token's value / total), so it automatically
-// becomes "the user's own position composition" without any code change here.
-// ─────────────────────────────────────────────────────────────────────────────
-async function loadAerodromePool() {
-    let data = null;
-    try { data = await rpc('aerodrome_pool_watch_latest'); }
-    catch(err) { console.error('Aerodrome pool widget fetch failed:', err); }
-    renderAerodromePool(data);
-}
-
-function renderAerodromePool(d) {
-    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    const setWidth = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + '%'; };
-    const alertEl = document.getElementById('aero-alert');
-
-    if (!d || !d.captured_at) {
-        setText('aero-usdc-val', '--'); setText('aero-msusd-val', '--');
-        setText('aero-usdc-pct', ''); setText('aero-msusd-pct', '');
-        setText('aero-total-val', '--'); setText('aero-apy', '--');
-        setText('aero-updated', 'no data');
-        setWidth('aero-bar-usdc', 50); setWidth('aero-bar-msusd', 50);
-        if (alertEl) alertEl.style.display = 'none';
-        return;
-    }
-
-    const usdcVal   = Number(d.usdc_value_usd) || 0;
-    const msusdVal  = d.msusd_value_usd != null ? Number(d.msusd_value_usd) : null;
-    const total     = d.total_value_usd != null ? Number(d.total_value_usd) : null;
-    const usdcPct   = total ? (usdcVal / total * 100) : 50;
-    const msusdPct  = total && msusdVal != null ? (msusdVal / total * 100) : 50;
-
-    setText('aero-usdc-val', fd(usdcVal));
-    setText('aero-usdc-pct', total ? usdcPct.toFixed(1) + '%' : '');
-    setText('aero-msusd-val', msusdVal != null ? fd(msusdVal) : '--');
-    setText('aero-msusd-pct', total && msusdVal != null ? msusdPct.toFixed(1) + '%' : '');
-    setText('aero-total-val', total != null ? fd(total) : '--');
-    setText('aero-apy', d.apy_pct != null ? Number(d.apy_pct).toFixed(2) + '%' : '--');
-    setWidth('aero-bar-usdc', usdcPct);
-    setWidth('aero-bar-msusd', msusdPct);
-
-    const ageMin = (Date.now() - new Date(d.captured_at).getTime()) / 60000;
-    setText('aero-updated', ageMin < 120 ? Math.max(1, Math.round(ageMin)) + 'm ago' : Math.round(ageMin / 60) + 'h ago');
-
-    if (alertEl) {
-        if (d.is_lopsided) {
-            alertEl.style.display = 'block';
-            alertEl.textContent = '⚠ Underlying pool imbalanced — one side near zero';
-        } else {
-            alertEl.style.display = 'none';
-        }
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
