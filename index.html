@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zhodler Dashboard</title>
-    <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack.min.css" rel="stylesheet">
-    <link  href="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-extra.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.0/dist/gridstack-all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
 /* ── THEMES ──────────────────────────────────────────────────────────────── */
@@ -340,44 +337,401 @@ tr:hover td{background:rgba(255,255,255,.03);}
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media(max-width:860px){.mc-stats{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:600px){.krow{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));}.header{gap:4px;}.ibtn{padding:0 5px;}}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   REDESIGN SHELL (2026-09) — fixed sidebar layout, no GridStack.
+   New class namespace (app/sidebar/sec/wcard/…) — legacy CSS above is kept for
+   the modals and injected widget markup (kpi, mc-*, ms-*, twrap).
+   ═════════════════════════════════════════════════════════════════════════════ */
+body{font-size:14px;}
+.app{display:flex;min-height:100vh;}
+.sidebar{
+    width:216px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;
+    background:var(--bg2);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:18px 12px 14px;
+}
+.sidebar .brand{font-size:20px;padding:0 8px 2px;display:block;}
+.sidebar small{display:block;font-size:10.5px;font-weight:500;color:var(--text2);letter-spacing:.6px;margin-top:2px;}
+.nav-group{margin-top:16px;}
+.nav-group h4{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--text2);font-weight:700;padding:0 8px 5px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;margin:1px 0;border-radius:8px;
+    color:var(--text2);font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:var(--glow);border-color:var(--border);}
+.nav-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0;}
+.sidebar-foot{margin-top:auto;padding:10px 8px 0;border-top:1px solid var(--border);font-size:11.5px;color:var(--text2);}
+
+.main{flex:1;min-width:0;scroll-behavior:smooth;}
+.topbar{position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:12px;
+    padding:12px 22px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.topbar .ts{font-size:12px;margin-left:0;}
+.top-actions{margin-left:auto;display:flex;gap:7px;}
+.top-actions .ibtn{height:30px;}
+
+.wrap{padding:20px 22px 60px;max-width:1160px;}
+.sec{margin-bottom:30px;scroll-margin-top:64px;}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:11px;flex-wrap:wrap;}
+.sec-head h2{font-size:17px;font-weight:700;}
+.sec-head .sub{font-size:12.5px;color:var(--text2);}
+.sgrid{display:grid;gap:12px;}
+.sg-hero{grid-template-columns:1.4fr 1fr;}
+.sg-2{grid-template-columns:repeat(2,1fr);}
+.sg-3{grid-template-columns:repeat(3,1fr);}
+.sg-4{grid-template-columns:repeat(4,1fr);}
+
+/* Composite widget card (new shell) */
+.wcard{background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px 14px;position:relative;
+    box-shadow:0 4px 24px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04) inset;}
+.wcard:hover{border-color:rgba(255,255,255,.18);}
+.whead{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.wtitle{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--text2);}
+.whero{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1.1;}
+.whero .unit{font-size:14px;font-weight:500;color:var(--text2);letter-spacing:0;}
+.wbig{font-size:21px;font-weight:700;letter-spacing:-.3px;}
+.wline{font-size:13px;color:var(--text2);margin-top:3px;}
+.substat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:13.5px;}
+.substat:last-child{border-bottom:none;}
+.substat .k{color:var(--text2);}
+.wcell .k{display:block;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px;}
+.wnote{font-size:11.5px;color:var(--text2);margin-top:7px;}
+
+/* ⓘ info pattern — click to expand */
+.info-btn{width:17px;height:17px;border-radius:50%;border:1px solid var(--border);
+    background:transparent;color:var(--text2);font-size:10.5px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;font-style:italic;font-family:Georgia,serif;
+    flex-shrink:0;margin-left:auto;}
+.info-btn.gear{font-style:normal;}
+.info-btn:hover,.info-btn.open{color:var(--accent);border-color:var(--accent);}
+.info-pop{display:none;margin-top:10px;padding:11px 13px;border-radius:9px;background:var(--card2);
+    border:1px solid var(--border);font-size:12.5px;color:var(--text2);line-height:1.55;}
+.info-pop.open{display:block;}
+.info-pop b{color:var(--text);}
+.info-pop .formula{display:block;margin-top:6px;padding:5px 9px;border-radius:6px;background:rgba(0,0,0,.4);
+    color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:12px;}
+.info-pop table{margin-top:6px;}
+.info-pop td,.info-pop th{font-size:12px;padding:5px 7px;}
+
+/* Scope chips (Investments only) */
+.chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:11px;}
+.chips .cap{font-size:11.5px;color:var(--text2);}
+.chip{font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:99px;cursor:pointer;
+    border:1px solid var(--border);background:transparent;color:var(--text2);}
+.chip:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
+.chip.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
+.chip-note{font-size:11px;color:var(--text2);}
+
+/* Drill-down groups in the assets table */
+details.dd{border-bottom:1px solid rgba(255,255,255,.04);}
+details.dd:last-of-type{border-bottom:none;}
+details.dd>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
+    padding:8px clamp(8px,0.9vw,12px);font-weight:700;font-size:13px;}
+details.dd>summary::-webkit-details-marker{display:none;}
+details.dd>summary .dd-caret{color:var(--text2);transition:transform .15s;font-size:10px;}
+details.dd[open]>summary .dd-caret{transform:rotate(90deg);color:var(--accent);}
+details.dd>summary:hover{background:rgba(255,255,255,.03);}
+details.dd>summary .dd-sum{margin-left:auto;color:var(--accent);}
+.dd-count{color:var(--text2);font-weight:500;font-size:11.5px;}
+details.dd tbody tr td:first-child{padding-left:26px;}
+
+/* FIRE controls */
+.firectl{margin-top:12px;padding-top:11px;border-top:1px dashed rgba(255,255,255,.07);}
+.firectl input[type=range]{width:170px;accent-color:var(--accent);vertical-align:middle;}
+.firectl .runs-val{font-weight:800;font-size:14px;margin-left:8px;}
+.fire-run-btn{padding:8px 18px;background:var(--accent);border:none;border-radius:6px;color:#000;
+    cursor:pointer;font-size:13px;font-weight:700;margin-top:9px;}
+.fire-run-btn:hover{filter:brightness(1.1);}
+.cta-link{display:inline-block;padding:8px 16px;background:var(--accent);color:#000;border-radius:6px;
+    font-size:13px;font-weight:700;text-decoration:none;margin-top:9px;}
+.cta-link:hover{filter:brightness(1.1);}
+
+/* Responsive shell */
+@media(max-width:900px){
+    .sidebar{display:none;}
+    .sg-hero,.sg-2,.sg-3,.sg-4{grid-template-columns:1fr;}
+    .wrap{padding:16px 14px 50px;}
+    .topbar{padding:10px 14px;}
+    /* grid children must be allowed to shrink below content width,
+       otherwise wide tables force the whole page wider than the screen */
+    .sgrid>*{min-width:0;}
+    .wcard{min-width:0;}
+    body{overflow-x:hidden;}
+}
     </style>
 </head>
 <body data-filter="portfolio">
 
-<!-- HEADER -->
-<div class="header">
-    <div style="display:flex;align-items:center;">
-        <span class="brand">Zhodler</span>
-        <span class="ts">Last updated: <span id="ts">--:--</span></span>
-        <span class="stale-badge" id="staleBadge"></span>
-    </div>
-    <div class="hright">
-        <div class="pill active" role="button" tabindex="0" data-filter="portfolio" onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Total Portfolio</div>
-        <div class="pill"        role="button" tabindex="0" data-filter="liquid"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Liquid</div>
-        <div class="pill"        role="button" tabindex="0" data-filter="crypto"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">Crypto</div>
-        <div class="pill"        role="button" tabindex="0" data-filter="tradfi"    onclick="setFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' ')setFilter(this)">TradFi</div>
-        <div class="sep"></div>
-        <div role="radiogroup" aria-label="Dashboard theme" style="display:flex;align-items:center;gap:6px;">
-            <div class="tpill active" role="radio" aria-checked="true"  tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('zhodler')" aria-label="Theme: Zhodler"></div>
-            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="cyan"    onclick="setTheme('cyan')"    onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('cyan')"    aria-label="Theme: Cyan"></div>
-            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="neon"    onclick="setTheme('neon')"    onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('neon')"    aria-label="Theme: Neon"></div>
-            <div class="tpill"        role="radio" aria-checked="false" tabindex="0" data-t="cyber"   onclick="setTheme('cyber')"   onkeydown="if(event.key==='Enter'||event.key===' ')setTheme('cyber')"   aria-label="Theme: Cyber"></div>
-        </div>
-        <div class="sep"></div>
-        <button class="ibtn" id="lockBtn"    onclick="toggleLock()"    aria-label="Toggle layout lock">&#128275; Unlocked</button>
-        <button class="ibtn" id="editBtn"    onclick="toggleEdit()"    aria-label="Toggle edit mode">&#9998; Edit Mode</button>
+<!-- ═══ APP SHELL: fixed sidebar + scrollable main ═══ -->
+<div class="app">
+<aside class="sidebar">
+    <span class="brand">Zhodler<small>PERSONAL WEALTH · FIRE</small></span>
+    <nav class="nav-group">
+        <h4>Overview</h4>
+        <a class="nav-item" href="#sec-overview"><span class="dot"></span>Net Worth</a>
+        <a class="nav-item" href="#sec-velocity"><span class="dot"></span>Growth &amp; Velocity</a>
+    </nav>
+    <nav class="nav-group">
+        <h4>Investments</h4>
+        <a class="nav-item" href="#sec-investments"><span class="dot"></span>Distribution</a>
+        <a class="nav-item" href="#sec-btc"><span class="dot"></span>Market · BTC</a>
+        <a class="nav-item" href="#sec-yearly"><span class="dot"></span>Yearly Performance</a>
+    </nav>
+    <nav class="nav-group">
+        <h4>Debt &amp; Risk</h4>
+        <a class="nav-item" href="#sec-debt"><span class="dot"></span>Debt Overview</a>
+    </nav>
+    <nav class="nav-group">
+        <h4>Planning</h4>
+        <a class="nav-item" href="#sec-fire"><span class="dot"></span>FIRE Projection</a>
+        <a class="nav-item" href="#sec-milestones"><span class="dot"></span>Milestones</a>
+        <a class="nav-item" href="#sec-prj27"><span class="dot"></span>Strategy · PRJ27</a>
+    </nav>
+    <nav class="nav-group">
+        <h4>Tools &amp; Settings</h4>
+        <a class="nav-item" href="#sec-tools"><span class="dot"></span>Tools &amp; Links</a>
+    </nav>
+    <div class="sidebar-foot">Personal wealth tracker</div>
+</aside>
+
+<main class="main">
+<div class="topbar">
+    <span class="brand" style="font-size:18px;">Wealth Dashboard</span>
+    <span class="ts">Updated <span id="ts">--:--</span></span>
+    <span class="stale-badge" id="staleBadge"></span>
+    <div class="top-actions">
         <button class="ibtn" id="privacyBtn" onclick="togglePrivacy()" aria-label="Toggle privacy blur">&#128065; Privacy</button>
-        <button class="ibtn"                 onclick="doRefresh()"     aria-label="Refresh data">&#8635; Refresh</button>
-        <a class="ibtn" href="https://bot-dashboard-weld.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open bot performance dashboard" style="text-decoration:none;display:inline-flex;align-items:center;">&#129302; Bots</a>
-        <a class="ibtn" href="https://btc-loan-simulator.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open BTC loan and liquidity pool simulator" style="text-decoration:none;display:inline-flex;align-items:center;">&#129518; Simulator</a>
-        <a class="ibtn" href="https://loan-pool-simulator.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open the loan and pool strategy simulator" style="text-decoration:none;display:inline-flex;align-items:center;">&#127922; Strategy Sim</a>
-        <button class="ibtn" id="editAssetsBtn" onclick="openEditAssets()" aria-label="Edit manual assets">&#128273; Edit Assets</button>
-        <button class="ibtn" id="cashFlowBtn" onclick="openCashFlow()" aria-label="Open cash flow ledger">&#128181; Cash Flow</button>
-        <button class="ibtn"                 onclick="openSettings()"  aria-label="Open settings">&#9881; Settings</button>
+        <button class="ibtn" onclick="doRefresh()" aria-label="Refresh data">&#8635; Refresh</button>
+        <button class="ibtn" onclick="openSettings()" aria-label="Open settings">&#9881; Settings</button>
     </div>
 </div>
 
-<div class="grid-stack" id="grid"></div>
+<div class="wrap">
+
+<!-- ══ OVERVIEW ══ -->
+<section class="sec" id="sec-overview">
+    <div class="sec-head"><h2>Overview</h2><span class="sub">always portfolio-wide · grouped instead of one card per number</span></div>
+    <div class="sgrid sg-hero">
+        <div class="wcard">
+            <div class="whead"><span class="wtitle">Net Worth</span>
+                <button class="info-btn" onclick="toggleInfo(this,'i-nw')">i</button></div>
+            <div class="whero sensitive" id="c-nw">--</div>
+            <div class="wline">Current balance &mdash; everything you own minus everything you owe</div>
+            <div class="info-pop" id="i-nw">
+                <b>Net worth = Total Assets &minus; Total Debt.</b> Refreshed each time the ledger updates. The rows below break the same number into its parts — gross holdings, deployed capital, and gains.
+                <span class="formula">Net Worth = Total Assets &minus; Total Debt</span>
+            </div>
+            <div style="margin-top:10px;">
+                <div class="substat"><span class="k">Total assets (gross, incl. real estate &amp; vehicles)</span><span class="sensitive" id="c-assets">--</span></div>
+                <div class="substat"><span class="k">Total invested</span><span class="sensitive" id="c-invested">--</span></div>
+                <div class="substat"><span class="k">Liquid net worth (excl. real estate &amp; vehicles) <button class="info-btn" style="width:14px;height:14px;font-size:10px;margin-left:2px" onclick="toggleInfo(this,'i-liq')">i</button></span><span class="sensitive" id="c-liquid">--</span></div>
+                <div class="info-pop" id="i-liq"><b>"Liquid" is a definition, not a filter:</b> net worth excluding real estate &amp; vehicles — what you could realistically free up. In Supabase mode it is a real per-scope snapshot; in Sheets mode it is approximated as crypto + TradFi net worth.</div>
+                <div class="substat"><span class="k">YTD gain / loss</span><span><span class="sensitive" id="c-ytd">--</span> <span id="c-ytd-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
+                <div class="substat"><span class="k">All-time gain</span><span><span class="sensitive" id="c-atgain">--</span> <span id="c-atgain-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
+                <div class="substat"><span class="k">Monthly avg · YTD</span><span class="sensitive" id="c-monthly-ytd">--</span></div>
+                <div class="substat"><span class="k">Daily avg · YTD</span><span class="sensitive" id="c-daily-ytd">--</span></div>
+                <div class="substat"><span class="k">Monthly avg · all-time</span><span class="sensitive" id="c-monthly-at">--</span></div>
+                <div class="substat"><span class="k">Daily avg · all-time</span><span class="sensitive" id="c-daily-at">--</span></div>
+            </div>
+        </div>
+        <div class="wcard" id="sec-velocity">
+            <div class="whead"><span class="wtitle">Velocity &amp; Momentum</span>
+                <button class="info-btn" onclick="toggleInfo(this,'i-vel')">i</button></div>
+            <div class="wbig" id="c-vel-annual">--</div>
+            <div class="wline" id="c-vel-momentum">&nbsp;</div>
+            <div class="info-pop" id="i-vel">
+                <b>Net Worth Velocity — how fast your wealth is compounding right now.</b> It turns the year-to-date gain into an annual rate so this year can be compared fairly against any other.
+                <span class="formula">Annualized rate = YTD return &times; 12 &divide; months elapsed</span>
+                Momentum = YTD monthly pace minus all-time monthly pace.
+            </div>
+            <div style="margin-top:10px;">
+                <div class="substat"><span class="k">Projected end of year</span><span><span class="sensitive" id="c-proj-eoy">--</span> <span id="c-proj-eoy-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
+                <div class="substat"><span class="k">Projected 1 year</span><span><span class="sensitive" id="c-proj-1y">--</span> <span id="c-proj-1y-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
+                <div class="substat"><span class="k">Projected 5 years</span><span><span class="sensitive" id="c-proj-5y">--</span> <span id="c-proj-5y-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
+            </div>
+        </div>
+    </div>
+    <div class="sgrid sg-2" style="margin-top:12px;">
+        <div class="wcard">
+            <div class="whead"><span class="wtitle">Tracking</span></div>
+            <div class="krow" id="globalKpis"></div>
+        </div>
+        <div class="wcard">
+            <div class="whead"><span class="wtitle">Yearly Performance</span>
+                <button class="info-btn" onclick="toggleInfo(this,'i-yrchart')">i</button></div>
+            <div class="chwrap" style="min-height:170px;"><canvas id="yearChart"></canvas></div>
+            <div class="info-pop" id="i-yrchart">
+                <b>Net worth vs total assets, year by year.</b> Net worth subtracts debt; total assets is the gross figure. The detail table below (Investments section) shows both side by side with the derived debt.
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ INVESTMENTS (the only filterable section) ══ -->
+<section class="sec" id="sec-investments">
+    <div class="sec-head"><h2>Investments</h2><span class="sub">the only filterable section — chips re-scope the distribution only, never FIRE or projections</span></div>
+    <div class="chips">
+        <span class="cap">Scope:</span>
+        <button class="chip active" data-scope="portfolio" onclick="setScopeBtn(this)">All classes</button>
+        <button class="chip" data-scope="crypto" onclick="setScopeBtn(this)">Crypto</button>
+        <button class="chip" data-scope="tradfi" onclick="setScopeBtn(this)">TradFi</button>
+        <button class="chip" data-scope="cash" onclick="setScopeBtn(this)">Cash</button>
+        <span class="chip-note">Supabase mode scopes from real per-class data; Sheets mode filters by asset type</span>
+    </div>
+    <div class="wcard">
+        <div class="whead"><span class="wtitle" id="assetsTitle">Assets Distribution</span>
+            <button class="info-btn" onclick="toggleInfo(this,'i-dist')">i</button></div>
+        <div class="chwrap" style="min-height:210px;"><canvas id="assetsChart"></canvas></div>
+        <div class="info-pop" id="i-dist">
+            <b>What counts where:</b> each slice is computed straight from the asset ledger — real per-class figures, no estimates. Use the scope chips above to focus on one class; expand a class group in the table below to see its individual holdings.
+        </div>
+        <div class="twrap" id="assetsTable" style="max-height:320px;overflow:auto;"></div>
+    </div>
+</section>
+
+<section class="sec" id="sec-btc">
+    <div class="sec-head"><h2>Market &middot; Bitcoin</h2><span class="sub">always portfolio-wide — BTC is BTC in every scope</span></div>
+    <div class="wcard">
+        <div class="whead"><span class="wtitle">BTC</span>
+            <button class="info-btn" onclick="toggleInfo(this,'i-btc')">i</button></div>
+        <div class="wbig"><span id="c-btc-holdings">--</span> <span class="unit">BTC @ <span id="c-btc-price">--</span></span></div>
+        <div class="info-pop" id="i-btc">
+            <b>Bitcoin module.</b> Holdings and spot price come from the BTC trackers; "since start" compares against your entry price, "YTD" against January 1.
+        </div>
+        <div style="margin-top:8px;">
+            <div class="substat"><span class="k">BTC value</span><span class="sensitive" id="c-btc-value">--</span></div>
+            <div class="substat"><span class="k">% since start (vs entry)</span><span id="c-btc-since">--</span></div>
+            <div class="substat"><span class="k">BTC YTD</span><span id="c-btc-ytd">--</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="sec" id="sec-yearly">
+    <div class="sec-head"><h2>Yearly Performance &mdash; detail</h2><span class="sub">gross vs net, side by side · always portfolio-wide</span></div>
+    <div class="wcard">
+        <div class="whead"><span class="wtitle">By year</span>
+            <button class="info-btn" onclick="toggleInfo(this,'i-yrtbl')">i</button></div>
+        <div class="twrap" id="yearTable"></div>
+        <div class="info-pop" id="i-yrtbl">
+            <b>What's gross and what's net:</b> <b>Total assets</b> is everything you hold — not net of anything. <b>Net worth</b> subtracts debt. Debt shown here is derived (assets &minus; net worth).
+            <span class="formula">Net worth = Total assets &minus; Debt</span>
+        </div>
+    </div>
+</section>
+
+<!-- ══ DEBT & RISK ══ -->
+<section class="sec" id="sec-debt">
+    <div class="sec-head"><h2>Debt &amp; Risk</h2><span class="sub">always portfolio-wide</span></div>
+    <div class="wcard">
+        <div class="whead"><span class="wtitle">Debt Overview</span>
+            <button class="info-btn" onclick="toggleInfo(this,'i-debt')">i</button></div>
+        <div class="wbig neg" id="c-debt-total">--</div>
+        <div class="info-pop" id="i-debt">
+            <b>Debt grouped by collateral, not just by lender.</b> Crypto debt is backed by your BTC (a price drop can trigger a margin call); TradFi debt is fixed-obligation.
+        </div>
+        <div class="sgrid sg-2" style="margin-top:10px;">
+            <div class="wcell"><span class="k" id="c-debt-crypto-lbl">Crypto Debt</span><span class="wbig sensitive" id="c-debt-crypto">--</span></div>
+            <div class="wcell"><span class="k" id="c-debt-tradfi-lbl">TradFi Debt</span><span class="wbig sensitive" id="c-debt-tradfi">--</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ PLANNING ══ -->
+<section class="sec" id="sec-planning">
+    <div class="sec-head"><h2>Planning</h2><span class="sub">always portfolio-wide — projections are never re-scoped</span></div>
+    <div class="sgrid sg-hero">
+        <div class="wcard" id="sec-fire">
+            <div class="whead"><span class="wtitle" id="monteFilter">FIRE Projection</span><span class="wline" id="mc-params"></span>
+                <button class="info-btn" title="What this card measures" onclick="toggleInfo(this,'i-fire')">i</button>
+                <button class="info-btn gear" title="Projection settings" onclick="toggleInfo(this,'fireSettings');renderFireSettings()">&#9881;</button></div>
+            <div id="mc-empty" style="display:none;color:var(--text2);font-size:13px;padding:14px 6px;line-height:1.6;"></div>
+            <div id="mc-content">
+                <div class="mc-stats" id="mc-stats"></div>
+                <div class="chwrap" style="min-height:260px;"><canvas id="mcChart"></canvas></div>
+                <div class="wnote" style="text-align:center;" id="mc-footer"></div>
+            </div>
+            <div class="firectl">
+                <div class="substat"><span class="k">Monte Carlo runs (0 = off)</span><span style="white-space:nowrap;"><input type="range" min="0" max="20000" step="500" id="fireRuns"><span class="runs-val" id="fireRunsVal">2,000</span></span></div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <button class="fire-run-btn" onclick="fireRunNow()">&#9654; Run projection</button>
+                    <span class="wnote" style="margin:0;">Results are saved and stay on screen until you run a new projection.</span>
+                </div>
+            </div>
+            <div class="info-pop" id="i-fire">
+                <b>FIRE probability = the share of simulated futures where the investable nest egg reaches your FIRE number.</b>
+                The nest egg counts investment assets only — <b>real estate and vehicles are never part of the FIRE target</b> (they still count toward Net Worth). Click &#9881; to see every parameter and its source.
+                <span class="formula">Runs: 0 (off) to 20,000 &mdash; more runs = smoother bands, slower calculation</span>
+                Results persist (saved with your dashboard) until you calculate a new projection — reloading shows the last run, never a blank.
+            </div>
+            <div class="info-pop" id="fireSettings">
+                <b>Projection settings — each parameter shows where it comes from</b>
+                <table>
+                    <tr><th>Parameter</th><th>Value</th><th>Source</th></tr>
+                    <tr><td>FIRE number, expenses, SWR, contribution mode</td><td>—</td><td>Your saved FIRE plan (Edit Assets &rarr; FIRE Calculator)</td></tr>
+                    <tr><td>Essential expenses &amp; salary growth</td><td>—</td><td>Your plan; essentials auto-suggested from Cash Flow</td></tr>
+                    <tr><td>Crypto sleeve return</td><td id="fsApyCell">—</td><td>PRJ27 chosen variant (set below)</td></tr>
+                    <tr><td>TradFi sleeve return</td><td id="fsTradCell">—</td><td>Your setting below (default 7%)</td></tr>
+                    <tr><td>Blend weights</td><td id="fsShareCell">—</td><td>Crypto share of investable (set below)</td></tr>
+                </table>
+                <div style="margin-top:10px;color:var(--red);"><b>Excluded from the simulation: real estate &amp; vehicles.</b> They are not retirement nest egg — including them would fake an earlier FIRE date. They still count toward Net Worth.</div>
+                <div style="margin-top:10px;display:grid;gap:7px;">
+                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">PRJ27 chosen variant <input class="minput" id="prj27Variant" style="flex:1;" placeholder='e.g. "Curve shielded"'></label>
+                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant net APY % <input class="minput" id="prj27Apy" type="number" step="0.1" min="0" max="100" style="flex:1;" placeholder="12.4"></label>
+                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Crypto share of investable % <input class="minput" id="prj27Share" type="number" step="1" min="0" max="100" style="flex:1;" placeholder="45"></label>
+                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">TradFi return %/yr <input class="minput" id="prj27Tradfi" type="number" step="0.1" min="0" max="30" style="flex:1;" placeholder="7"></label>
+                </div>
+                <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="mgray" onclick="saveFireSettings()">Save &amp; apply blend</button>
+                    <button class="mgray" onclick="clearFireSettings()">Reset to plan return</button>
+                </div>
+                <div class="wnote">Blend: <span id="fireBlendNote">—</span>. Saved on this device; the FIRE plan itself is never modified.</div>
+            </div>
+        </div>
+        <div class="wcard" id="sec-milestones">
+            <div class="whead"><span class="wtitle">Milestones &middot; to $1M FIRE</span>
+                <button class="info-btn" onclick="toggleInfo(this,'i-mile')">i</button></div>
+            <div class="ms-outer">
+                <div class="ms-track"><div class="ms-line"></div><div class="ms-fill" id="ms-fill"></div><div class="ms-dots" id="ms-dots"></div></div>
+                <div class="ms-labels" id="ms-labels"></div>
+            </div>
+            <div class="wnote" style="text-align:center;margin-top:6px;" id="ms-status"></div>
+            <div class="info-pop" id="i-mile">
+                <b>One milestone tracker — and this is it.</b> Progress is measured on the <b>investable nest egg</b> (investment assets — the same basis as the FIRE projection), so "$1M" means the same thing everywhere. Real estate &amp; vehicles are excluded. Net worth itself has no milestone bar: mixing a house into a FIRE milestone would fake the finish line.
+            </div>
+        </div>
+    </div>
+    <div class="wcard" id="sec-prj27" style="margin-top:12px;">
+        <div class="whead"><span class="wtitle">Chosen Strategy &middot; PRJ27</span>
+            <button class="info-btn" onclick="toggleInfo(this,'i-prj27')">i</button></div>
+        <div class="sgrid sg-4">
+            <div class="wcell"><span class="k">Chosen variant</span><span class="wbig" id="prj27Name">—</span></div>
+            <div class="wcell"><span class="k">Net APY</span><span class="wbig" id="prj27Return">—</span><span class="wnote">feeds the FIRE blend</span></div>
+            <div class="wcell"><span class="k">Crypto share</span><span class="wbig" id="prj27ShareTxt">—</span></div>
+            <div class="wcell"><span class="k">Blend</span><span class="wbig" id="prj27BlendTxt">—</span></div>
+        </div>
+        <a class="cta-link" href="https://loan-pool-simulator.vercel.app" target="_blank" rel="noopener noreferrer">&#8599; Open full simulator &rarr;</a>
+        <button class="mgray" style="margin-left:8px;vertical-align:middle;" onclick="toggleInfo(document.querySelector('#sec-prj27 .info-btn'),'fireSettings')">Edit variant / blend</button>
+        <div class="info-pop" id="i-prj27">
+            <b>This is the strategy the FIRE projection's crypto sleeve uses.</b> You pick the variant in the PRJ27 simulator, then enter its name and net APY here (via &#9881; settings on the FIRE card or the button above). Scenarios, strategy editing and full results stay in the simulator — this card is the bridge.
+        </div>
+    </div>
+</section>
+
+<!-- ══ TOOLS ══ -->
+<section class="sec" id="sec-tools">
+    <div class="sec-head"><h2>Tools &amp; Links</h2></div>
+    <div class="sgrid sg-3">
+        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://bot-dashboard-weld.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://btc-loan-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#129518; BTC Loan Simulator</div><div class="wnote" style="margin:0;">Model collateral &amp; liquidation prices</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://loan-pool-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, salary &amp; FIRE plan</div></div>
+    </div>
+</section>
+
+</div><!-- /wrap -->
+</main>
+</div><!-- /app -->
 
 <div id="loadOverlay">
     <div class="brand">Zhodler</div>
@@ -405,17 +759,6 @@ tr:hover td{background:rgba(255,255,255,.03);}
         <div class="mrow">
             <label class="mlabel">Google Sheet URL or ID</label>
             <input class="minput" id="sheetInput" placeholder="Paste URL or Sheet ID">
-        </div>
-        <div class="mrow">
-            <label class="mlabel">Layout</label>
-            <div class="mrow-row">
-                <button class="mgray" onclick="resetLayout()">&#8635; Reset Layout</button>
-                <button class="mgray" onclick="exportLayout()">&#8599; Export Layout</button>
-                <label class="mgray" style="cursor:pointer;">
-                    &#8600; Import Layout
-                    <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importLayout(this)">
-                </label>
-            </div>
         </div>
         <div class="mactions">
             <button class="mcancel"  onclick="closeSettings()">Cancel</button>
@@ -1014,6 +1357,7 @@ const SS_EMAIL_KEY = 'zh-ea-email';
 // STATE
 // ─────────────────────────────────────────────────────────────────────────────
 let rows = [], activeFilter = 'portfolio', charts = {};
+let gridReady = false;   // redesign: static layout — no GridStack, just first-load flag
 let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
 let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
@@ -1153,311 +1497,13 @@ function sv(id,val,colorCls){
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WIDGET DEFINITIONS
-// ─────────────────────────────────────────────────────────────────────────────
-// Stat card builder — produces the EXACT portfolio-card structure:
-//   .card-header (flex:1)  ← label + title + subtitle, direct children
-//   .card-divider          ← gradient 1px line
-//   .card-body   (flex:5)  ← main value + secondary value, centred
-function _sc(sector, sectorId, title, valId, cls, subId, titleId, subtitle) {
-    const label = sectorId
-        ? `<span class="card-label" id="${sectorId}">${sector}</span>`
-        : `<span class="card-label">${sector}</span>`;
-    const titleEl = titleId
-        ? `<span class="card-title" id="${titleId}">${title}</span>`
-        : `<span class="card-title">${title}</span>`;
-    const subtitleEl = subtitle ? `<span class="card-subtitle">${subtitle}</span>` : '';
-    const valCls = `card-main-value${cls ? ' ' + cls : ''}`;
-    const sub = subId ? `<span class="card-secondary-value" id="${subId}"></span>` : '';
-    return (
-        `<div class="card-header">${label}${titleEl}${subtitleEl}</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body" style="align-items:center;text-align:center;">` +
-            `<span class="${valCls}" id="${valId}">--</span>${sub}` +
-        `</div>`
-    );
-}
-
-const WIDGET_HTML = {
-    // ── GLOBAL (grouped KPI card) ─────────────────────────────────────────────
-    'w-global':
-        `<div class="card-header">` +
-            `<span class="card-label">Portfolio</span>` +
-            `<span class="card-title">Global Metrics</span>` +
-            `<span class="card-subtitle">Days tracked · Year %</span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable">` +
-            `<div class="krow" id="globalKpis"></div>` +
-        `</div>`,
-
-    // ── SUMMARY ───────────────────────────────────────────────────────────────
-    'w-c-nw':          _sc('Portfolio','s-sec-nw',        'Net Worth',         'c-nw',          'hero sensitive', null,          null,               'Current balance'),
-    'w-c-assets':      _sc('Portfolio','s-sec-assets',    'Total Assets',      'c-assets',      'sensitive',      null,          null,               'All holdings'),
-    'w-c-invested':    _sc('Portfolio','s-sec-invested',  'Total Invested',    'c-invested',    'sensitive',      null,          null,               'Capital deployed'),
-    'w-c-ytd':         _sc('Portfolio','s-sec-ytd',       'YTD Gain / Loss',   'c-ytd',         'sensitive',      'c-ytd-sub',   null,               'Since Jan 1'),
-    'w-c-atgain':      _sc('Portfolio','s-sec-atgain',    'All-Time Gain',     'c-atgain',      'sensitive',      'c-atgain-sub',null,               'Since inception'),
-    'w-c-monthly-ytd': _sc('Portfolio','s-sec-myt',       'Monthly Avg',       'c-monthly-ytd', 'sensitive',      null,          null,               'YTD average'),
-    'w-c-daily-ytd':   _sc('Portfolio','s-sec-dyt',       'Daily Avg',         'c-daily-ytd',   'sensitive',      null,          null,               'YTD average'),
-    'w-c-monthly-at':  _sc('Portfolio','s-sec-mat',       'Monthly Avg',       'c-monthly-at',  'sensitive',      null,          null,               'All-time average'),
-    'w-c-daily-at':    _sc('Portfolio','s-sec-dat',       'Daily Avg',         'c-daily-at',    'sensitive',      null,          null,               'All-time average'),
-
-    // ── VELOCITY ──────────────────────────────────────────────────────────────
-    'w-c-vel-annual':   _sc('Portfolio','vel-sec-annual', 'Annual Rate',       'c-vel-annual',  'hero sensitive', null,          null,               'YTD × 12 months'),
-    'w-c-vel-momentum': _sc('Portfolio','vel-sec-mom',    'Momentum',          'c-vel-momentum','',               null,          null,               'vs all-time avg'),
-
-    // ── PROJECTIONS ───────────────────────────────────────────────────────────
-    'w-c-eoy': _sc('Portfolio','proj-sec-eoy','End of Year', 'c-proj-eoy','sensitive','c-proj-eoy-sub',null,'Dec 31 estimate'),
-    'w-c-1y':  _sc('Portfolio','proj-sec-1y', '1-Year',      'c-proj-1y', 'sensitive','c-proj-1y-sub', null,'12 months ahead'),
-    'w-c-5y':  _sc('Portfolio','proj-sec-5y', '5-Year',      'c-proj-5y', 'sensitive','c-proj-5y-sub', null,'60 months ahead'),
-
-    // ── DEBT ──────────────────────────────────────────────────────────────────
-    'w-c-debt-total':  _sc('Portfolio','debt-sec-total',  'Total Debt',   'c-debt-total',  'sensitive', null,'c-debt-total-lbl', 'All categories'),
-    'w-c-debt-crypto': _sc('Portfolio','debt-sec-crypto', 'Crypto Debt',  'c-debt-crypto', 'sensitive', null,'c-debt-crypto-lbl','DeFi + CeFi'),
-    'w-c-debt-tradfi': _sc('Portfolio','debt-sec-tradfi', 'TradFi Debt',  'c-debt-tradfi', 'sensitive', null,'c-debt-tradfi-lbl','Bank + personal'),
-
-    // ── BTC ───────────────────────────────────────────────────────────────────
-    'w-c-btc-value':    _sc('Market', null,'BTC Value',    'c-btc-value',    'sensitive',null,null,'At spot price'),
-    'w-c-btc-price':    _sc('Market', null,'BTC Price',    'c-btc-price',    '',         null,null,'USD spot'),
-    'w-c-btc-holdings': _sc('Market', null,'BTC Holdings', 'c-btc-holdings', '',         null,null,'Total in portfolio'),
-    'w-c-btc-since':    _sc('Market', null,'% Since Start','c-btc-since',    '',         null,null,'vs entry price'),
-    'w-c-btc-ytd':      _sc('Market', null,'BTC YTD',      'c-btc-ytd',      '',         null,null,'Year-to-date'),
-
-    // ── MILESTONE ─────────────────────────────────────────────────────────────
-    'w-milestone':
-        `<div class="card-header">` +
-            `<span class="card-label" id="milestoneFilter">Portfolio</span>` +
-            `<span class="card-title">Net Worth Milestones</span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable">` +
-            `<div class="ms-outer">` +
-                `<div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:5px;text-align:center">Tracking <strong>Net Worth</strong> toward $1M &mdash; bar fills between reached dots</div>` +
-                `<div class="ms-track"><div class="ms-line"></div><div class="ms-fill" id="ms-fill"></div><div class="ms-dots" id="ms-dots"></div></div>` +
-                `<div class="ms-labels" id="ms-labels"></div>` +
-            `</div>` +
-            `<div style="text-align:center;margin-top:6px;font-size:clamp(10px,1vw,12px);color:var(--text2);" id="ms-status"></div>` +
-        `</div>`,
-
-    // ── FIRE PROJECTION (main-page summary — Phase C) ───────────────────────────
-    // Deliberately simple: headline numbers + one chart, no inputs/toggles/
-    // transparency panels (those stay in the Edit Assets modal). Reads
-    // whatever the user has actually saved to fire_plan (mode, expenses, SWR,
-    // etc.) via computeFireProjection() — the SAME shared engine the modal's
-    // renderFireOutputs() uses — so this can never silently disagree with the
-    // modal again. See loadMainFireSummary()/renderMainFireSummary()/
-    // renderFireSetupPrompt() in the RENDER section.
-    'w-monte':
-        `<div class="card-header">` +
-            `<span class="card-label" id="monteFilter">Portfolio</span>` +
-            `<span class="card-title">FIRE Projection</span>` +
-            `<span class="card-subtitle" id="mc-params"></span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable">` +
-            `<div id="mc-empty" style="display:none;text-align:center;color:var(--text2);font-size:clamp(10px,1vw,12px);padding:20px 10px;line-height:1.6;"></div>` +
-            `<div id="mc-content">` +
-                `<div class="mc-stats" id="mc-stats"></div>` +
-                `<div class="chwrap" style="min-height:320px;"><canvas id="mcChart"></canvas></div>` +
-                `<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:4px;" id="mc-footer"></div>` +
-            `</div>` +
-            `<div style="text-align:center;margin-top:8px;"><button class="mgray" style="padding:5px 12px;font-size:11px;" onclick="openEditAssets()">Configure FIRE Plan &rarr;</button></div>` +
-        `</div>`,
-
-    // ── ASSETS ────────────────────────────────────────────────────────────────
-    'w-assets':
-        `<div class="card-header">` +
-            `<span class="card-label">Portfolio</span>` +
-            `<span class="card-title" id="assetsTitle">Assets Distribution</span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable" style="gap:0;">` +
-            `<div class="chwrap" style="min-height:220px;flex:2;"><canvas id="assetsChart"></canvas></div>` +
-            `<div class="twrap" id="assetsTable" style="flex:1;"></div>` +
-        `</div>`,
-
-    // ── YEARLY PERFORMANCE ────────────────────────────────────────────────────
-    'w-yearly':
-        `<div class="card-header">` +
-            `<span class="card-label" id="yearlyFilter">Portfolio</span>` +
-            `<span class="card-title">Yearly Performance</span>` +
-        `</div>` +
-        `<div class="card-divider"></div>` +
-        `<div class="card-body scrollable" style="gap:0;">` +
-            `<div class="chwrap"><canvas id="yearChart"></canvas></div>` +
-            `<div class="twrap" id="yearTable"></div>` +
-        `</div>`,
-};
-
-const DEFAULT_LAYOUT = [
-    {id:'w-c-nw',           x:0,  y:0,  w:6,  h:4},
-    {id:'w-c-vel-annual',   x:6,  y:0,  w:6,  h:4},
-    {id:'w-c-assets',       x:12, y:0,  w:6,  h:4},
-    {id:'w-c-invested',     x:18, y:0,  w:6,  h:4},
-
-    {id:'w-c-ytd',          x:0,  y:4,  w:4,  h:3},
-    {id:'w-c-atgain',       x:4,  y:4,  w:4,  h:3},
-    {id:'w-c-monthly-ytd',  x:8,  y:4,  w:4,  h:3},
-    {id:'w-c-daily-ytd',    x:12, y:4,  w:4,  h:3},
-    {id:'w-c-monthly-at',   x:16, y:4,  w:4,  h:3},
-    {id:'w-c-daily-at',     x:20, y:4,  w:4,  h:3},
-
-    {id:'w-c-vel-momentum', x:0,  y:7,  w:6,  h:3},
-    {id:'w-global',         x:6,  y:7,  w:18, h:3},
-
-    {id:'w-c-eoy',          x:0,  y:10, w:4,  h:3},
-    {id:'w-c-1y',           x:4,  y:10, w:4,  h:3},
-    {id:'w-c-5y',           x:8,  y:10, w:4,  h:3},
-    {id:'w-c-btc-value',    x:12, y:10, w:4,  h:3},
-    {id:'w-c-btc-price',    x:16, y:10, w:4,  h:3},
-    {id:'w-c-btc-holdings', x:20, y:10, w:4,  h:3},
-
-    {id:'w-c-debt-total',   x:0,  y:13, w:4,  h:3},
-    {id:'w-c-debt-crypto',  x:4,  y:13, w:4,  h:3},
-    {id:'w-c-debt-tradfi',  x:8,  y:13, w:4,  h:3},
-    {id:'w-c-btc-since',    x:12, y:13, w:4,  h:3},
-    {id:'w-c-btc-ytd',      x:16, y:13, w:4,  h:3},
-
-    {id:'w-milestone',      x:0,  y:16, w:24, h:6},
-    {id:'w-assets',         x:0,  y:22, w:14, h:7},
-    {id:'w-yearly',         x:14, y:22, w:10, h:7},
-    {id:'w-monte',          x:0,  y:29, w:24, h:11},
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GRIDSTACK INIT
-// ─────────────────────────────────────────────────────────────────────────────
-function calcCellHeight() {
-    return Math.max(36, Math.min(62, Math.round(window.innerHeight / 20)));
-}
-
-function initGrid() {
-    if (grid) return;
-    if (typeof GridStack === 'undefined') throw new Error('GridStack library failed to load.');
-
-    grid = GridStack.init({
-        column: 24,
-        cellHeight: calcCellHeight(),
-        margin: 0,
-        float: true,
-        animate: true,
-        disableDrag: false,
-        disableResize: false,
-        resizable: {handles: 'se,s,e,sw,w'},
-        draggable: {handle: '.card-header'},
-    }, '#grid');
-
-    const layout = loadLayout() || DEFAULT_LAYOUT;
-    layout.forEach(item => {
-        if (!WIDGET_HTML[item.id]) return;
-        grid.addWidget({
-            id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
-            content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
-        });
-    });
-
-    grid.on('change', saveLayout);
-    setTimeout(initSectionResizeObserver, 80);
-
-    if (localStorage.getItem(LS.locked) === 'true') applyLock(true, false);
-
-    let _rhTimer;
-    window.addEventListener('resize', () => {
-        clearTimeout(_rhTimer);
-        _rhTimer = setTimeout(() => { if (grid) grid.cellHeight(calcCellHeight()); }, 150);
-    });
-}
-
-function saveLayout() {
-    if (!grid) return;
-    const items = grid.getGridItems().map(el => {
-        const n = el.gridstackNode;
-        return {id: n.id, x: n.x, y: n.y, w: n.w, h: n.h};
-    });
-    localStorage.setItem(LS.layout, JSON.stringify(items));
-}
-
-function loadLayout() {
-    try {
-        const s = localStorage.getItem(LS.layout);
-        if (!s) return null;
-        const parsed = JSON.parse(s);
-        const validIds = Object.keys(WIDGET_HTML);
-        const filtered = parsed.filter(i => validIds.includes(i.id));
-        const savedIds = filtered.map(i => i.id);
-        const missing  = DEFAULT_LAYOUT.filter(i => !savedIds.includes(i.id));
-        const maxY     = filtered.length ? Math.max(...filtered.map(i => i.y + i.h)) : 0;
-        missing.forEach((w, idx) => filtered.push({...w, y: maxY + idx * 4}));
-        return filtered;
-    } catch { return null; }
-}
-
-function resetLayout() {
-    if (!grid) return;
-    localStorage.removeItem(LS.layout);
-    grid.removeAll();
-    DEFAULT_LAYOUT.forEach(item => {
-        grid.addWidget({
-            id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
-            content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
-        });
-    });
-    if (rows.length > 0) setTimeout(() => renderAll(), 80);
-    toast('Layout reset to default', false);
-}
-
-function exportLayout() {
-    if (!grid) return;
-    const items = grid.getGridItems().map(el => {
-        const n = el.gridstackNode;
-        return {id: n.id, x: n.x, y: n.y, w: n.w, h: n.h};
-    });
-    const data = {version:'5', date:new Date().toISOString(),
-        theme: document.body.className.replace('privacy','').trim() || 'zhodler',
-        locked: isLocked, layout: items};
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const a = Object.assign(document.createElement('a'), {
-        href: URL.createObjectURL(blob),
-        download: `zhodler-layout-${new Date().toISOString().slice(0,10)}.json`,
-    });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    toast('Layout exported', false);
-}
-
-function importLayout(input) {
-    const file = input.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (!data.layout || !Array.isArray(data.layout)) throw new Error('Invalid layout file');
-            localStorage.setItem(LS.layout, JSON.stringify(data.layout));
-            if (data.theme) setTheme(data.theme);
-            grid.removeAll();
-            data.layout.forEach(item => {
-                if (!WIDGET_HTML[item.id]) return;
-                grid.addWidget({
-                    id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
-                    content: `<div class="grid-stack-item-content">${WIDGET_HTML[item.id]}</div>`,
-                });
-            });
-            if (data.locked !== undefined) applyLock(data.locked, true);
-            if (rows.length > 0) setTimeout(() => renderAll(), 80);
-            closeSettings();
-            toast('Layout imported', false);
-        } catch(err) { toast('Import failed: ' + err.message, true); }
-    };
-    reader.readAsText(file);
-    input.value = '';
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA FETCH
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadData() {
     const source = localStorage.getItem(LS.source) || 'sheets';
-    const isFirstLoad = !grid;
+    const isFirstLoad = !gridReady;
 
     if (isFirstLoad) {
         document.getElementById('loadMsg').textContent = 'Loading data\u2026';
@@ -1496,15 +1542,9 @@ async function loadData() {
         } catch(err) { fetchErr = err; }
     }
 
-    let gridErr = null;
-    try { initGrid(); } catch(err) { gridErr = err; }
-
-    if (gridErr) {
-        document.getElementById('loadMsg').innerHTML =
-            `<span style="color:var(--red)">&#10005; ${gridErr.message}</span>`;
-        toast(gridErr.message, true);
-        return;
-    }
+    // Redesign: the layout is static HTML (sidebar + sections). No GridStack —
+    // every widget element already exists in the DOM with its render ID.
+    gridReady = true;
 
     updateStalenessBadge();
 
@@ -1825,6 +1865,9 @@ function renderSummary() {
     sv('c-nw',          fd(d.nw));
     sv('c-assets',      fd(d.a));
     sv('c-invested',    fd(d.inv));
+    // Redesign: "Liquid" is a labeled line inside Net Worth, not a filter.
+    // Sheet-mode approximation (crypto NW + TradFi NW); Supabase uses its real scope.
+    sv('c-liquid',      fd(N(32)+N(44)));
     sv('c-ytd',         fd(d.yd),        cc(d.yd));  gi('c-ytd-sub',    fp(d.yp));
     sv('c-atgain',      fd(d.ad),        cc(d.ad));  gi('c-atgain-sub', fp(d.ap));
     sv('c-monthly-ytd', fd(d.dm)+'/mo',  cc(d.dm));
@@ -1846,6 +1889,9 @@ function renderSummarySupabase() {
     sv('c-nw',       fd(num(s.net_worth)));
     sv('c-assets',   fd(num(s.total_assets)));
     sv('c-invested', fd(dbInvested()));
+    // Redesign: Liquid as a Net Worth line — real per-scope snapshot in Supabase mode.
+    const liqScope = (dbData && dbData.scopes) ? dbData.scopes.liquid : null;
+    sv('c-liquid', liqScope ? fd(num(liqScope.net_worth)) : '—');
 
     const ytdOk = g && has(g.ytd_abs), atOk = g && has(g.alltime_abs);
     const ytdAbs = ytdOk ? num(g.ytd_abs) : null;
@@ -1976,7 +2022,11 @@ function renderVelocity() {
 }
 
 function renderMilestone() {
-    const currentNW=getFilterNW(), monthlyGrowth=getFilterMonthly();
+    // Redesign: the single milestone tracker runs on the investable nest egg
+    // (same basis as the FIRE projection) once the FIRE plan's investment
+    // total has loaded; before that it falls back to net worth.
+    const currentNW = _mainFireInvestmentTotal > 0 ? _mainFireInvestmentTotal : getFilterNW();
+    const monthlyGrowth = getFilterMonthly();
     const milestones=[
         {name:'$50K', target:50000,  icon:'🎯'},
         {name:'$100K',target:100000, icon:'💯'},
@@ -2015,7 +2065,8 @@ function renderMilestone() {
     const remainToNext=next?next.target-currentNW:0;
     const moToNext=(next&&monthlyGrowth>0)?Math.ceil(remainToNext/monthlyGrowth):0;
     const nextStr=next?` &bull; Next: ${next.name} in ${moToNext>0?moToNext+'mo':'∞'}`:' &bull; 🏆 All milestones reached!';
-    gi('ms-status', `NW: ${fd(currentNW)} &bull; ${Math.min(100,(currentNW/1000000)*100).toFixed(1)}% of $1M goal${nextStr}`);
+    const basisLbl = _mainFireInvestmentTotal > 0 ? 'Investable (FIRE basis)' : 'Net worth';
+    gi('ms-status', `${basisLbl}: ${fd(currentNW)} &bull; ${Math.min(100,(currentNW/1000000)*100).toFixed(1)}% of $1M FIRE goal${nextStr}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2035,6 +2086,97 @@ function renderMilestone() {
 let _mainFirePlan = null;
 let _mainFireInvestmentTotal = 0;
 let _mainFireLoans = [];
+// Redesign: FIRE run controls — configurable run count (0–20,000), persisted
+// last result, and the PRJ27 strategy blend (crypto sleeve return).
+let _mainFireInputs = null;
+let _mainFireSalary = [];
+let _mainFireBlendNote = null;
+const FIRE_CACHE_KEY = 'zhodler_fire_last_run_v1';
+const PRJ27_KEY = 'zhodler_prj27_bridge_v1';
+
+function saveFireCache(projection) {
+    try { localStorage.setItem(FIRE_CACHE_KEY, JSON.stringify({ when: new Date().toISOString(), projection })); } catch (e) {}
+}
+function loadFireCache() {
+    try {
+        const s = localStorage.getItem(FIRE_CACHE_KEY); if (!s) return null;
+        const o = JSON.parse(s);
+        return (o && o.projection && o.projection.fireProb !== undefined) ? o : null;
+    } catch (e) { return null; }
+}
+function fireRunsValue() {
+    const el = document.getElementById('fireRuns');
+    const raw = (el && el.value !== '' && el.value !== undefined) ? +el.value : (+localStorage.getItem('fireRuns') || 2000);
+    return Math.max(0, Math.min(20000, raw));
+}
+function fireRunsChanged() {
+    const v = fireRunsValue();
+    document.getElementById('fireRunsVal').textContent = v === 0 ? '0 · off' : v.toLocaleString('en-US');
+    try { localStorage.setItem('fireRuns', String(v)); } catch (e) {}
+}
+function prj27Settings() { try { return JSON.parse(localStorage.getItem(PRJ27_KEY)) || {}; } catch (e) { return {}; } }
+function applyFireBlend(f) {
+    const p = prj27Settings();
+    const apy = +p.apy || 0;
+    const share = Math.min(100, Math.max(0, +p.share || 0)) / 100;
+    const trad = +p.tradfi || 7;
+    if (apy > 0 && share > 0) {
+        f.returnPct = share * apy + (1 - share) * trad;
+        _mainFireBlendNote = `return blended: ${(share*100).toFixed(0)}% crypto ("${p.variant || 'PRJ27 variant'}" ${apy}% APY) + ${((1-share)*100).toFixed(0)}% TradFi @ ${trad}%`;
+    } else {
+        _mainFireBlendNote = null;
+    }
+}
+function renderPrj27Bridge() {
+    const p = prj27Settings();
+    const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
+    const nameEl = document.getElementById('prj27Name');
+    if (!nameEl) return;
+    nameEl.textContent = p.variant ? p.variant : '—';
+    document.getElementById('prj27Return').textContent = apy > 0 ? apy + '% / yr' : '—';
+    document.getElementById('prj27ShareTxt').textContent = share > 0 ? share + '%' : '—';
+    document.getElementById('prj27BlendTxt').textContent = (apy > 0 && share > 0)
+        ? ((share * apy + (1 - share / 100 * 100) * 0) || 0).toFixed(1) + '%'
+        : '—';
+    if (apy > 0 && share > 0) document.getElementById('prj27BlendTxt').textContent = (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr';
+}
+function renderFireSettings() {
+    const p = prj27Settings();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Share', p.share || ''); set('prj27Tradfi', p.tradfi || 7);
+    const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
+    const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    t('fsApyCell', apy > 0 ? apy + '% / yr' : 'not set');
+    t('fsTradCell', trad + '% / yr');
+    t('fsShareCell', share > 0 ? share + '% crypto / ' + (100 - share) + '% TradFi' : 'not set');
+    const note = document.getElementById('fireBlendNote');
+    if (note) note.textContent = (apy > 0 && share > 0)
+        ? (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr'
+        : 'not configured — using the return saved in your FIRE plan';
+}
+function saveFireSettings() {
+    const g = id => document.getElementById(id).value.trim();
+    const p = { variant: g('prj27Variant'), apy: g('prj27Apy'), share: g('prj27Share'), tradfi: g('prj27Tradfi') };
+    try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
+    renderPrj27Bridge(); renderFireSettings();
+    if (_mainFireInputs) applyFireBlend(_mainFireInputs);
+    toast('PRJ27 blend saved — press Run projection to apply', false);
+}
+function clearFireSettings() {
+    try { localStorage.removeItem(PRJ27_KEY); } catch (e) {}
+    renderPrj27Bridge(); renderFireSettings();
+    if (_mainFireInputs) applyFireBlend(_mainFireInputs);
+    toast('Blend cleared — using your saved plan return', false);
+}
+async function fireRunNow() {
+    if (!_mainFireInputs) { toast('FIRE plan not loaded yet — switch to Supabase mode', true); return; }
+    const runs = fireRunsValue();
+    if (runs === 0) { toast('Runs = 0 (off) — last saved result kept', true); return; }
+    const projection = computeFireProjection(_mainFireInputs, _mainFireInvestmentTotal, _mainFireLoans, _mainFireSalary, runs);
+    saveFireCache(projection);
+    renderMainFireSummary(projection);
+    toast(`FIRE projection recalculated — ${runs.toLocaleString('en-US')} runs`, false);
+}
 
 function renderFireSetupPrompt(message) {
     const lbl = document.getElementById('monteFilter'); if (lbl) lbl.textContent = 'FIRE Plan';
@@ -2045,7 +2187,7 @@ function renderFireSetupPrompt(message) {
     if (charts.monte) { charts.monte.destroy(); charts.monte = null; }
 }
 
-function renderMainFireSummary(projection) {
+function renderMainFireSummary(projection, savedWhen) {
     const lbl = document.getElementById('monteFilter'); if (lbl) lbl.textContent = 'FIRE Plan';
     const empty = document.getElementById('mc-empty'), content = document.getElementById('mc-content');
     if (empty) empty.style.display = 'none';
@@ -2061,7 +2203,9 @@ function renderMainFireSummary(projection) {
         <div class="mc-box"><div class="klbl">Median Time to FIRE</div><div class="kval">${medianStr}</div></div>
     `);
     const modeLabel = (_mainFirePlan && _mainFirePlan.contribution_mode === 'salary_driven') ? 'salary-driven' : 'manual';
-    gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations`);
+    const whenStr = savedWhen ? ' &bull; saved result from ' + new Date(savedWhen).toLocaleString() + ' — press Run to recalculate' : '';
+    const blendStr = _mainFireBlendNote ? ' &bull; ' + _mainFireBlendNote : '';
+    gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only — real estate &amp; vehicles excluded &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations${blendStr}${whenStr}`);
     gi('mc-params', `Target ${fd(projection.fireNumber)}`);
 
     const targetLine = projection.yearLabels.map(() => projection.fireNumber);
@@ -2124,6 +2268,7 @@ async function renderMonteCarlo() {
         _mainFireInvestmentTotal = Number(invTotal) || 0;
         await ensureEurUsdRate();
         _mainFireLoans = buildFireLoanModel(loanDetails || [], assets || []);
+        renderMilestone();   // milestones switch to the investable (FIRE) basis now
 
         const mode = plan.contribution_mode === 'salary_driven' ? 'salary_driven' : 'manual';
         let salaryHistory = [];
@@ -2142,7 +2287,18 @@ async function renderMonteCarlo() {
             essentialExp: has(plan.essential_monthly_expenses) ? Number(plan.essential_monthly_expenses) : NaN,
             salaryGrowthPct: has(plan.salary_growth_pct) ? Number(plan.salary_growth_pct) : NaN,
         };
-        const projection = computeFireProjection(f, _mainFireInvestmentTotal, _mainFireLoans, salaryHistory, 500);
+        // Redesign: store the inputs so "Run projection" can recompute with the
+        // user-chosen run count; apply the PRJ27 crypto/TradFi blend to the
+        // return for this dashboard's run only (the saved plan is untouched).
+        _mainFireInputs = f;
+        _mainFireSalary = salaryHistory;
+        applyFireBlend(f);
+        // Results persist until a new run: show the cached result when present,
+        // otherwise compute once (with the configured run count) and cache it.
+        const cachedRun = loadFireCache();
+        if (cachedRun) { renderMainFireSummary(cachedRun.projection, cachedRun.when); return; }
+        const projection = computeFireProjection(f, _mainFireInvestmentTotal, _mainFireLoans, salaryHistory, fireRunsValue());
+        saveFireCache(projection);
         renderMainFireSummary(projection);
     } catch (err) {
         renderFireSetupPrompt('Failed to load your FIRE plan — try refreshing.');
@@ -2159,6 +2315,12 @@ function renderAssets() {
     } else {
         if (titleEl) titleEl.textContent='Assets Distribution';
         for(let i=81;i<=92;i++){const name=V(i,0);if(!name)continue;assets.push({name,qty:N(i,1),val:N(i,2),type:V(i,3)||'',plat:V(i,4)||'',status:V(i,5)||''});}
+        // Scope chips (Sheets mode): filter the parsed asset rows by class
+        // keywords. Supabase mode scopes from real per-class data upstream.
+        const hay = a => (a.type+' '+a.name+' '+a.plat).toLowerCase();
+        if (activeFilter === 'crypto')      assets = assets.filter(a => /btc|eth|sol|crypto|defi|cefi|stable|coin|token/.test(hay(a)));
+        else if (activeFilter === 'tradfi') assets = assets.filter(a => /stock|etf|retire|ppr|bond|fund|manual|realestate|real estate|vehicle|motorbike/.test(hay(a)));
+        else if (activeFilter === 'cash')   assets = assets.filter(a => /cash|bank|savings|meal|wallet/.test(hay(a)));
     }
     // Doughnut only charts positive-value holdings (borrows are negative).
     const chartAssets = assets.filter(a => a.val > 0);
@@ -2174,23 +2336,33 @@ function renderAssets() {
     }
     const row=a=>`<tr><td><b>${a.name}</b></td><td>${a.qty===null||a.qty===undefined?'—':fq(a.qty)}</td>`+
         `<td class="sensitive ${a.val<0?'neg':''}">${fd(a.val)}</td><td>${a.type}</td><td>${a.plat}</td><td>${a.status}</td></tr>`;
+    // Redesign: drill-down — one expandable group per asset class, each class
+    // header showing its total; expanding reveals the individual holdings.
     let tbody;
     if (usingSupabase()) {
-        // Group DeFi and manual/TradFi holdings under their own headings.
-        const groups=['Crypto / DeFi','TradFi / Manual'];
-        tbody=groups.map(g=>{
-            const items=assets.filter(a=>a.group===g);
-            if(!items.length) return '';
-            const sum=items.reduce((t,a)=>t+a.val,0);
-            return `<tr><td colspan="5" style="background:var(--card2);font-size:.85em;letter-spacing:.08em;`+
-                   `text-transform:uppercase;color:var(--text2);font-weight:700;">${g}</td>`+
-                   `<td style="background:var(--card2);font-weight:700;" class="sensitive ${cc(sum)}">${fd(sum)}</td></tr>`+
-                   items.map(row).join('');
+        const groups = ['Crypto / DeFi', 'TradFi / Manual'].filter(g => assets.some(a => a.group === g));
+        tbody = groups.map(g => {
+            const items = assets.filter(a => a.group === g);
+            return ddGroup(g, items, row);
         }).join('');
     } else {
-        tbody=assets.map(row).join('');
+        const typeOf = a => (a.type || '').trim() || 'Other';
+        const classNames = [...new Set(assets.map(typeOf))];
+        tbody = classNames.map(cn => ddGroup(cn, assets.filter(a => typeOf(a) === cn), row)).join('');
     }
-    gi('assetsTable',`<table><thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead><tbody>${tbody}</tbody></table>`);
+    gi('assetsTable', tbody);
+}
+
+// One expandable asset-class group for the distribution drill-down table.
+function ddGroup(name, items, row) {
+    const sum = items.reduce((t, a) => t + a.val, 0);
+    const openAttr = items.length <= 6 ? ' open' : '';
+    return `<details class="dd"${openAttr}><summary>` +
+        `<span class="dd-caret">&#9656;</span>${name} ` +
+        `<span class="dd-count">(${items.length} holding${items.length === 1 ? '' : 's'})</span>` +
+        `<span class="dd-sum sensitive ${cc(sum)}">${fd(sum)}</span></summary>` +
+        `<table><thead><tr><th>Asset</th><th>Qty</th><th>Value</th><th>Type</th><th>Platform</th><th>Status</th></tr></thead>` +
+        `<tbody>${items.map(row).join('')}</tbody></table></details>`;
 }
 
 function renderYearly() {
@@ -2198,7 +2370,9 @@ function renderYearly() {
     if (usingSupabase()) {
         // yearly() RPC: 2023-25 backfilled, current year live. YoY isn't stored,
         // so derive it; the first year has no prior to compare against (0 → '—').
-        const src = dbYearly[scopeForFilter(activeFilter)] || [];
+        // Redesign: yearly performance is portfolio-wide by design — chips and
+        // scopes never re-scope it.
+        const src = dbYearly[scopeForFilter('portfolio')] || [];
         const byYear = (dbData.btc || {}).yearly_holdings || {};
         src.forEach((r, i) => {
             const nw = num(r.net_worth), prev = i > 0 ? num(src[i-1].net_worth) : 0;
@@ -2207,13 +2381,14 @@ function renderYearly() {
                 nw:  nw,
                 yoy: (i > 0 && prev !== 0) ? (nw - prev) / Math.abs(prev) : 0,
                 ta:  num(r.total_assets),
+                mo:  (i > 0 && prev !== 0) ? (nw - prev) / 12 : null,
                 // per-scope btc_holdings is null pre-2026; fall back to the
                 // portfolio-wide yearly BTC accumulation from the bootstrap.
                 btc: has(r.btc_holdings) ? num(r.btc_holdings) : num(byYear[String(r.year)]),
             });
         });
     } else {
-        for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4)});}
+        for(let i=95;i<=98;i++){const yr=V(i,0);if(!yr)continue;years.push({yr,nw:N(i,1),yoy:V(i,2)||'—',ta:N(i,3),btc:N(i,4),mo:null});}
     }
     if(charts.year) charts.year.destroy();
     const ctx=document.getElementById('yearChart');
@@ -2230,51 +2405,46 @@ function renderYearly() {
             }
         });
     }
-    const tbody=years.map(y=>`<tr><td><b>${y.yr}</b></td><td class="sensitive">${fd(y.nw)}</td><td>${typeof y.yoy==='number'?(y.yoy===0?'—':fp(y.yoy)):y.yoy}</td><td class="sensitive">${fd(y.ta)}</td><td>${fq(y.btc)} &#x20bf;</td></tr>`).join('');
-    gi('yearTable',`<table><thead><tr><th>Year</th><th>Net Worth</th><th>YoY</th><th>Total Assets</th><th>BTC</th></tr></thead><tbody>${tbody}</tbody></table>`);
+    const tbody=years.map(y=>`<tr><td><b>${y.yr}</b></td>`+
+        `<td class="sensitive">${fd(y.ta)}</td>`+
+        `<td class="sensitive">${fd(y.ta-y.nw)}</td>`+
+        `<td class="sensitive">${fd(y.nw)}</td>`+
+        `<td>${typeof y.yoy==='number'?(y.yoy===0?'—':fp(y.yoy)):y.yoy}</td>`+
+        `<td class="sensitive">${(y.mo===null||y.mo===undefined)?'—':fd(y.mo)+'/mo'}</td>`+
+        `<td>${fq(y.btc)} &#x20bf;</td></tr>`).join('');
+    gi('yearTable',`<table><thead><tr><th>Year</th><th>Total Assets <span class="dd-count">(gross)</span></th><th>Debt <span class="dd-count">(derived)</span></th><th>Net Worth <span class="dd-count">(net)</span></th><th>YoY</th><th>Monthly Avg</th><th>BTC</th></tr></thead><tbody>${tbody}</tbody></table>`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTROLS
 // ─────────────────────────────────────────────────────────────────────────────
-function setFilter(el) {
-    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+// Redesign: scope chips live only in the Investments section and re-scope ONLY
+// the asset distribution (where real per-class data exists). Never FIRE,
+// projections, milestones or debt.
+function setScopeBtn(el) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
-    activeFilter = el.dataset.filter;
+    activeFilter = el.dataset.scope;
     document.body.dataset.filter = activeFilter;
-    if (rows.length > 0 || usingSupabase()) {
-        updateSectorHeaders();
-        renderSummary(); renderDebt(); renderProjections();
-        renderVelocity(); renderMilestone(); renderMonteCarlo(); renderYearly();
-        renderAssets();
-    }
+    if (rows.length > 0 || usingSupabase()) renderAssets();
 }
 
-function doRefresh() { rows=[]; loadData(); }
-
-function applyLock(lock, save) {
-    isLocked = lock;
-    const btn = document.getElementById('lockBtn');
-    if (lock) {
-        if (grid) { grid.enableMove(false); grid.enableResize(false); }
-        if (editMode) { editMode=false; document.body.classList.remove('editing'); const eb=document.getElementById('editBtn'); if(eb) eb.classList.remove('on'); }
-        if (btn) { btn.textContent='\uD83D\uDD12 Locked'; btn.classList.add('lock-on'); }
-        saveLayout();
-    } else {
-        if (grid) { grid.enableMove(true); grid.enableResize(true); }
-        if (btn) { btn.textContent='\uD83D\uDD13 Unlocked'; btn.classList.remove('lock-on'); }
-    }
-    if (save) localStorage.setItem(LS.locked, lock ? 'true' : 'false');
+// Click-to-expand info panels (the ⓘ pattern).
+function toggleInfo(btn, id) {
+    const pop = document.getElementById(id);
+    if (!pop) return;
+    const open = pop.classList.toggle('open');
+    if (btn) btn.classList.toggle('open', open);
 }
 
-function toggleLock() { applyLock(!isLocked, true); }
-
-function toggleEdit() {
-    if (isLocked) { toast('Unlock layout first', true); return; }
-    editMode = !editMode;
-    document.body.classList.toggle('editing', editMode);
-    document.getElementById('editBtn').classList.toggle('on', editMode);
-    if (!editMode) { saveLayout(); toast('Layout saved', false); }
+function doRefresh() {
+    rows = [];
+    // Reset the scope to portfolio-wide so a refresh never leaves the yearly
+    // view or summaries scoped by a stale chip.
+    activeFilter = 'portfolio';
+    document.body.dataset.filter = 'portfolio';
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.scope === 'portfolio'));
+    loadData();
 }
 
 function togglePrivacy() {
@@ -5480,6 +5650,10 @@ function toast(msg, isErr) {
     const theme = localStorage.getItem(LS.theme) || 'zhodler';
     setTheme(theme);
     if (localStorage.getItem(LS.privacy) === '1') togglePrivacy();
+    const fr = document.getElementById('fireRuns');
+    if (fr) fr.value = localStorage.getItem('fireRuns') || 2000;
+    fireRunsChanged();
+    renderPrj27Bridge();
     loadData();
 })();
 </script>
