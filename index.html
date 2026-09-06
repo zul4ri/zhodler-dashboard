@@ -2132,7 +2132,7 @@ function importPrj27FromHash() {
     let payload = null;
     try { payload = JSON.parse(decodeURIComponent(m[1])); } catch (e) { payload = null; }
     history.replaceState(null, '', location.pathname + location.search);
-    if (!payload || payload.v !== 1 || !Array.isArray(payload.strategies) || !payload.strategies.length) {
+    if (!payload || (payload.v !== 1 && payload.v !== 2) || !Array.isArray(payload.strategies) || !payload.strategies.length) {
         toast('PRJ27 sync failed — unexpected data', true);
         return;
     }
@@ -2240,8 +2240,13 @@ function renderPrj27Bridge() {
             list.innerHTML =
                 '<div class="wnote">Synced from PRJ27 (' + (res.scenario || 'n/a') + ' scenario' + (when ? ' · ' + when : '') + ') — click one to use it:</div>' +
                 res.strategies.map(s =>
-                    '<button class="chip' + (p.variant === s.label ? ' active' : '') + '" style="margin:4px 5px 0 0;" onclick="pickPrj27Strategy(this)" data-label="' + s.label.replace(/"/g, '&quot;') + '">' +
+                    '<button class="chip' + (p.variant === s.label ? ' active' : '') + '" style="margin:4px 5px 0 0;" onclick="pickPrj27Strategy(this)" data-label="' + s.label.replace(/"/g, '&quot;') + '" title="' +
+                    (s.apyBasis === 'mc'
+                        ? 'Monte Carlo median, ' + (s.runs || '?') + ' runs' + (s.apyP10 !== null && s.apyP10 !== undefined ? ' · P10–P90: ' + s.apyP10 + '–' + s.apyP90 + '%/yr' : '')
+                        : 'Deterministic single-path result (run the Monte Carlo in the simulator for a distribution-based figure)') +
+                    '">' +
                     s.label + ' · ' + s.apy + '%/yr' +
+                    (s.apyBasis === 'mc' ? ' · MC' : ' · det') +
                     (s.pLiq !== null && s.pLiq !== undefined ? ' · P(liq) ' + (s.pLiq * 100).toFixed(1) + '%' : '') +
                     '</button>'
                 ).join('') +
@@ -2275,7 +2280,10 @@ function renderFireSettings() {
         if (res && Array.isArray(res.strategies)) {
             res.strategies.forEach(s => {
                 const liq = (s.pLiq !== null && s.pLiq !== undefined) ? ` · P(liq) ${(s.pLiq * 100).toFixed(1)}%` : '';
-                opts.push(`<option value="${s.label.replace(/"/g, '&quot;')}">${s.label} — ${s.apy}%/yr (${res.scenario || 'n/a'}${liq})</option>`);
+                const basis = s.apyBasis === 'mc' ? ` · MC ${s.runs || '?'} runs` : ' · deterministic';
+                const range = (s.apyBasis === 'mc' && s.apyP10 !== null && s.apyP10 !== undefined && s.apyP90 !== null && s.apyP90 !== undefined)
+                    ? ` · ${s.apyP10}–${s.apyP90}%` : '';
+                opts.push(`<option value="${s.label.replace(/"/g, '&quot;')}">${s.label} — ${s.apy}%/yr (${res.scenario || 'n/a'}${basis}${range}${liq})</option>`);
             });
         }
         opts.push('<option value="manual">Manual entry…</option>');
