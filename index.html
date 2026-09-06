@@ -580,10 +580,11 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     </div>
     <div class="wcard">
         <div class="whead"><span class="wtitle" id="assetsTitle">Assets Distribution</span>
+            <label class="wnote" style="margin:0 0 0 auto;display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;"><input type="checkbox" id="distIncludeRE" onchange="toggleDistRE(this)"> include real estate &amp; vehicles</label>
             <button class="info-btn" onclick="toggleInfo(this,'i-dist')">i</button></div>
         <div class="chwrap" style="min-height:210px;"><canvas id="assetsChart"></canvas></div>
         <div class="info-pop" id="i-dist">
-            <b>What counts where:</b> each slice is computed straight from the asset ledger — real per-class figures, no estimates. Use the scope chips above to focus on one class; expand a class group in the table below to see its individual holdings.
+            <b>What counts where:</b> this shows your <b>investable</b> assets by default — everything except real estate &amp; vehicles, the same basis as the FIRE projection and milestones. Tick "include real estate &amp; vehicles" to see the full breakdown; excluded items are listed under the table. Each class group expands to its individual holdings, and the scope chips above re-scope what's shown.
         </div>
         <div class="twrap" id="assetsTable" style="max-height:320px;overflow:auto;"></div>
     </div>
@@ -2471,16 +2472,25 @@ function renderAssets() {
         else if (activeFilter === 'tradfi') assets = assets.filter(a => /stock|etf|retire|ppr|bond|fund|manual|realestate|real estate|vehicle|motorbike/.test(hay(a)));
         else if (activeFilter === 'cash')   assets = assets.filter(a => /cash|bank|savings|meal|wallet/.test(hay(a)));
     }
-    // Doughnut only charts positive-value holdings (borrows are negative).
+    // Redesign: the distribution defaults to INVESTABLE assets — real estate
+    // & vehicles excluded (same basis as FIRE/milestones) — with a toggle to
+    // include them. A 90%-house doughnut reads as a single blob otherwise.
+    const isNonInvestable = a => /real\s*estate|motorbike|vehicle/i.test(a.type + ' ' + a.name + ' ' + a.plat);
+    const includeRE = localStorage.getItem('distIncludeRE') === '1';
     const chartAssets = assets.filter(a => a.val > 0);
+    const excludedAssets = includeRE ? [] : chartAssets.filter(isNonInvestable);
+    const shown = includeRE ? chartAssets : chartAssets.filter(a => !isNonInvestable(a));
+    const checkbox = document.getElementById('distIncludeRE');
+    if (checkbox) checkbox.checked = includeRE;
+    if (titleEl) titleEl.textContent = includeRE ? 'Assets Distribution — all assets' : 'Assets Distribution — investable';
     const COLORS=['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
     if(charts.assets) charts.assets.destroy();
     const ctx=document.getElementById('assetsChart');
     if(ctx) {
         charts.assets=new Chart(ctx,{
             type:'doughnut',
-            data:{labels:chartAssets.map(a=>`${a.name} (${a.plat})`),datasets:[{data:chartAssets.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:10},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
+            data:{labels:shown.map(a=>`${a.name} (${a.plat})`),datasets:[{data:shown.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
         });
     }
     const row=a=>`<tr><td><b>${a.name}</b></td><td>${a.qty===null||a.qty===undefined?'—':fq(a.qty)}</td>`+
@@ -2489,17 +2499,29 @@ function renderAssets() {
     // header showing its total; expanding reveals the individual holdings.
     let tbody;
     if (usingSupabase()) {
-        const groups = ['Crypto / DeFi', 'TradFi / Manual'].filter(g => assets.some(a => a.group === g));
+        const groups = ['Crypto / DeFi', 'TradFi / Manual'].filter(g => shown.some(a => a.group === g));
         tbody = groups.map(g => {
-            const items = assets.filter(a => a.group === g);
+            const items = shown.filter(a => a.group === g);
             return ddGroup(g, items, row);
         }).join('');
     } else {
         const typeOf = a => (a.type || '').trim() || 'Other';
-        const classNames = [...new Set(assets.map(typeOf))];
-        tbody = classNames.map(cn => ddGroup(cn, assets.filter(a => typeOf(a) === cn), row)).join('');
+        const classNames = [...new Set(shown.map(typeOf))];
+        tbody = classNames.map(cn => ddGroup(cn, shown.filter(a => typeOf(a) === cn), row)).join('');
+    }
+    if (excludedAssets.length) {
+        const exSum = excludedAssets.reduce((t, a) => t + a.val, 0);
+        tbody += `<div class="wnote">Not shown (not investable — excluded from FIRE &amp; milestones): ` +
+            excludedAssets.map(a => `${a.name} ${fd(a.val)}`).join(' · ') +
+            ` — total <b class="sensitive">${fd(exSum)}</b>. Tick "include real estate &amp; vehicles" above to show them.</div>`;
     }
     gi('assetsTable', tbody);
+}
+
+// Toggle for including real estate & vehicles in the distribution view.
+function toggleDistRE(cb) {
+    try { localStorage.setItem('distIncludeRE', cb.checked ? '1' : '0'); } catch (e) {}
+    renderAssets();
 }
 
 // One expandable asset-class group for the distribution drill-down table.
