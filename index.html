@@ -683,6 +683,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Crypto share of investable % <input class="minput" id="prj27Share" type="number" step="1" min="0" max="100" style="flex:1;" placeholder="45"></label>
                     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">TradFi return %/yr <input class="minput" id="prj27Tradfi" type="number" step="0.1" min="0" max="30" style="flex:1;" placeholder="7"></label>
                 </div>
+                <div class="wnote" id="fireShareHint"></div>
                 <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="mgray" onclick="saveFireSettings()">Save &amp; apply blend</button>
                     <button class="mgray" onclick="clearFireSettings()">Reset to plan return</button>
@@ -714,6 +715,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
         </div>
         <a class="cta-link" href="https://loan-pool-simulator.vercel.app" target="_blank" rel="noopener noreferrer">&#8599; Open full simulator &rarr;</a>
         <button class="mgray" style="margin-left:8px;vertical-align:middle;" onclick="toggleInfo(document.querySelector('#sec-prj27 .info-btn'),'fireSettings')">Edit variant / blend</button>
+        <div id="prj27SyncList" style="margin-top:8px;"></div>
         <div class="info-pop" id="i-prj27">
             <b>This is the strategy the FIRE projection's crypto sleeve uses.</b> You pick the variant in the PRJ27 simulator, then enter its name and net APY here (via &#9881; settings on the FIRE card or the button above). Scenarios, strategy editing and full results stay in the simulator — this card is the bridge.
         </div>
@@ -2139,8 +2141,36 @@ function importPrj27FromHash() {
     renderFireSettings();
     toast(`Synced ${payload.strategies.length} strategies from PRJ27 (${payload.scenario || 'n/a'} scenario) — pick one in FIRE settings`, false);
 }
-function prj27PickChanged() {
-    const pick = document.getElementById('prj27Pick');
+// "Crypto share of investable" — computed from the same asset data the
+// distribution chart uses: crypto positive value ÷ investable value, where
+// investable = everything except real estate & vehicles. This is what the
+// FIRE blend needs: how the investable nest egg splits between the crypto
+// sleeve (PRJ27 strategy APY) and the TradFi sleeve (your return setting).
+function computeCryptoSharePct() {
+    let crypto = 0, total = 0, excluded = 0;
+    if (usingSupabase()) {
+        (dbData && Array.isArray(dbData.holdings) ? dbData.holdings : []).forEach(h => {
+            const v = num(h.usd_value);
+            if (v <= 0) return;               // borrows & zero rows don't count as assets
+            total += v;
+            if (h.protocol === 'manual' && (h.account_type === 'real_estate' || h.account_type === 'motorbike')) excluded += v;
+            if (h.scope_class === 'crypto') crypto += v;
+        });
+    } else {
+        for (let i = 81; i <= 92; i++) {
+            const name = V(i, 0); if (!name) continue;
+            const v = N(i, 2); if (v <= 0) continue;
+            const hay = ((V(i, 3) || '') + ' ' + name + ' ' + (V(i, 4) || '')).toLowerCase();
+            total += v;
+            if (/real\s*estate|motorbike|vehicle/.test(hay)) excluded += v;
+            else if (/collateral|defi|cefi|crypto|btc|eth|sol|stable|token/.test(hay)) crypto += v;
+        }
+    }
+    const investable = total - excluded;
+    return investable > 0 ? { pct: Math.round((crypto / investable) * 100), crypto, investable } : null;
+}
+
+function prj27PickChanged() {    const pick = document.getElementById('prj27Pick');
     if (!pick) return;
     const manualRow = document.getElementById('prj27ManualRow');
     if (pick.value === 'manual') {
@@ -2181,9 +2211,39 @@ function renderPrj27Bridge() {
     document.getElementById('prj27Return').textContent = apy > 0 ? apy + '% / yr' : '—';
     document.getElementById('prj27ShareTxt').textContent = share > 0 ? share + '%' : '—';
     document.getElementById('prj27BlendTxt').textContent = (apy > 0 && share > 0)
-        ? ((share * apy + (1 - share / 100 * 100) * 0) || 0).toFixed(1) + '%'
+        ? (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr'
         : '—';
-    if (apy > 0 && share > 0) document.getElementById('prj27BlendTxt').textContent = (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr';
+    // Synced strategies, shown right on the card — one click to pick.
+    const list = document.getElementById('prj27SyncList');
+    if (list) {
+        const res = prj27Results();
+        if (res && Array.isArray(res.strategies) && res.strategies.length) {
+            const when = res.syncedAt ? new Date(res.syncedAt).toLocaleString() : '';
+            list.innerHTML =
+                '<div class="wnote">Synced from PRJ27 (' + (res.scenario || 'n/a') + ' scenario' + (when ? ' · ' + when : '') + ') — click one to use it:</div>' +
+                res.strategies.map(s =>
+                    '<button class="chip' + (p.variant === s.label ? ' active' : '') + '" style="margin:4px 5px 0 0;" onclick="pickPrj27Strategy(this)" data-label="' + s.label.replace(/"/g, '&quot;') + '">' +
+                    s.label + ' · ' + s.apy + '%/yr' +
+                    (s.pLiq !== null && s.pLiq !== undefined ? ' · P(liq) ' + (s.pLiq * 100).toFixed(1) + '%' : '') +
+                    '</button>'
+                ).join('') +
+                '<div class="wnote">Re-sync any time: simulator → Strategy comparison → "⇗ Send to FIRE dashboard".</div>';
+        } else {
+            list.innerHTML = '<div class="wnote">No strategies synced yet. In the PRJ27 simulator, open <b>Strategy comparison</b> and press <b>"⇗ Send to FIRE dashboard"</b> — the results land here.</div>';
+        }
+    }
+}
+function pickPrj27Strategy(btn) {
+    const label = btn.getAttribute('data-label');
+    const res = prj27Results();
+    const hit = res && res.strategies.find(s => s.label === label);
+    if (!hit) { toast('Synced result not found — re-sync from the simulator', true); return; }
+    const p = prj27Settings();
+    p.variant = hit.label;
+    p.apy = hit.apy;
+    try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
+    renderPrj27Bridge();
+    toast(`"${hit.label}" set as the FIRE crypto sleeve — ${hit.apy}%/yr`, false);
 }
 function renderFireSettings() {
     const p = prj27Settings();
@@ -2213,7 +2273,17 @@ function renderFireSettings() {
         }
     }
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Share', p.share || ''); set('prj27Tradfi', p.tradfi || 7);
+    set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Tradfi', p.tradfi || 7);
+    // Crypto share: pre-fill from the user's own asset split when they haven't
+    // chosen one yet, and always explain what the number means.
+    const sugg = computeCryptoSharePct();
+    const shareEl = document.getElementById('prj27Share');
+    if (shareEl && !(+p.share > 0) && sugg) shareEl.value = String(sugg.pct);
+    else if (shareEl) shareEl.value = p.share || '';
+    const hint = document.getElementById('fireShareHint');
+    if (hint) hint.textContent = sugg
+        ? `What this means: your investable money (everything except real estate & vehicles) is ${fd(sugg.investable)}, of which ${fd(sugg.crypto)} is crypto → ${sugg.pct}% crypto sleeve, ${100 - sugg.pct}% TradFi sleeve.`
+        : 'What this means: how your investable money (everything except real estate & vehicles) splits between the crypto sleeve (PRJ27 APY) and the TradFi sleeve (your return setting).';
     const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
     const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     t('fsApyCell', apy > 0 ? apy + '% / yr' : 'not set');
