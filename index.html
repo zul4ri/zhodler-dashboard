@@ -681,10 +681,9 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                         <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant name <input class="minput" id="prj27Variant" style="flex:1;" placeholder='e.g. "Curve shielded"'></label>
                         <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant net APY % <input class="minput" id="prj27Apy" type="number" step="0.1" min="0" max="100" style="flex:1;" placeholder="12.4"></label>
                     </div>
-                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Crypto share of investable % <input class="minput" id="prj27Share" type="number" step="1" min="0" max="100" style="flex:1;" placeholder="45"></label>
                     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">TradFi return %/yr <input class="minput" id="prj27Tradfi" type="number" step="0.1" min="0" max="30" style="flex:1;" placeholder="7"></label>
                 </div>
-                <div class="wnote" id="fireShareHint"></div>
+                <div class="wnote" id="fireShareAuto" style="margin-top:8px;"></div>
                 <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="mgray" onclick="saveFireSettings()">Save &amp; apply blend</button>
                     <button class="mgray" onclick="clearFireSettings()">Reset to plan return</button>
@@ -1772,6 +1771,7 @@ function renderAll() {
     renderGlobal(); renderBtc(); renderSummary(); renderDebt();
     renderProjections(); renderVelocity(); renderMilestone();
     renderMonteCarlo(); renderAssets(); renderYearly();
+    renderPrj27Bridge();   // auto crypto share needs the asset data — refresh after render
 }
 
 function renderGlobal() {
@@ -2206,9 +2206,12 @@ function prj27PickChanged() {    const pick = document.getElementById('prj27Pick
 function applyFireBlend(f) {
     const p = prj27Settings();
     const apy = +p.apy || 0;
-    const share = Math.min(100, Math.max(0, +p.share || 0)) / 100;
     const trad = +p.tradfi || 7;
-    if (apy > 0 && share > 0) {
+    // Crypto share is always automatic — computed from the asset ledger at
+    // blend time, never a user-typed number.
+    const sugg = computeCryptoSharePct();
+    if (apy > 0 && sugg && sugg.pct >= 0) {
+        const share = Math.min(100, Math.max(0, sugg.pct)) / 100;
         f.returnPct = share * apy + (1 - share) * trad;
         _mainFireBlendNote = `return blended: ${(share*100).toFixed(0)}% crypto ("${p.variant || 'PRJ27 variant'}" ${apy}% APY) + ${((1-share)*100).toFixed(0)}% TradFi @ ${trad}%`;
     } else {
@@ -2217,13 +2220,15 @@ function applyFireBlend(f) {
 }
 function renderPrj27Bridge() {
     const p = prj27Settings();
-    const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
+    const apy = +p.apy || 0, trad = +p.tradfi || 7;
+    const sugg = computeCryptoSharePct();
+    const share = sugg ? sugg.pct : 0;
     const nameEl = document.getElementById('prj27Name');
     if (!nameEl) return;
     nameEl.textContent = p.variant ? p.variant : '—';
     document.getElementById('prj27Return').textContent = apy > 0 ? apy + '% / yr' : '—';
-    document.getElementById('prj27ShareTxt').textContent = share > 0 ? share + '%' : '—';
-    document.getElementById('prj27BlendTxt').textContent = (apy > 0 && share > 0)
+    document.getElementById('prj27ShareTxt').textContent = sugg ? share + '% (auto)' : '—';
+    document.getElementById('prj27BlendTxt').textContent = (apy > 0 && sugg)
         ? (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr'
         : '—';
     // Synced strategies, shown right on the card — one click to pick.
@@ -2287,17 +2292,17 @@ function renderFireSettings() {
     }
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Tradfi', p.tradfi || 7);
-    // Crypto share: pre-fill from the user's own asset split when they haven't
-    // chosen one yet, and always explain what the number means.
+    // Crypto share is never asked for — it's computed from the user's own
+    // assets every time (same investable basis as the distribution chart, and
+    // the exact fire_investment_total inclusion list in Supabase mode).
     const sugg = computeCryptoSharePct();
-    const shareEl = document.getElementById('prj27Share');
-    if (shareEl && !(+p.share > 0) && sugg) shareEl.value = String(sugg.pct);
-    else if (shareEl) shareEl.value = p.share || '';
+    const shareEl = document.getElementById('fireShareAuto');
+    if (shareEl) shareEl.textContent = sugg
+        ? `Crypto share: ${sugg.pct}% — automatic, nothing to type. Your investable money (everything except real estate & vehicles) is ${fd(sugg.investable)}, of which ${fd(sugg.crypto)} is crypto. The blend is ${sugg.pct}% × PRJ27 APY + ${100 - sugg.pct}% × TradFi return.` +
+          (usingSupabase() ? ' Basis: exact fire_investment_total account list.' : ' Basis: sheet asset rows (exact in Supabase mode).')
+        : 'Crypto share: waiting for asset data — reload once the dashboard has loaded.';
     const hint = document.getElementById('fireShareHint');
-    if (hint) hint.textContent = sugg
-        ? `What this means: your investable money (everything except real estate & vehicles) is ${fd(sugg.investable)}, of which ${fd(sugg.crypto)} is crypto → ${sugg.pct}% crypto sleeve, ${100 - sugg.pct}% TradFi sleeve.` +
-          (usingSupabase() ? ' Computed on the exact same investment-accounts basis as the FIRE simulation.' : ' Approximated from the sheet asset rows — exact once you switch to Supabase mode.')
-        : 'What this means: how your investable money (everything except real estate & vehicles) splits between the crypto sleeve (PRJ27 APY) and the TradFi sleeve (your return setting).';
+    if (hint) hint.textContent = '';
     const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
     const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     t('fsApyCell', apy > 0 ? apy + '% / yr' : 'not set');
@@ -2312,18 +2317,17 @@ function saveFireSettings() {
     const pick = document.getElementById('prj27Pick');
     const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
     // Dropdown mode: variant/apy were already persisted by prj27PickChanged().
-    // Manual mode: take them from the inputs.
+    // Manual mode: take them from the inputs. Crypto share is always automatic.
     const p = prj27Settings();
     if (pick && pick.value === 'manual') {
         p.variant = g('prj27Variant');
         p.apy = g('prj27Apy');
     }
-    p.share = g('prj27Share');
     p.tradfi = g('prj27Tradfi');
     try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
     renderPrj27Bridge(); renderFireSettings();
     if (_mainFireInputs) applyFireBlend(_mainFireInputs);
-    toast('PRJ27 blend saved — press Run projection to apply', false);
+    toast('Blend saved — press Run projection to apply', false);
 }
 function clearFireSettings() {
     try { localStorage.removeItem(PRJ27_KEY); } catch (e) {}
@@ -5839,6 +5843,16 @@ function toast(msg, isErr) {
     fireRunsChanged();
     renderPrj27Bridge();
     importPrj27FromHash();
+    // If the "Send to FIRE dashboard" popup imports results while an older
+    // dashboard tab is open somewhere, that tab hears the localStorage change
+    // and refreshes the bridge card + settings immediately.
+    window.addEventListener('storage', e => {
+        if (e.key === PRJ27_RESULTS_KEY || e.key === PRJ27_KEY) {
+            renderPrj27Bridge();
+            renderFireSettings();
+            toast('PRJ27 strategies synced — see the Strategy · PRJ27 card in Planning', false);
+        }
+    });
     loadData();
 })();
 </script>
