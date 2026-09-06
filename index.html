@@ -651,7 +651,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 <div class="wnote" style="text-align:center;" id="mc-footer"></div>
             </div>
             <div class="firectl">
-                <div class="substat"><span class="k">Monte Carlo runs (0 = off)</span><span style="white-space:nowrap;"><input type="range" min="0" max="20000" step="500" id="fireRuns"><span class="runs-val" id="fireRunsVal">2,000</span></span></div>
+                <div class="substat"><span class="k">Monte Carlo runs (0 = off)</span><span style="white-space:nowrap;"><input type="range" min="0" max="20000" step="500" id="fireRuns" oninput="fireRunsChanged()"><span class="runs-val" id="fireRunsVal">2,000</span></span></div>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                     <button class="fire-run-btn" onclick="fireRunNow()">&#9654; Run projection</button>
                     <span class="wnote" style="margin:0;">Results are saved and stay on screen until you run a new projection.</span>
@@ -675,8 +675,11 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 </table>
                 <div style="margin-top:10px;color:var(--red);"><b>Excluded from the simulation: real estate &amp; vehicles.</b> They are not retirement nest egg — including them would fake an earlier FIRE date. They still count toward Net Worth.</div>
                 <div style="margin-top:10px;display:grid;gap:7px;">
-                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">PRJ27 chosen variant <input class="minput" id="prj27Variant" style="flex:1;" placeholder='e.g. "Curve shielded"'></label>
-                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant net APY % <input class="minput" id="prj27Apy" type="number" step="0.1" min="0" max="100" style="flex:1;" placeholder="12.4"></label>
+                    <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Strategy (from PRJ27 results) <select class="minput" id="prj27Pick" style="flex:1;" onchange="prj27PickChanged()"></select></label>
+                    <div id="prj27ManualRow" style="display:none;gap:7px;">
+                        <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant name <input class="minput" id="prj27Variant" style="flex:1;" placeholder='e.g. "Curve shielded"'></label>
+                        <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Variant net APY % <input class="minput" id="prj27Apy" type="number" step="0.1" min="0" max="100" style="flex:1;" placeholder="12.4"></label>
+                    </div>
                     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">Crypto share of investable % <input class="minput" id="prj27Share" type="number" step="1" min="0" max="100" style="flex:1;" placeholder="45"></label>
                     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;">TradFi return %/yr <input class="minput" id="prj27Tradfi" type="number" step="0.1" min="0" max="30" style="flex:1;" placeholder="7"></label>
                 </div>
@@ -2115,6 +2118,48 @@ function fireRunsChanged() {
     try { localStorage.setItem('fireRuns', String(v)); } catch (e) {}
 }
 function prj27Settings() { try { return JSON.parse(localStorage.getItem(PRJ27_KEY)) || {}; } catch (e) { return {}; } }
+// Redesign: synced PRJ27 simulation results — pushed from the simulator via the
+// "#prj27=" URL fragment ("Send to FIRE dashboard" button). The dropdown in the
+// FIRE settings pre-fills from here.
+const PRJ27_RESULTS_KEY = 'zhodler_prj27_results_v1';
+function prj27Results() { try { return JSON.parse(localStorage.getItem(PRJ27_RESULTS_KEY)) || null; } catch (e) { return null; } }
+function importPrj27FromHash() {
+    const m = location.hash.match(/#prj27=([^&]+)/);
+    if (!m) return;
+    let payload = null;
+    try { payload = JSON.parse(decodeURIComponent(m[1])); } catch (e) { payload = null; }
+    history.replaceState(null, '', location.pathname + location.search);
+    if (!payload || payload.v !== 1 || !Array.isArray(payload.strategies) || !payload.strategies.length) {
+        toast('PRJ27 sync failed — unexpected data', true);
+        return;
+    }
+    try {
+        localStorage.setItem(PRJ27_RESULTS_KEY, JSON.stringify(payload));
+    } catch (e) { toast('PRJ27 sync failed — storage error', true); return; }
+    renderFireSettings();
+    toast(`Synced ${payload.strategies.length} strategies from PRJ27 (${payload.scenario || 'n/a'} scenario) — pick one in FIRE settings`, false);
+}
+function prj27PickChanged() {
+    const pick = document.getElementById('prj27Pick');
+    if (!pick) return;
+    const manualRow = document.getElementById('prj27ManualRow');
+    if (pick.value === 'manual') {
+        if (manualRow) manualRow.style.display = 'grid';
+        return;
+    }
+    if (manualRow) manualRow.style.display = 'none';
+    const res = prj27Results();
+    const hit = res && res.strategies.find(s => s.label === pick.value);
+    if (!hit) return;
+    const p = prj27Settings();
+    p.variant = hit.label;
+    p.apy = hit.apy;
+    try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
+    renderPrj27Bridge();
+    const note = document.getElementById('fireBlendNote');
+    if (note) note.textContent = 'variant set from PRJ27 sync — press Save & apply blend to use it';
+    toast(`"${hit.label}" selected — ${hit.apy}%/yr. Press Save & apply blend.`, false);
+}
 function applyFireBlend(f) {
     const p = prj27Settings();
     const apy = +p.apy || 0;
@@ -2142,6 +2187,31 @@ function renderPrj27Bridge() {
 }
 function renderFireSettings() {
     const p = prj27Settings();
+    // Dropdown of synced PRJ27 strategies, pre-filled from the last
+    // "Send to FIRE dashboard" sync; falls back to manual entry.
+    const pick = document.getElementById('prj27Pick');
+    const manualRow = document.getElementById('prj27ManualRow');
+    if (pick) {
+        const res = prj27Results();
+        const opts = ['<option value="none">— no results synced yet —</option>'];
+        if (res && Array.isArray(res.strategies)) {
+            res.strategies.forEach(s => {
+                const liq = (s.pLiq !== null && s.pLiq !== undefined) ? ` · P(liq) ${(s.pLiq * 100).toFixed(1)}%` : '';
+                opts.push(`<option value="${s.label.replace(/"/g, '&quot;')}">${s.label} — ${s.apy}%/yr (${res.scenario || 'n/a'}${liq})</option>`);
+            });
+        }
+        opts.push('<option value="manual">Manual entry…</option>');
+        pick.innerHTML = opts.join('');
+        if (p.variant && res && res.strategies.some(s => s.label === p.variant)) {
+            pick.value = p.variant;
+            if (manualRow) manualRow.style.display = 'none';
+        } else if (p.variant || p.apy) {
+            pick.value = 'manual';
+            if (manualRow) manualRow.style.display = 'grid';
+        } else {
+            if (manualRow) manualRow.style.display = 'none';
+        }
+    }
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Share', p.share || ''); set('prj27Tradfi', p.tradfi || 7);
     const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
@@ -2155,8 +2225,17 @@ function renderFireSettings() {
         : 'not configured — using the return saved in your FIRE plan';
 }
 function saveFireSettings() {
-    const g = id => document.getElementById(id).value.trim();
-    const p = { variant: g('prj27Variant'), apy: g('prj27Apy'), share: g('prj27Share'), tradfi: g('prj27Tradfi') };
+    const pick = document.getElementById('prj27Pick');
+    const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    // Dropdown mode: variant/apy were already persisted by prj27PickChanged().
+    // Manual mode: take them from the inputs.
+    const p = prj27Settings();
+    if (pick && pick.value === 'manual') {
+        p.variant = g('prj27Variant');
+        p.apy = g('prj27Apy');
+    }
+    p.share = g('prj27Share');
+    p.tradfi = g('prj27Tradfi');
     try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
     renderPrj27Bridge(); renderFireSettings();
     if (_mainFireInputs) applyFireBlend(_mainFireInputs);
@@ -5654,6 +5733,7 @@ function toast(msg, isErr) {
     if (fr) fr.value = localStorage.getItem('fireRuns') || 2000;
     fireRunsChanged();
     renderPrj27Bridge();
+    importPrj27FromHash();
     loadData();
 })();
 </script>
