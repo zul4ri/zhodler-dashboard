@@ -2147,25 +2147,37 @@ function importPrj27FromHash() {
 // investable = everything except real estate & vehicles. This is what the
 // FIRE blend needs: how the investable nest egg splits between the crypto
 // sleeve (PRJ27 strategy APY) and the TradFi sleeve (your return setting).
+//
+// Supabase mode mirrors the FIRE engine's own nest-egg definition
+// (fire_investment_total, schema phase 18) EXACTLY: accounts of type
+// defi_wallet / cex / manual_asset / portfolio — i.e. manual bank,
+// real_estate, motorbike and vehicle accounts are out — and borrow rows are
+// never counted as assets. Sheets mode can only approximate from the typed
+// asset rows (the sheet doesn't tag bank vs investment inside "TradFi").
 function computeCryptoSharePct() {
-    let crypto = 0, total = 0, excluded = 0;
     if (usingSupabase()) {
+        // Exact mirror of fire_investment_total()'s inclusion list, split by sleeve.
+        let crypto = 0, invest = 0;
         (dbData && Array.isArray(dbData.holdings) ? dbData.holdings : []).forEach(h => {
+            if (h.position_type === 'borrow') return;               // engine: <> 'borrow'
             const v = num(h.usd_value);
-            if (v <= 0) return;               // borrows & zero rows don't count as assets
-            total += v;
-            if (h.protocol === 'manual' && (h.account_type === 'real_estate' || h.account_type === 'motorbike')) excluded += v;
+            const excludedAccount = h.protocol === 'manual' &&
+                ['bank', 'real_estate', 'motorbike', 'vehicle'].includes(h.account_type);
+            if (excludedAccount) return;                            // engine: account type inclusion list
+            invest += v;
             if (h.scope_class === 'crypto') crypto += v;
         });
-    } else {
-        for (let i = 81; i <= 92; i++) {
-            const name = V(i, 0); if (!name) continue;
-            const v = N(i, 2); if (v <= 0) continue;
-            const hay = ((V(i, 3) || '') + ' ' + name + ' ' + (V(i, 4) || '')).toLowerCase();
-            total += v;
-            if (/real\s*estate|motorbike|vehicle/.test(hay)) excluded += v;
-            else if (/collateral|defi|cefi|crypto|btc|eth|sol|stable|token/.test(hay)) crypto += v;
-        }
+        return invest !== 0 ? { pct: Math.round((crypto / invest) * 100), crypto, investable: invest } : null;
+    }
+    // Sheets mode: approximation from the typed asset rows (rows 81-92).
+    let crypto = 0, total = 0, excluded = 0;
+    for (let i = 81; i <= 92; i++) {
+        const name = V(i, 0); if (!name) continue;
+        const v = N(i, 2); if (v <= 0) continue;
+        const hay = ((V(i, 3) || '') + ' ' + name + ' ' + (V(i, 4) || '')).toLowerCase();
+        total += v;
+        if (/real\s*estate|motorbike|vehicle/.test(hay)) excluded += v;
+        else if (/collateral|defi|cefi|crypto|btc|eth|sol|stable|token/.test(hay)) crypto += v;
     }
     const investable = total - excluded;
     return investable > 0 ? { pct: Math.round((crypto / investable) * 100), crypto, investable } : null;
@@ -2283,7 +2295,8 @@ function renderFireSettings() {
     else if (shareEl) shareEl.value = p.share || '';
     const hint = document.getElementById('fireShareHint');
     if (hint) hint.textContent = sugg
-        ? `What this means: your investable money (everything except real estate & vehicles) is ${fd(sugg.investable)}, of which ${fd(sugg.crypto)} is crypto → ${sugg.pct}% crypto sleeve, ${100 - sugg.pct}% TradFi sleeve.`
+        ? `What this means: your investable money (everything except real estate & vehicles) is ${fd(sugg.investable)}, of which ${fd(sugg.crypto)} is crypto → ${sugg.pct}% crypto sleeve, ${100 - sugg.pct}% TradFi sleeve.` +
+          (usingSupabase() ? ' Computed on the exact same investment-accounts basis as the FIRE simulation.' : ' Approximated from the sheet asset rows — exact once you switch to Supabase mode.')
         : 'What this means: how your investable money (everything except real estate & vehicles) splits between the crypto sleeve (PRJ27 APY) and the TradFi sleeve (your return setting).';
     const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
     const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
