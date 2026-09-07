@@ -727,7 +727,6 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     <div class="sec-head"><h2>Tools &amp; Links</h2></div>
     <div class="sgrid sg-3">
         <div class="wcard" style="cursor:pointer;" onclick="window.open('https://bot-dashboard-weld.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
-        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://btc-loan-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#129518; BTC Loan Simulator</div><div class="wnote" style="margin:0;">Model collateral &amp; liquidation prices</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="window.open('https://loan-pool-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, salary &amp; FIRE plan</div></div>
@@ -2139,8 +2138,26 @@ function importPrj27FromHash() {
     try {
         localStorage.setItem(PRJ27_RESULTS_KEY, JSON.stringify(payload));
     } catch (e) { toast('PRJ27 sync failed — storage error', true); return; }
+    // If the user already picked a variant, refresh its APY from this newer
+    // sync automatically — changing strategies in the simulator must flow
+    // through to the FIRE blend without re-picking or retyping.
+    const p = prj27Settings();
+    const chosen = p.variant && payload.strategies.find(s => s.label === p.variant);
+    let blendRefreshed = false;
+    if (chosen && chosen.apy !== p.apy) {
+        p.apy = chosen.apy;
+        try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
+        blendRefreshed = true;
+    }
     renderFireSettings();
-    toast(`Synced ${payload.strategies.length} strategies from PRJ27 (${payload.scenario || 'n/a'} scenario) — pick one in FIRE settings`, false);
+    renderPrj27Bridge();
+    if (_mainFireInputs && blendRefreshed) applyFireBlend(_mainFireInputs);
+    // Same auto-run contract as picking a chip: visible change immediately.
+    if (_mainFireInputs && _mainFirePlan && usingSupabase() && fireRunsValue() > 0 && (chosen || blendRefreshed)) {
+        fireRunNow();
+        return;
+    }
+    toast(`Synced ${payload.strategies.length} strategies from PRJ27 (${payload.scenario || 'n/a'} scenario) — see the Strategy · PRJ27 card`, false);
 }
 // "Crypto share of investable" — computed from the same asset data the
 // distribution chart uses: crypto positive value ÷ investable value, where
@@ -2277,7 +2294,19 @@ function pickPrj27Strategy(btn) {
     p.apy = hit.apy;
     try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
     renderPrj27Bridge();
-    toast(`"${hit.label}" set as the FIRE crypto sleeve — ${hit.apy}%/yr`, false);
+    // Apply the new blend immediately AND re-run the projection so the user
+    // sees the change — not a stale number behind a "Run" they must remember
+    // to press.
+    if (_mainFireInputs) {
+        applyFireBlend(_mainFireInputs);
+        // Auto-run when the plan is actually loaded (Supabase mode); otherwise
+        // the toast below tells the user the chip is saved for later.
+        if (fireRunsValue() > 0 && _mainFirePlan && usingSupabase()) {
+            fireRunNow();
+            return;
+        }
+    }
+    toast(`"${hit.label}" set as the FIRE crypto sleeve — press Run projection`, false);
 }
 function renderFireSettings() {
     const p = prj27Settings();
@@ -2361,6 +2390,7 @@ async function fireRunNow() {
     if (!_mainFireInputs) { toast('FIRE plan not loaded yet — switch to Supabase mode', true); return; }
     const runs = fireRunsValue();
     if (runs === 0) { toast('Runs = 0 (off) — last saved result kept', true); return; }
+    applyFireBlend(_mainFireInputs);   // always blend with the CURRENT variant/apy
     const projection = computeFireProjection(_mainFireInputs, _mainFireInvestmentTotal, _mainFireLoans, _mainFireSalary, runs);
     saveFireCache(projection);
     renderMainFireSummary(projection);
