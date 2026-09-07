@@ -2132,7 +2132,7 @@ function importPrj27FromHash() {
     let payload = null;
     try { payload = JSON.parse(decodeURIComponent(m[1])); } catch (e) { payload = null; }
     history.replaceState(null, '', location.pathname + location.search);
-    if (!payload || (payload.v !== 1 && payload.v !== 2) || !Array.isArray(payload.strategies) || !payload.strategies.length) {
+    if (!payload || (payload.v !== 1 && payload.v !== 2 && payload.v !== 3) || !Array.isArray(payload.strategies) || !payload.strategies.length) {
         toast('PRJ27 sync failed — unexpected data', true);
         return;
     }
@@ -2239,17 +2239,28 @@ function renderPrj27Bridge() {
             const when = res.syncedAt ? new Date(res.syncedAt).toLocaleString() : '';
             list.innerHTML =
                 '<div class="wnote">Synced from PRJ27 (' + (res.scenario || 'n/a') + ' scenario' + (when ? ' · ' + when : '') + ') — click one to use it:</div>' +
-                res.strategies.map(s =>
-                    '<button class="chip' + (p.variant === s.label ? ' active' : '') + '" style="margin:4px 5px 0 0;" onclick="pickPrj27Strategy(this)" data-label="' + s.label.replace(/"/g, '&quot;') + '" title="' +
-                    (s.apyBasis === 'mc'
-                        ? 'Monte Carlo median, ' + (s.runs || '?') + ' runs' + (s.apyP10 !== null && s.apyP10 !== undefined ? ' · P10–P90: ' + s.apyP10 + '–' + s.apyP90 + '%/yr' : '')
-                        : 'Deterministic single-path result (run the Monte Carlo in the simulator for a distribution-based figure)') +
-                    '">' +
-                    s.label + ' · ' + s.apy + '%/yr' +
-                    (s.apyBasis === 'mc' ? ' · MC' : ' · det') +
-                    (s.pLiq !== null && s.pLiq !== undefined ? ' · P(liq) ' + (s.pLiq * 100).toFixed(1) + '%' : '') +
-                    '</button>'
-                ).join('') +
+                res.strategies.map(s => {
+                    const isIrr = s.apyBasis === 'mc-irr';
+                    // Audit trail: money in → money out, so any APY can be checked by hand.
+                    let title;
+                    if (isIrr) {
+                        const moneyIn = (s.own0 || 0) + (s.contributed || 0);
+                        title = `Monte Carlo median, IRR basis, ${s.runs || '?'} runs · ` +
+                            `in ${fd((s.own0 || 0) + (s.contributed || 0))} (own ${fd(s.own0 || 0)} + contributions ${fd(s.contributed || 0)}, ${s.contribCount || '?'} deposits over ${s.horizonMonths || '?'} months) → ` +
+                            `P50 out ${fd(s.finalP50 || s.finalEquity || 0)} · P10 ${fd(s.finalP10 || 0)} / P90 ${fd(s.finalP90 || 0)}` +
+                            (moneyIn > 0 ? ` · money multiple ${(s.finalP50 || 0) / moneyIn > 0 ? ((s.finalP50 || 0) / moneyIn).toFixed(2) : '—'}` : '');
+                    } else if (s.apyBasis === 'mc') {
+                        title = `Monte Carlo median, ${s.runs || '?'} runs` + (s.apyP10 !== null && s.apyP10 !== undefined ? ` · P10–P90: ${s.apyP10}–${s.apyP90}%/yr` : '');
+                    } else {
+                        title = 'Deterministic single-path result (run the Monte Carlo in the simulator for a distribution-based figure)';
+                    }
+                    return '<button class="chip' + (p.variant === s.label ? ' active' : '') + '" style="margin:4px 5px 0 0;" onclick="pickPrj27Strategy(this)" data-label="' + s.label.replace(/"/g, '&quot;') + '" title="' +
+                        title.replace(/"/g, '&quot;') + '">' +
+                        s.label + ' · ' + s.apy + '%/yr' +
+                        (isIrr ? ' · MC·IRR' : s.apyBasis === 'mc' ? ' · MC' : ' · det') +
+                        (s.pLiq !== null && s.pLiq !== undefined ? ' · P(liq) ' + (s.pLiq * 100).toFixed(1) + '%' : '') +
+                        '</button>';
+                }).join('') +
                 '<div class="wnote">Re-sync any time: simulator → Strategy comparison → "⇗ Send to FIRE dashboard".</div>';
         } else {
             list.innerHTML = '<div class="wnote">No strategies synced yet. In the PRJ27 simulator, open <b>Strategy comparison</b> and press <b>"⇗ Send to FIRE dashboard"</b> — the results land here.</div>';
@@ -2280,8 +2291,11 @@ function renderFireSettings() {
         if (res && Array.isArray(res.strategies)) {
             res.strategies.forEach(s => {
                 const liq = (s.pLiq !== null && s.pLiq !== undefined) ? ` · P(liq) ${(s.pLiq * 100).toFixed(1)}%` : '';
-                const basis = s.apyBasis === 'mc' ? ` · MC ${s.runs || '?'} runs` : ' · deterministic';
-                const range = (s.apyBasis === 'mc' && s.apyP10 !== null && s.apyP10 !== undefined && s.apyP90 !== null && s.apyP90 !== undefined)
+                const isIrr = s.apyBasis === 'mc-irr';
+                const basis = s.apyBasis === 'mc' || isIrr
+                    ? ` · MC${isIrr ? '·IRR' : ''} ${s.runs || '?'} runs`
+                    : ' · deterministic';
+                const range = (s.apyP10 !== null && s.apyP10 !== undefined && s.apyP90 !== null && s.apyP90 !== undefined)
                     ? ` · ${s.apyP10}–${s.apyP90}%` : '';
                 opts.push(`<option value="${s.label.replace(/"/g, '&quot;')}">${s.label} — ${s.apy}%/yr (${res.scenario || 'n/a'}${basis}${range}${liq})</option>`);
             });
