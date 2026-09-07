@@ -2097,7 +2097,7 @@ let _mainFireLoans = [];
 let _mainFireInputs = null;
 let _mainFireSalary = [];
 let _mainFireBlendNote = null;
-const FIRE_CACHE_KEY = 'zhodler_fire_last_run_v1';
+const FIRE_CACHE_KEY = 'zhodler_fire_last_run_v2'; // v2 = inflation-aware engine; old cached results invalidated
 const PRJ27_KEY = 'zhodler_prj27_bridge_v1';
 
 function saveFireCache(projection) {
@@ -2394,10 +2394,17 @@ function renderMainFireSummary(projection, savedWhen) {
     const modeLabel = (_mainFirePlan && _mainFirePlan.contribution_mode === 'salary_driven') ? 'salary-driven' : 'manual';
     const whenStr = savedWhen ? ' &bull; saved result from ' + new Date(savedWhen).toLocaleString() + ' — press Run to recalculate' : '';
     const blendStr = _mainFireBlendNote ? ' &bull; ' + _mainFireBlendNote : '';
-    gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only — real estate &amp; vehicles excluded &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations${blendStr}${whenStr}`);
-    gi('mc-params', `Target ${fd(projection.fireNumber)}`);
+    const inflStr = projection.inflationPct
+        ? ` &bull; target rises ${projection.inflationPct}%/yr with inflation`
+        : ' &bull; no inflation set in plan — target does not rise';
+    gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only — real estate &amp; vehicles excluded &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations${inflStr}${blendStr}${whenStr}`);
+    gi('mc-params', `Target ${fd(projection.fireNumber)} (today's dollars)`);
 
-    const targetLine = projection.yearLabels.map(() => projection.fireNumber);
+    // Rising target line (year 0 = today's FIRE number); guard for cached
+    // projections computed before the inflation-aware engine.
+    const targetLine = projection.targetByYear || projection.yearLabels.map(() => projection.fireNumber);
+    const chartTargetLabel = projection.targetByYear && projection.inflationPct
+        ? `FIRE Number (rising ${projection.inflationPct}%/yr)` : 'FIRE Number';
     if (charts.monte) charts.monte.destroy();
     const ctx = document.getElementById('mcChart');
     if (ctx) {
@@ -2409,7 +2416,7 @@ function renderMainFireSummary(projection, savedWhen) {
                     { label: 'P90', data: projection.p90s, borderColor: 'rgba(124,111,239,.8)', backgroundColor: 'rgba(124,111,239,.12)', fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
                     { label: 'Median', data: projection.p50s, borderColor: '#00c896', backgroundColor: 'rgba(0,200,150,.08)', fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
                     { label: 'P10', data: projection.p10s, borderColor: 'rgba(255,77,109,.7)', backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
-                    { label: 'FIRE Number', data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
+                    { label: chartTargetLabel, data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
                 ],
             },
             options: {
@@ -3976,6 +3983,11 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     const SIMS = simsOverride || 500;
     const meanMonthly = (returnPct / 100) / 12;
     const monthlyVol = (volPct / 100) / Math.sqrt(12);
+    // Inflation: the FIRE target is a TOMORROW'S-DOLLARS bar, not today's.
+    // The plan's inflation % grows the target through the horizon; without it
+    // a static nominal $1M silently overstates FIRE probability.
+    const inflationPct = isNaN(f.inflationPct) ? 0 : Math.max(0, f.inflationPct);
+    const monthlyInfl = (inflationPct / 100) / 12;
     const startCapital = investmentTotal || 0;
     const horizonMonths = years * 12;
 
@@ -3996,13 +4008,24 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     }
 
     const tracks = [], fireYrs = [];
+    // Log-normal sampling anchored to the intended CAGR: the drift is
+    // ln(1+return), so the MEDIAN path compounds at exactly the return the
+    // plan states, and the σ²/2 correction is implicit (mean > median, as a
+    // log-normal should be). The previous arithmetic draw (mean + randn·σ)
+    // overstated long-run growth and drifted the median off the stated rate.
+    const drift = Math.log(1 + returnPct / 100) / 12;
     for (let sim = 0; sim < SIMS; sim++) {
         let value = startCapital, fireYr = null;
         const track = [value];
         for (let mo = 0; mo < horizonMonths; mo++) {
-            value = Math.max(0, value * (1 + meanMonthly + fireRandNormal() * monthlyVol) + contributionByMonth[mo]);
+            value = Math.max(0, value * Math.exp(drift + fireRandNormal() * monthlyVol) + contributionByMonth[mo]);
             if ((mo + 1) % 12 === 0) track.push(value);
-            if (fireNumber !== null && value >= fireNumber && fireYr === null) fireYr = (mo + 1) / 12;
+            // The target itself rises with inflation — hitting $1M in year 12
+            // means $1M of YEAR-12 money, not today's.
+            if (fireNumber !== null && fireYr === null) {
+                const target = fireNumber * Math.pow(1 + monthlyInfl, mo + 1);
+                if (value >= target) fireYr = (mo + 1) / 12;
+            }
         }
         tracks.push(track);
         if (fireYr !== null) fireYrs.push(fireYr);
@@ -4013,9 +4036,11 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     const p90s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.90));
     const fireProb = SIMS > 0 ? (fireYrs.length / SIMS * 100) : 0;
     const medianFireYrs = fireYrs.length ? firePercentile(fireYrs, 0.5) : null;
+    // Rising target line for the charts (year 0 = today's FIRE number).
+    const targetByYear = yearLabels.map((_, yi) => fireNumber * Math.pow(1 + monthlyInfl, yi * 12));
 
     return {
-        fireNumber, years, horizonMonths, horizonIsAssumed, SIMS, baseContribution,
+        fireNumber, inflationPct, targetByYear, years, horizonMonths, horizonIsAssumed, SIMS, baseContribution,
         startCapital, includedLoans, excludedLoans, contributionByMonth, salaryModel,
         tracks, yearLabels, p10s, p50s, p90s, fireProb, medianFireYrs,
     };
@@ -4081,14 +4106,16 @@ function renderFireOutputs() {
     }
 
     const { years, horizonIsAssumed, SIMS, yearLabels, p10s, p50s, p90s, fireProb, medianFireYrs } = projection;
-    const targetLine = yearLabels.map(() => fireNumber);
+    const targetLine = projection.targetByYear || yearLabels.map(() => fireNumber);
     const fireProbStr = fireProb.toFixed(0);
     const medianFireYrsStr = medianFireYrs !== null ? medianFireYrs.toFixed(1) : null;
 
     if (captionEl) {
         captionEl.textContent = `${years}-yr horizon${horizonIsAssumed ? ' (assumed — set current/retirement age for a real one)' : ''} · `
             + `${SIMS} simulations · FIRE probability by year ${years}: ${fireProbStr}% · `
-            + `Median time to FIRE: ${medianFireYrsStr ? medianFireYrsStr + ' yrs' : 'not reached in horizon'}`;
+            + `Median time to FIRE: ${medianFireYrsStr ? medianFireYrsStr + ' yrs' : 'not reached in horizon'} · `
+            + (projection.inflationPct ? `target rises with inflation ${projection.inflationPct}%/yr`
+                                      : 'no inflation set in plan — target does not rise');
     }
 
     if (charts.fire) charts.fire.destroy();
