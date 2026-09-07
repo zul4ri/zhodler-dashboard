@@ -2947,7 +2947,11 @@ async function ensureEurUsdRate() {
     if (eurRatePromise) return eurRatePromise;
     eurRatePromise = (async () => {
         try {
-            const resp = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD');
+            // api.frankfurter.dev, NOT the legacy .app host — the old host
+            // sends no Access-Control-Allow-Origin header, so every BROWSER
+            // fetch fails CORS and the amber fallback badge would show
+            // permanently (found live in production after the W-05 deploy).
+            const resp = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD');
             if (!resp.ok) throw new Error('rate fetch failed');
             const data = await resp.json();
             const rate = data && data.rates && data.rates.USD;
