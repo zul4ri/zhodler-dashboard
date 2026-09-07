@@ -275,6 +275,7 @@ tr:hover td{background:rgba(255,255,255,.03);}
         background:var(--card2);border:1px solid var(--border);border-radius:2px;}
 .mc-box .klbl{margin-bottom:4px;font-size:clamp(10px,1.1vw,14px);}
 .mc-box .kval{font-size:clamp(14px,1.6vw,20px);font-weight:800;}
+.mc-box .ksub{font-size:clamp(9px,0.75vw,11px);color:var(--text2);margin-top:3px;line-height:1.25;}
 
 /* ── Milestone ───────────────────────────────────────────────────────────── */
 .ms-outer{padding:4px 0;}
@@ -543,6 +544,8 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 <b>Net Worth Velocity — how fast your wealth is compounding right now.</b> It turns the year-to-date gain into an annual rate so this year can be compared fairly against any other.
                 <span class="formula">Annualized rate = YTD return &times; 12 &divide; months elapsed</span>
                 Momentum = YTD monthly pace minus all-time monthly pace.
+                <span class="formula">Projected end of year / 1 year = today's net worth + (this year's realised monthly pace &times; months remaining)</span>
+                <span class="formula">Projected 5 years = the FIRE projection's median investable value at year 5, plus property, vehicles and cash minus debt, held flat</span>
             </div>
             <div style="margin-top:10px;">
                 <div class="substat"><span class="k">Projected end of year</span><span><span class="sensitive" id="c-proj-eoy">--</span> <span id="c-proj-eoy-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
@@ -963,6 +966,35 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 </div>
             </div>
             <div style="margin-top:8px;"><button class="mgray" onclick="saveFirePlan()">Save Plan</button></div>
+
+            <div class="card-divider" style="margin:14px 0;"></div>
+            <div class="mlabel" style="margin-bottom:4px;">Cost basis (invested) — what you actually put in<span class="fire-help" title="Audit W-03, Option A: the all-time gain compares net worth against MONEY CONTRIBUTED, not the house's purchase price. Enter the house's equity contributed below; EUR figures are converted at the live rate and the other scopes are rebased so invested.total = tradfi + crypto still holds.">?</span></div>
+            <div style="font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.5;">
+                Enter the house's <b>equity contributed</b>: deposit + purchase costs (IMT, stamp duty, notary) + cumulative principal repaid. This is NOT the purchase price. Until saved, the dashboard keeps the old (stale) basis and says so on the All-time card.
+            </div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Deposit paid (EUR)</label>
+                    <input class="minput" id="eaCbDeposit" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Purchase costs (EUR)</label>
+                    <input class="minput" id="eaCbCosts" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+            </div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Principal repaid to date (EUR)</label>
+                    <input class="minput" id="eaCbPrincipal" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Deposit / valuation date</label>
+                    <input class="minput" id="eaCbDate" type="date" onchange="renderCostBasisPreview()">
+                </div>
+            </div>
+            <div id="eaCbPreview" style="font-size:10px;color:var(--text2);margin-top:8px;line-height:1.6;"></div>
+            <div style="margin-top:8px;"><button class="mgray" onclick="saveCostBasis()">Save cost basis</button>
+                <span id="eaCbStatus" style="font-size:10px;color:var(--text2);margin-left:8px;"></span></div>
 
             <div class="card-divider" style="margin:14px 0;"></div>
             <div class="mrow-row">
@@ -1388,7 +1420,11 @@ let _eaFireEssentialExpenses = null; // Edit Assets: cache of fire_essential_exp
 let eurUsdRate = null;      // Edit Assets: cached EUR->USD rate, fetched once per session
 let eurRatePromise = null;  // Edit Assets: in-flight rate fetch (avoids duplicate calls)
 let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback rate
-const EUR_USD_FALLBACK_RATE = 1.08; // approximate — only used if the live fetch fails
+// Only used when the live Frankfurter fetch fails. It was 1.08 against a live
+// 1.1622 — a 7.6% understatement that moved the FIRE probability from 8.2% to
+// 6.2% with no warning outside the Edit Assets modal (audit W-05). Keep this
+// within ~2% of the real rate and update it when you touch this file.
+const EUR_USD_FALLBACK_RATE = 1.16; // ECB reference, 2026-09-07
 
 // Thin PostgREST RPC helper (anon key is read-only + RLS-locked).
 async function rpc(name, args) {
@@ -1596,8 +1632,22 @@ function computeStaleness(data) {
         if (info.is_stale) worstStaleHours = Math.max(worstStaleHours, hrs);
     });
     if (anyNull) return {level: 'red', text: 'no successful sync'};
+
+    // The collector badge alone is not enough. Every scope figure on this page
+    // reads from `snapshots`, and collector.py deliberately skips the snapshot
+    // unless EVERY source is clean — so one failing collector freezes the whole
+    // dashboard while the other badges stay green (audit W-07). Age the numbers
+    // actually on screen, not just the jobs that feed them.
+    const cap = data.scopes && data.scopes.total && data.scopes.total.captured_at;
+    const snapHrs = cap ? (Date.now() - new Date(cap).getTime()) / 3.6e6 : null;
+    if (snapHrs === null) return {level: 'red', text: 'no snapshot'};
+    if (snapHrs > 24) {
+        return {level: 'red', text: `net worth frozen · ${fmtAgo(snapHrs)} ago`};
+    }
     if (worstStaleHours > 24) return {level: 'red', text: `stale · ${fmtAgo(worstStaleHours)} ago`};
-    if (worstStaleHours > 0)  return {level: 'amber', text: `as of ${fmtAgo(worstStaleHours)} ago`};
+    if (worstStaleHours > 0 || snapHrs > 6) {
+        return {level: 'amber', text: `as of ${fmtAgo(Math.max(worstStaleHours, snapHrs))} ago`};
+    }
     return {level: 'green', text: `live · ${fmtAgo(freshestHours)} ago`};
 }
 function updateStalenessBadge() {
@@ -1606,6 +1656,15 @@ function updateStalenessBadge() {
     const source = localStorage.getItem(LS.source) || 'sheets';
     if (source !== 'supabase') { el.className = 'stale-badge'; el.textContent = ''; return; }
     const info = computeStaleness(dbData);
+    // A silently-stale FX rate moves every EUR asset and loan (audit W-05), so
+    // it belongs in the same badge as collector staleness, not only in the
+    // Edit Assets modal.
+    if (eurRateIsStale) {
+        el.className = 'stale-badge on stale-amber';
+        el.textContent = '● EUR rate unavailable — using ' + EUR_USD_FALLBACK_RATE;
+        el.title = 'Live EUR/USD fetch failed; euro assets and loans are converted at an approximate rate.';
+        return;
+    }
     el.className = 'stale-badge on stale-' + info.level;
     el.textContent = '● ' + info.text;
 }
@@ -1912,10 +1971,21 @@ function renderSummarySupabase() {
         sv('c-monthly-ytd', '—', ''); sv('c-daily-ytd', '—', '');
     }
     if (atOk) {
-        // All-time is legitimately deeply negative (capital sunk into the house);
-        // display it faithfully rather than flooring at zero.
+        // All-time compares net worth against the cost basis. The pre-Task-10
+        // seed made this structurally negative (the house's full EURO purchase
+        // price subtracted from a net worth already net of its mortgage — a
+        // definitional error, not "capital sunk into the house"). Option A
+        // rebases the basis to equity contributed via the Cost basis form in
+        // Edit Assets; until that form is filled the stale figure still shows,
+        // with its age appended below.
         sv('c-atgain', fd(atAbs), cc(atAbs));
-        gi('c-atgain-sub', has(g.alltime_pct) ? fp(num(g.alltime_pct) / 100) : '');
+        // Cost-basis staleness (audit W-03): the seeded basis sat untouched for
+        // 1,113 days while every deposit read as a gain or a loss. Say so.
+        const basisAgeDays = (dbData && dbData.invested_updated_at)
+            ? Math.floor((Date.now() - new Date(dbData.invested_updated_at).getTime()) / 8.64e7)
+            : null;
+        gi('c-atgain-sub', (has(g.alltime_pct) ? fp(num(g.alltime_pct) / 100) : '') +
+            (basisAgeDays !== null && basisAgeDays > 90 ? ` · cost basis last set ${basisAgeDays} days ago` : ''));
         sv('c-monthly-at', fd(atAbs / e.monthsTracked) + '/mo',  cc(atAbs));
         sv('c-daily-at',   fd(atAbs / e.daysTracked)   + '/day', cc(atAbs));
     } else {
@@ -1976,40 +2046,60 @@ function renderDebtSupabase() {
     gi('c-debt-tradfi-lbl', lbl2);
 }
 
+// Velocity & Projections card.
+//
+// END-OF-YEAR and 1-YEAR are PACE extrapolations: "if the rest of the year
+// looks like the part we've measured". They do not compound, so the realised
+// return inside the pace is never counted a second time.
+//
+// 5-YEAR is taken straight from the FIRE engine's own median path (see
+// computeFireProjection) plus the part of net worth the FIRE model excludes —
+// property, vehicles, cash, minus all debt — held FLAT. Two reasons:
+//   * this card used to compound abs(alltime_pct), a CUMULATIVE since-2023
+//     return, as if it were an ANNUAL rate, with Math.abs() turning the
+//     current −8.93% loss into +8.93%/yr growth (audit W-01);
+//   * it then added ytd_abs/months on top as a "contribution", double-counting
+//     returns and treating the house's quarterly INE revaluation as investable
+//     cash — $12,235/mo against the FIRE model's real $1,224/mo (audit W-02).
+// Deriving it from the FIRE engine makes the two cards structurally unable to
+// disagree. Never reintroduce a second projection formula here.
 function renderProjections() {
     updateSectorHeaders();
-    // Sheets mode had no TradFi projections; Supabase gives every scope the
-    // gains it needs, so TradFi is only "N/A" on the sheet path.
-    if (activeFilter === 'tradfi' && !usingSupabase()) {
-        sv('c-proj-eoy','N/A'); gi('c-proj-eoy-sub','no data');
-        sv('c-proj-1y', 'N/A'); gi('c-proj-1y-sub', 'no data');
-        sv('c-proj-5y', 'N/A'); gi('c-proj-5y-sub', 'no data');
+
+    const put = (id, val, sub) => {
+        sv(id, val === null ? '—' : fd(val), val === null ? '' : cc(val));
+        gi(id + '-sub', sub);
+    };
+
+    if (!usingSupabase()) {
+        // Sheets mode keeps its precomputed cells where they exist. The sheet
+        // has no investable/FIRE basis, so there is no honest 5-year figure.
+        if (activeFilter === 'portfolio') {
+            put('c-proj-eoy', N(73), 'from sheet'); put('c-proj-1y', N(74), 'from sheet');
+            put('c-proj-5y', N(75), 'from sheet'); return;
+        }
+        if (activeFilter === 'crypto') {
+            put('c-proj-eoy', N(76), 'from sheet'); put('c-proj-1y', N(77), 'from sheet');
+            put('c-proj-5y', N(78), 'from sheet'); return;
+        }
+        put('c-proj-eoy', null, 'no data'); put('c-proj-1y', null, 'no data');
+        put('c-proj-5y', null, 'no data'); return;
+    }
+
+    const nw = getFilterNW();
+    const pace = getFilterMonthly();               // ytd_abs / months elapsed
+    const moLeft = Math.round((1 - N(1)) * 12);
+    put('c-proj-eoy', nw + pace * moLeft, "at this year's pace");
+    put('c-proj-1y',  nw + pace * 12,     "at this year's pace");
+
+    const p = _mainFireProjection;
+    if (!p || !Array.isArray(p.p50s) || p.p50s.length < 6) {
+        put('c-proj-5y', null, 'run the FIRE projection');
         return;
     }
-    let eoy, yr1, v5, sub='';
-    // Supabase stores no precomputed projections — always derive them.
-    if (usingSupabase()) {
-        const lnw=getFilterNW(), dm=getFilterMonthly(), yr=N(1);
-        const moLeft=Math.round((1-yr)*12);
-        eoy=lnw+dm*moLeft; yr1=lnw+dm*12;
-        const ar=Math.max(0.04,Math.min(0.5,Math.abs(getFilterAtPct())));
-        v5=lnw; for(let m=0;m<60;m++) v5=v5*(1+ar/12)+dm;
-        sub='est.';
-    } else if (activeFilter === 'portfolio') {
-        eoy=N(73); yr1=N(74); v5=N(75);
-    } else if (activeFilter === 'crypto') {
-        eoy=N(76); yr1=N(77); v5=N(78);
-    } else {
-        const lnw=getFilterNW(), dm=getFilterMonthly(), yr=N(1);
-        const moLeft=Math.round((1-yr)*12);
-        eoy=lnw+dm*moLeft; yr1=lnw+dm*12;
-        const ar=Math.max(0.04,Math.min(0.5,Math.abs(getFilterAtPct())));
-        v5=lnw; for(let m=0;m<60;m++) v5=v5*(1+ar/12)+dm;
-        sub='est.';
-    }
-    sv('c-proj-eoy', fd(eoy), cc(eoy)); gi('c-proj-eoy-sub', sub);
-    sv('c-proj-1y',  fd(yr1), cc(yr1)); gi('c-proj-1y-sub',  sub);
-    sv('c-proj-5y',  fd(v5),  cc(v5));  gi('c-proj-5y-sub',  sub);
+    // p50s is indexed by YEAR (0 = today), so p50s[5] is the year-5 median.
+    const rest = nw - (_mainFireInvestmentTotal || 0);
+    put('c-proj-5y', p.p50s[5] + rest, 'FIRE median + other assets flat');
 }
 
 function renderVelocity() {
@@ -2096,11 +2186,28 @@ let _mainFireLoans = [];
 let _mainFireInputs = null;
 let _mainFireSalary = [];
 let _mainFireBlendNote = null;
-const FIRE_CACHE_KEY = 'zhodler_fire_last_run_v2'; // v2 = inflation-aware engine; old cached results invalidated
+// The last projection computed by computeFireProjection(), kept so the
+// Velocity & Projections card can derive its 5-year figure from the SAME
+// engine instead of hand-rolling a second, contradictory one (audit W-01/W-02).
+let _mainFireProjection = null;
+const FIRE_CACHE_KEY = 'zhodler_fire_last_run_v3'; // v3 = terminal-probability engine (audit W-06); v2 results invalidated
 const PRJ27_KEY = 'zhodler_prj27_bridge_v1';
 
+// W-11: store only what renderMainFireSummary() and the chart actually read
+// (p10s/p50s/p90s/yearLabels/targetByYear + scalars). The full projection at
+// the slider's 20,000-run maximum blows past the localStorage quota, setItem
+// throws into an empty catch, and the 'results persist until the next run'
+// promise silently stops holding. tracks/contributionByMonth verified unused
+// outside computeFireProjection (grep before relying on this).
 function saveFireCache(projection) {
-    try { localStorage.setItem(FIRE_CACHE_KEY, JSON.stringify({ when: new Date().toISOString(), projection })); } catch (e) {}
+    const slim = { ...projection };
+    delete slim.tracks;              // 20,000 x 14 numbers — blows the quota
+    delete slim.contributionByMonth; // only needed by the transparency panels
+    try {
+        localStorage.setItem(FIRE_CACHE_KEY, JSON.stringify({ when: new Date().toISOString(), projection: slim }));
+    } catch (e) {
+        toast('Result computed but too large to save — it will be gone on reload.', true);
+    }
 }
 function loadFireCache() {
     try {
@@ -2131,7 +2238,7 @@ function importPrj27FromHash() {
     let payload = null;
     try { payload = JSON.parse(decodeURIComponent(m[1])); } catch (e) { payload = null; }
     history.replaceState(null, '', location.pathname + location.search);
-    if (!payload || (payload.v !== 1 && payload.v !== 2 && payload.v !== 3) || !Array.isArray(payload.strategies) || !payload.strategies.length) {
+    if (!payload || ![1, 2, 3, 4].includes(payload.v) || !Array.isArray(payload.strategies) || !payload.strategies.length) {
         toast('PRJ27 sync failed — unexpected data', true);
         return;
     }
@@ -2146,6 +2253,11 @@ function importPrj27FromHash() {
     let blendRefreshed = false;
     if (chosen && chosen.apy !== p.apy) {
         p.apy = chosen.apy;
+        // v4 payloads carry the strategy's implied volatility — refresh it
+        // alongside the APY so a re-sync updates RISK too, not just return
+        // (audit W-09). Null on older (v1-v3) syncs.
+        p.apySigma = chosen.apySigma ?? null;
+        p.pLiq = chosen.pLiq ?? null;
         try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
         blendRefreshed = true;
     }
@@ -2176,7 +2288,11 @@ function computeCryptoSharePct() {
         // Exact mirror of fire_investment_total()'s inclusion list, split by sleeve.
         let crypto = 0, invest = 0;
         (dbData && Array.isArray(dbData.holdings) ? dbData.holdings : []).forEach(h => {
-            if (h.position_type === 'borrow') return;               // engine: <> 'borrow'
+            // Phase 38: borrows inside an INVESTMENT account (defi_wallet/cex)
+            // are netted; manual_asset borrows (mortgage, car loan) stay out.
+            // Must stay an exact mirror of fire_investment_total().
+            if (h.position_type === 'borrow' &&
+                !['defi_wallet', 'cex'].includes(h.account_type)) return;
             const v = num(h.usd_value);
             const excludedAccount = h.protocol === 'manual' &&
                 ['bank', 'real_estate', 'motorbike', 'vehicle'].includes(h.account_type);
@@ -2214,26 +2330,57 @@ function prj27PickChanged() {    const pick = document.getElementById('prj27Pick
     const p = prj27Settings();
     p.variant = hit.label;
     p.apy = hit.apy;
+    p.apySigma = hit.apySigma ?? null;   // v4 payloads only; null on older syncs
+    p.pLiq = hit.pLiq ?? null;           // shown for context, never applied as a haircut
     try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
     renderPrj27Bridge();
     const note = document.getElementById('fireBlendNote');
     if (note) note.textContent = 'variant set from PRJ27 sync — press Save & apply blend to use it';
     toast(`"${hit.label}" selected — ${hit.apy}%/yr. Press Save & apply blend.`, false);
 }
+// Blends the PRJ27 crypto-strategy result into the FIRE plan's assumptions.
+//
+// Blends BOTH the return and the volatility. Blending the return alone applied
+// a leveraged BTC strategy at broad-equity volatility, so the entire leverage
+// tail vanished from the projection (audit W-09).
+//
+// The volatility blend uses rho = 1 (a plain weighted average rather than the
+// sqrt-of-variance form). That is deliberately CONSERVATIVE: it is an upper
+// bound on the true portfolio volatility, and the failure mode being fixed here
+// is understating risk, not overstating it.
+//
+// pLiq is deliberately NOT applied as a return haircut. PRJ27's exported APY is
+// an IRR on the Monte Carlo MEDIAN terminal equity across ALL runs, liquidated
+// ones included — liquidation is already priced in. Haircutting again would
+// double-count it. It is surfaced in the note for context only.
 function applyFireBlend(f) {
     const p = prj27Settings();
     const apy = +p.apy || 0;
-    const trad = +p.tradfi || 7;
-    // Crypto share is always automatic — computed from the asset ledger at
-    // blend time, never a user-typed number.
+    // The TradFi sleeve defaults to the return the user actually saved in their
+    // own plan, not a hardcoded 7% (audit W-09). planReturnPct/planVolPct are
+    // the PRISTINE plan values captured at load — f.returnPct/f.volPct are
+    // mutated in place by this very function, so reading them on a re-run
+    // would blend the blend and drift every "Run projection" click.
+    const planReturn = isNaN(f.planReturnPct) ? (isNaN(f.returnPct) ? 6 : f.returnPct) : f.planReturnPct;
+    const planVol = isNaN(f.planVolPct) ? (isNaN(f.volPct) ? 15 : f.volPct) : f.planVolPct;
+    const trad = has(p.tradfi) && +p.tradfi > 0 ? +p.tradfi : planReturn;
     const sugg = computeCryptoSharePct();
-    if (apy > 0 && sugg && sugg.pct >= 0) {
-        const share = Math.min(100, Math.max(0, sugg.pct)) / 100;
-        f.returnPct = share * apy + (1 - share) * trad;
-        _mainFireBlendNote = `return blended: ${(share*100).toFixed(0)}% crypto ("${p.variant || 'PRJ27 variant'}" ${apy}% APY) + ${((1-share)*100).toFixed(0)}% TradFi @ ${trad}%`;
+    if (!(apy > 0 && sugg && sugg.pct >= 0)) { _mainFireBlendNote = null; return; }
+
+    const share = Math.min(100, Math.max(0, sugg.pct)) / 100;
+    f.returnPct = share * apy + (1 - share) * trad;
+
+    const sigC = +p.apySigma || 0;
+    let volNote = '';
+    if (sigC > 0) {
+        f.volPct = share * sigC + (1 - share) * planVol;
+        volNote = ` · volatility blended to ${f.volPct.toFixed(0)}% (crypto sleeve ${sigC}%)`;
     } else {
-        _mainFireBlendNote = null;
+        volNote = ` · volatility left at ${planVol}% — re-sync from PRJ27 to carry the strategy's own risk across`;
     }
+    const liqNote = has(p.pLiq) ? ` · that strategy liquidated in ${(+p.pLiq * 100).toFixed(0)}% of PRJ27's runs (already inside its return)` : '';
+    _mainFireBlendNote = `return blended: ${(share*100).toFixed(0)}% crypto ("${p.variant || 'PRJ27 variant'}" ${apy}% APY) + ` +
+        `${((1-share)*100).toFixed(0)}% TradFi @ ${trad}%${volNote}${liqNote}`;
 }
 function renderPrj27Bridge() {
     const p = prj27Settings();
@@ -2263,6 +2410,7 @@ function renderPrj27Bridge() {
                     if (isIrr) {
                         const moneyIn = (s.own0 || 0) + (s.contributed || 0);
                         title = `Monte Carlo median, IRR basis, ${s.runs || '?'} runs · ` +
+                            (s.apySigma !== null && s.apySigma !== undefined ? `implied vol ${s.apySigma}%/yr · ` : '') +
                             `in ${fd((s.own0 || 0) + (s.contributed || 0))} (own ${fd(s.own0 || 0)} + contributions ${fd(s.contributed || 0)}, ${s.contribCount || '?'} deposits over ${s.horizonMonths || '?'} months) → ` +
                             `P50 out ${fd(s.finalP50 || s.finalEquity || 0)} · P10 ${fd(s.finalP10 || 0)} / P90 ${fd(s.finalP90 || 0)}` +
                             (moneyIn > 0 ? ` · money multiple ${(s.finalP50 || 0) / moneyIn > 0 ? ((s.finalP50 || 0) / moneyIn).toFixed(2) : '—'}` : '');
@@ -2292,6 +2440,8 @@ function pickPrj27Strategy(btn) {
     const p = prj27Settings();
     p.variant = hit.label;
     p.apy = hit.apy;
+    p.apySigma = hit.apySigma ?? null;   // v4 payloads only; null on older syncs
+    p.pLiq = hit.pLiq ?? null;           // shown for context, never applied as a haircut
     try { localStorage.setItem(PRJ27_KEY, JSON.stringify(p)); } catch (e) {}
     renderPrj27Bridge();
     // Apply the new blend immediately AND re-run the projection so the user
@@ -2354,13 +2504,19 @@ function renderFireSettings() {
         : 'Crypto share: waiting for asset data — reload once the dashboard has loaded.';
     const hint = document.getElementById('fireShareHint');
     if (hint) hint.textContent = '';
-    const apy = +p.apy || 0, share = +p.share || 0, trad = +p.tradfi || 7;
+    // W-10: p.share died when the share became automatic — read the COMPUTED
+    // share, or this panel permanently says "not configured" while the blend
+    // is active and changing the result. TradFi fallback matches
+    // applyFireBlend(): the plan's own saved return, not the old hardcoded 7.
+    const apy = +p.apy || 0, share = sugg ? sugg.pct : 0;
+    const planRet = _mainFireInputs && !isNaN(_mainFireInputs.planReturnPct) ? _mainFireInputs.planReturnPct : 6;
+    const trad = has(p.tradfi) && +p.tradfi > 0 ? +p.tradfi : planRet;
     const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     t('fsApyCell', apy > 0 ? apy + '% / yr' : 'not set');
     t('fsTradCell', trad + '% / yr');
     t('fsShareCell', share > 0 ? share + '% crypto / ' + (100 - share) + '% TradFi' : 'not set');
     const note = document.getElementById('fireBlendNote');
-    if (note) note.textContent = (apy > 0 && share > 0)
+    if (note) note.textContent = (apy > 0 && sugg)
         ? (share / 100 * apy + (1 - share / 100) * trad).toFixed(1) + '% / yr'
         : 'not configured — using the return saved in your FIRE plan';
 }
@@ -2407,19 +2563,30 @@ function renderFireSetupPrompt(message) {
 }
 
 function renderMainFireSummary(projection, savedWhen) {
+    // Single funnel: every path that produces a projection (first load, cached
+    // result, "Run projection") lands here, so this is the one correct place to
+    // publish it to the rest of the dashboard.
+    _mainFireProjection = projection;
+    renderProjections();   // the 5-yr figure is derived from this projection
     const lbl = document.getElementById('monteFilter'); if (lbl) lbl.textContent = 'FIRE Plan';
     const empty = document.getElementById('mc-empty'), content = document.getElementById('mc-content');
     if (empty) empty.style.display = 'none';
     if (content) content.style.display = '';
 
     const progressPct = projection.fireNumber > 0 ? Math.min(100, (_mainFireInvestmentTotal / projection.fireNumber) * 100) : 0;
-    const fireProbStr = projection.fireProb.toFixed(0);
+    // Headline is the TERMINAL probability — "will I still be there at 60" —
+    // because that is what readers take "FIRE probability" to mean. The
+    // touch-at-any-point figure is kept as context, not as the headline
+    // (audit W-06). Older cached runs have no fireProbTerminal; fall back.
+    const hasTerm = projection.fireProbTerminal !== undefined && projection.fireProbTerminal !== null;
+    const headlineProb = hasTerm ? projection.fireProbTerminal : projection.fireProb;
+    const touchStr = hasTerm ? `touched at some point in ${projection.fireProb.toFixed(0)}%` : 'older saved run';
     const medianStr = projection.medianFireYrs !== null ? projection.medianFireYrs.toFixed(1) + ' yrs' : '—';
     gi('mc-stats', `
         <div class="mc-box"><div class="klbl">FIRE Number</div><div class="kval">${fd(projection.fireNumber)}</div></div>
         <div class="mc-box"><div class="klbl">Progress</div><div class="kval ${progressPct >= 100 ? 'pos' : ''}">${progressPct.toFixed(1)}%</div></div>
-        <div class="mc-box"><div class="klbl">FIRE Probability</div><div class="kval ${projection.fireProb > 50 ? 'pos' : 'warn'}">${fireProbStr}%</div></div>
-        <div class="mc-box"><div class="klbl">Median Time to FIRE</div><div class="kval">${medianStr}</div></div>
+        <div class="mc-box"><div class="klbl">Still there at the end</div><div class="kval ${headlineProb > 50 ? 'pos' : 'warn'}">${headlineProb.toFixed(0)}%</div><div class="ksub">${touchStr}</div></div>
+        <div class="mc-box"><div class="klbl">Median time to first reach it</div><div class="kval">${medianStr}</div><div class="ksub">of the runs that got there</div></div>
     `);
     const modeLabel = (_mainFirePlan && _mainFirePlan.contribution_mode === 'salary_driven') ? 'salary-driven' : 'manual';
     const whenStr = savedWhen ? ' &bull; saved result from ' + new Date(savedWhen).toLocaleString() + ' — press Run to recalculate' : '';
@@ -2428,7 +2595,8 @@ function renderMainFireSummary(projection, savedWhen) {
         ? ` &bull; target rises ${projection.inflationPct}%/yr with inflation`
         : ' &bull; no inflation set in plan — target does not rise';
     gi('mc-footer', `${projection.years}-yr horizon${projection.horizonIsAssumed ? ' (assumed)' : ''} &bull; Investment assets only — real estate &amp; vehicles excluded &bull; ${modeLabel} contribution &bull; ${projection.SIMS} simulations${inflStr}${blendStr}${whenStr}`);
-    gi('mc-params', `Target ${fd(projection.fireNumber)} (today's dollars)`);
+    gi('mc-params', `Target ${fd(projection.fireNumber)} (today's dollars) · ` +
+        `nest egg ${fd(_mainFireInvestmentTotal)}, net of money borrowed against your own crypto`);
 
     // Rising target line (year 0 = today's FIRE number); guard for cached
     // projections computed before the inflation-aware engine.
@@ -2513,6 +2681,12 @@ async function renderMonteCarlo() {
             essentialExp: has(plan.essential_monthly_expenses) ? Number(plan.essential_monthly_expenses) : NaN,
             salaryGrowthPct: has(plan.salary_growth_pct) ? Number(plan.salary_growth_pct) : NaN,
         };
+        // Pristine plan values, kept aside because applyFireBlend() MUTATES
+        // returnPct/volPct in place and _mainFireInputs survives across runs —
+        // re-blending from the mutated values would compound toward the crypto
+        // APY every "Run projection" click (exposed by audit W-09's vol blend).
+        f.planReturnPct = f.returnPct;
+        f.planVolPct = f.volPct;
         // Redesign: store the inputs so "Run projection" can recompute with the
         // user-chosen run count; apply the PRJ27 crypto/TradFi blend to the
         // return for this dashboard's run only (the saved plan is untouched).
@@ -2786,6 +2960,10 @@ async function ensureEurUsdRate() {
         }
         updateEurRateCaption();
         refreshEurPreviews();
+        // The fetch resolves after the boot render — re-run the badge so a
+        // fallback-rate failure is visible on the main dashboard immediately,
+        // not only once a modal opens (audit W-05).
+        updateStalenessBadge();
         return eurUsdRate;
     })();
     return eurRatePromise;
@@ -3745,6 +3923,77 @@ async function refreshFireEssentialExpenses() {
     }
 }
 
+// ── Cost basis (invested) — audit W-03, Option A "money I actually put in" ─
+// The all-time gain compares net worth against invested; the seeded basis was
+// the house's full EURO purchase price against a DOLLAR net worth already net
+// of its mortgage — structurally negative by definition. This form rebases
+// invested.real_estate to the house's EQUITY CONTRIBUTED (deposit + purchase
+// costs + cumulative principal repaid) and keeps the scope identity
+// invested.total = tradfi + crypto intact by rebasing tradfi and total too.
+// Writes go through rpcAuth('invested_set') — authenticated session required;
+// the embedded anon key must never be able to write the books.
+function costBasisEquityEur() {
+    const dep = parseFloat(document.getElementById('eaCbDeposit').value) || 0;
+    const costs = parseFloat(document.getElementById('eaCbCosts').value) || 0;
+    const principal = parseFloat(document.getElementById('eaCbPrincipal').value) || 0;
+    return dep + costs + principal;
+}
+
+function renderCostBasisPreview() {
+    const el = document.getElementById('eaCbPreview');
+    if (!el) return;
+    const equityEur = costBasisEquityEur();
+    const inv = (dbData && dbData.invested) || {};
+    const banks = num(inv.tradfi_banks), crypto = num(inv.crypto);
+    const date = document.getElementById('eaCbDate').value || '(no date)';
+    if (equityEur <= 0) {
+        el.textContent = 'Enter the deposit, purchase costs and principal repaid to see the preview.';
+        return;
+    }
+    if (eurUsdRate === null) { el.textContent = 'Fetching the live EUR/USD rate…'; return; }
+    const realEstateUsd = equityEur * eurUsdRate;
+    const tradfiUsd = realEstateUsd + banks;
+    const totalUsd = tradfiUsd + crypto;
+    // What the TOTAL all-time figure becomes once saved.
+    const totalNw = dbData && dbData.scopes && dbData.scopes.total ? num(dbData.scopes.total.net_worth) : null;
+    const newAtPct = totalNw !== null && totalUsd > 0 ? ((totalNw - totalUsd) / totalUsd) * 100 : null;
+    el.innerHTML =
+        `Equity contributed: €${equityEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
+        `× ${eurUsdRate.toFixed(4)} = <b>${fd(realEstateUsd)}</b> (invested.real_estate)<br>` +
+        `tradfi = ${fd(tradfiUsd)} (real_estate + banks ${fd(banks)}) · ` +
+        `total = ${fd(totalUsd)} (tradfi + crypto ${fd(crypto)})<br>` +
+        (newAtPct !== null
+            ? `All-time gain (total) becomes: <b>${newAtPct >= 0 ? '+' : ''}${newAtPct.toFixed(2)}%</b> — vs money actually put in, dated ${date}.`
+            : 'Net worth not loaded — save will still work, but the projected all-time figure is unavailable.');
+}
+
+async function saveCostBasis() {
+    const status = document.getElementById('eaCbStatus');
+    const set = (msg, isErr) => { if (status) { status.textContent = msg; status.style.color = isErr ? 'var(--red)' : 'var(--text2)'; } };
+    const equityEur = costBasisEquityEur();
+    if (equityEur <= 0) { set('Enter the figures first.', true); return; }
+    if (eurUsdRate === null) { set('Live EUR/USD rate not available yet — try again in a moment.', true); return; }
+    if (!authToken) { set('Sign in first (top of this modal) — writes are never allowed through the public anon key.', true); return; }
+    const inv = (dbData && dbData.invested) || {};
+    const realEstateUsd = equityEur * eurUsdRate;
+    const tradfiUsd = realEstateUsd + num(inv.tradfi_banks);
+    const totalUsd = tradfiUsd + num(inv.crypto);
+    const date = document.getElementById('eaCbDate').value || '(no date)';
+    set('Saving…');
+    try {
+        await rpcAuth('invested_set', { p_scope: 'real_estate', p_amount: realEstateUsd,
+            p_note: `Equity contributed: deposit + costs + principal repaid to ${date}. NOT the purchase price.` });
+        await rpcAuth('invested_set', { p_scope: 'tradfi', p_amount: tradfiUsd,
+            p_note: `real_estate (${realEstateUsd.toFixed(2)}) + tradfi_banks (${num(inv.tradfi_banks).toFixed(2)}).` });
+        await rpcAuth('invested_set', { p_scope: 'total', p_amount: totalUsd,
+            p_note: `tradfi + crypto — identity kept by the Cost basis form.` });
+        set(`Saved: real_estate ${fd(realEstateUsd)} · tradfi ${fd(tradfiUsd)} · total ${fd(totalUsd)}`);
+        await loadData();   // refresh dbData so the all-time card + this preview re-read the new basis
+    } catch (err) {
+        set(`Failed: ${err.message}`, true);
+    }
+}
+
 // Toggles the manual-only vs salary-driven-only input groups and re-renders.
 function onFireModeChange() {
     const modeEl = document.getElementById('eaFireMode');
@@ -4011,13 +4260,14 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
         horizonIsAssumed = false;
     }
     const SIMS = simsOverride || 500;
-    const meanMonthly = (returnPct / 100) / 12;
     const monthlyVol = (volPct / 100) / Math.sqrt(12);
     // Inflation: the FIRE target is a TOMORROW'S-DOLLARS bar, not today's.
     // The plan's inflation % grows the target through the horizon; without it
     // a static nominal $1M silently overstates FIRE probability.
+    // W-13: compounding convention aligned with the returns' exact ln(1+r)/12
+    // drift — (1+i/12)^m was a 2.53% effective rate on a 2.5% input.
     const inflationPct = isNaN(f.inflationPct) ? 0 : Math.max(0, f.inflationPct);
-    const monthlyInfl = (inflationPct / 100) / 12;
+    const monthlyInfl = Math.pow(1 + inflationPct / 100, 1 / 12) - 1;
     const startCapital = investmentTotal || 0;
     const horizonMonths = years * 12;
 
@@ -4038,6 +4288,14 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     }
 
     const tracks = [], fireYrs = [];
+    // Two different questions, both worth answering (audit W-06):
+    //   fireProb        — did the path EVER touch the (inflating) target?
+    //   fireProbTerminal— did it END at or above it?
+    // The first is what the old card showed while reading as the second.
+    const terminalTarget = fireNumber === null
+        ? null
+        : fireNumber * Math.pow(1 + monthlyInfl, horizonMonths);
+    let endedAbove = 0;
     // Log-normal sampling anchored to the intended CAGR: the drift is
     // ln(1+return), so the MEDIAN path compounds at exactly the return the
     // plan states, and the σ²/2 correction is implicit (mean > median, as a
@@ -4059,12 +4317,14 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
         }
         tracks.push(track);
         if (fireYr !== null) fireYrs.push(fireYr);
+        if (terminalTarget !== null && value >= terminalTarget) endedAbove++;
     }
     const yearLabels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Now' : `Y${i}`);
     const p10s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.10));
     const p50s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.50));
     const p90s = yearLabels.map((_, yi) => firePercentile(tracks.map(t => t[yi]), 0.90));
     const fireProb = SIMS > 0 ? (fireYrs.length / SIMS * 100) : 0;
+    const fireProbTerminal = SIMS > 0 ? (endedAbove / SIMS * 100) : 0;
     const medianFireYrs = fireYrs.length ? firePercentile(fireYrs, 0.5) : null;
     // Rising target line for the charts (year 0 = today's FIRE number).
     const targetByYear = yearLabels.map((_, yi) => fireNumber * Math.pow(1 + monthlyInfl, yi * 12));
@@ -4072,7 +4332,7 @@ function computeFireProjection(f, investmentTotal, loans, salaryHistory, simsOve
     return {
         fireNumber, inflationPct, targetByYear, years, horizonMonths, horizonIsAssumed, SIMS, baseContribution,
         startCapital, includedLoans, excludedLoans, contributionByMonth, salaryModel,
-        tracks, yearLabels, p10s, p50s, p90s, fireProb, medianFireYrs,
+        tracks, yearLabels, p10s, p50s, p90s, fireProb, fireProbTerminal, terminalTarget, medianFireYrs,
     };
 }
 
@@ -5932,6 +6192,10 @@ function toast(msg, isErr) {
             toast('PRJ27 strategies synced — see the Strategy · PRJ27 card in Planning', false);
         }
     });
+    // Kick off the EUR/USD fetch at boot (idempotent/cached) so the staleness
+    // badge reflects the FX state before the Edit Assets modal is ever opened
+    // — a silently-stale rate moves every EUR asset and loan (audit W-05).
+    ensureEurUsdRate();
     loadData();
 })();
 </script>
