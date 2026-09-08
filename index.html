@@ -968,33 +968,50 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             <div style="margin-top:8px;"><button class="mgray" onclick="saveFirePlan()">Save Plan</button></div>
 
             <div class="card-divider" style="margin:14px 0;"></div>
-            <div class="mlabel" style="margin-bottom:4px;">Cost basis (invested) — what you actually put in<span class="fire-help" title="Audit W-03, Option A: the all-time gain compares net worth against MONEY CONTRIBUTED, not the house's purchase price. Enter the house's equity contributed below; EUR figures are converted at the live rate and the other scopes are rebased so invested.total = tradfi + crypto still holds.">?</span></div>
+            <div class="mlabel" style="margin-bottom:4px;">Cost basis (invested) — what you actually put in<span class="fire-help" title="Audit W-03, Option A: the all-time gain compares net worth against MONEY CONTRIBUTED, not the house's purchase price. Enter both sides of the house purchase below; the form derives your equity contributed and keeps every scope consistent.">?</span></div>
             <div style="font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.5;">
-                Enter the house's <b>equity contributed</b>: deposit + purchase costs (IMT, stamp duty, notary) + cumulative principal repaid. This is NOT the purchase price. Until saved, the dashboard keeps the old (stale) basis and says so on the All-time card.
+                <b>Cost side:</b> listing price + improvements + taxes &amp; paperwork. <b>Funding side:</b> initial capital (savings) + the bank loan. Your <b>equity contributed = total cost − current loan balance</b> — this is the money of yours actually sunk into the house (initial capital + principal repaid + any improvements paid from later savings, however they were funded). EUR figures are converted at the live rate. This is NOT the purchase price.
             </div>
             <div class="mrow-row">
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Deposit paid (EUR)</label>
-                    <input class="minput" id="eaCbDeposit" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                    <label class="mlabel" style="margin-bottom:3px;">House listing price (EUR)</label>
+                    <input class="minput" id="eaCbListing" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
                 </div>
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Purchase costs (EUR)</label>
-                    <input class="minput" id="eaCbCosts" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                    <label class="mlabel" style="margin-bottom:3px;">Improvements costs (EUR)</label>
+                    <input class="minput" id="eaCbImprovements" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Taxes &amp; paperwork (EUR)</label>
+                    <input class="minput" id="eaCbTaxes" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
                 </div>
             </div>
             <div class="mrow-row">
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Principal repaid to date (EUR)</label>
-                    <input class="minput" id="eaCbPrincipal" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                    <label class="mlabel" style="margin-bottom:3px;">Initial capital — savings (EUR)<span class="fire-help" title="Your own money paid at purchase time (the down payment), not borrowed.">?</span></label>
+                    <input class="minput" id="eaCbInitial" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
                 </div>
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Deposit / valuation date</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Loan requested from the bank (EUR)</label>
+                    <input class="minput" id="eaCbLoanAmount" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+            </div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Current loan balance (EUR)<span class="fire-help" title="What you still owe today. Pre-filled from the tracked loan row — correct it if that figure is stale.">?</span></label>
+                    <input class="minput" id="eaCbLoanBalance" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
+                </div>
+                <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Purchase / valuation date</label>
                     <input class="minput" id="eaCbDate" type="date" onchange="renderCostBasisPreview()">
                 </div>
             </div>
             <div id="eaCbPreview" style="font-size:10px;color:var(--text2);margin-top:8px;line-height:1.6;"></div>
-            <div style="margin-top:8px;"><button class="mgray" onclick="saveCostBasis()">Save cost basis</button>
-                <span id="eaCbStatus" style="font-size:10px;color:var(--text2);margin-left:8px;"></span></div>
+            <div style="margin-top:8px;">
+                <button class="mgray" onclick="saveCostBasis()">Save cost basis</button>
+                <label style="font-size:10px;color:var(--text2);margin-left:10px;"><input type="checkbox" id="eaCbUpdateLoan" checked onchange="renderCostBasisPreview()"> also update the tracked loan balance</label>
+                <span id="eaCbStatus" style="font-size:10px;color:var(--text2);margin-left:8px;"></span>
+            </div>
 
             <div class="card-divider" style="margin:14px 0;"></div>
             <div class="mrow-row">
@@ -3930,68 +3947,137 @@ async function refreshFireEssentialExpenses() {
 // ── Cost basis (invested) — audit W-03, Option A "money I actually put in" ─
 // The all-time gain compares net worth against invested; the seeded basis was
 // the house's full EURO purchase price against a DOLLAR net worth already net
-// of its mortgage — structurally negative by definition. This form rebases
-// invested.real_estate to the house's EQUITY CONTRIBUTED (deposit + purchase
-// costs + cumulative principal repaid) and keeps the scope identity
-// invested.total = tradfi + crypto intact by rebasing tradfi and total too.
-// Writes go through rpcAuth('invested_set') — authenticated session required;
-// the embedded anon key must never be able to write the books.
-function costBasisEquityEur() {
-    const dep = parseFloat(document.getElementById('eaCbDeposit').value) || 0;
-    const costs = parseFloat(document.getElementById('eaCbCosts').value) || 0;
-    const principal = parseFloat(document.getElementById('eaCbPrincipal').value) || 0;
-    return dep + costs + principal;
+// of its mortgage — structurally negative by definition.
+//
+// The house has two sides that must BOTH be accounted for:
+//   cost side    = listing price + improvements + taxes/paperwork
+//   funding side = initial capital (savings) + bank loan
+// EQUITY CONTRIBUTED = total cost − current loan balance. This identity holds
+// however the pieces were funded: it equals initial capital + principal
+// repaid + any improvements paid from later savings, and when the dashboard
+// computes alltime = net_worth − invested, the mortgage cancels EXACTLY,
+// leaving the house's true P&L (current value − total cost).
+//
+// The tracked loan row ("Bank house loan") is kept in sync on save when its
+// balance was corrected — otherwise the dashboard's debt and this basis would
+// silently disagree. Writes go through rpcAuth() — authenticated session
+// required; the embedded anon key must never be able to write the books.
+
+// Find the tracked house-loan holding and its native (EUR) balance. The
+// bootstrap view exposes usd_value but not meta, so the EUR balance is
+// usd / live rate — exact when the holding was converted recently (the
+// fx_refresh collector does this daily), and the user can always correct it.
+function findHouseLoanHolding() {
+    const hs = (dbData && Array.isArray(dbData.holdings)) ? dbData.holdings : [];
+    return hs.find(h => h.position_type === 'borrow' &&
+        /house\s*loan/i.test(h.account_label || '')) || null;
+}
+
+function costBasisFigures() {
+    const eur = id => parseFloat(document.getElementById(id).value) || 0;
+    const listing = eur('eaCbListing'), improvements = eur('eaCbImprovements'), taxes = eur('eaCbTaxes');
+    const initial = eur('eaCbInitial'), loanAmount = eur('eaCbLoanAmount'), loanBalance = eur('eaCbLoanBalance');
+    const totalCost = listing + improvements + taxes;
+    const principalRepaid = Math.max(0, loanAmount - loanBalance);
+    const equityEur = Math.max(0, totalCost - loanBalance);
+    return { listing, improvements, taxes, initial, loanAmount, loanBalance, totalCost, principalRepaid, equityEur };
 }
 
 function renderCostBasisPreview() {
     const el = document.getElementById('eaCbPreview');
     if (!el) return;
-    const equityEur = costBasisEquityEur();
-    const inv = (dbData && dbData.invested) || {};
-    const banks = num(inv.tradfi_banks), crypto = num(inv.crypto);
+    const f = costBasisFigures();
+    // Pre-fill the current balance from the tracked loan once (unless the
+    // user has already typed something).
+    const balInput = document.getElementById('eaCbLoanBalance');
+    if (!balInput.value && eurUsdRate !== null) {
+        const loan = findHouseLoanHolding();
+        if (loan) {
+            balInput.value = (Math.abs(Number(loan.usd_value)) / eurUsdRate).toFixed(2);
+            return renderCostBasisPreview();   // re-run with the balance in place
+        }
+    }
     const date = document.getElementById('eaCbDate').value || '(no date)';
-    if (equityEur <= 0) {
-        el.textContent = 'Enter the deposit, purchase costs and principal repaid to see the preview.';
+    if (f.totalCost <= 0) {
+        el.textContent = 'Enter the cost side (listing price + improvements + taxes) to see the preview.';
         return;
     }
     if (eurUsdRate === null) { el.textContent = 'Fetching the live EUR/USD rate…'; return; }
-    const realEstateUsd = equityEur * eurUsdRate;
+    const inv = (dbData && dbData.invested) || {};
+    const banks = num(inv.tradfi_banks), crypto = num(inv.crypto);
+    const realEstateUsd = f.equityEur * eurUsdRate;
     const tradfiUsd = realEstateUsd + banks;
     const totalUsd = tradfiUsd + crypto;
-    // What the TOTAL all-time figure becomes once saved.
     const totalNw = dbData && dbData.scopes && dbData.scopes.total ? num(dbData.scopes.total.net_worth) : null;
     const newAtPct = totalNw !== null && totalUsd > 0 ? ((totalNw - totalUsd) / totalUsd) * 100 : null;
+    const fundingGap = f.totalCost - (f.initial + f.loanAmount);
+    // Warn when the input balance disagrees with the tracked row and the
+    // update box is unticked — debt and basis must not drift apart.
+    const loan = findHouseLoanHolding();
+    let loanWarn = '';
+    if (loan && eurUsdRate !== null) {
+        const trackedEur = Math.abs(Number(loan.usd_value)) / eurUsdRate;
+        if (Math.abs(trackedEur - f.loanBalance) > 0.5 &&
+            !document.getElementById('eaCbUpdateLoan').checked) {
+            loanWarn = `<br><span style="color:var(--yellow);">⚠ The tracked loan says €${trackedEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} but you entered €${f.loanBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} and "also update the tracked loan" is off — debt and cost basis will disagree.</span>`;
+        }
+    }
     el.innerHTML =
-        `Equity contributed: €${equityEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
+        `<b>Total house cost:</b> €${f.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
+        `(listing €${f.listing.toLocaleString()} + improvements €${f.improvements.toLocaleString()} + taxes/paperwork €${f.taxes.toLocaleString()})<br>` +
+        `<b>Funding:</b> initial capital €${f.initial.toLocaleString()} + bank loan €${f.loanAmount.toLocaleString()} = €${(f.initial + f.loanAmount).toLocaleString()}` +
+        (Math.abs(fundingGap) > 0.5
+            ? ` — gap of €${Math.abs(fundingGap).toLocaleString(undefined, { maximumFractionDigits: 2 })}${fundingGap > 0 ? ' beyond the funding side (paid from later savings — included in the figure below)' : ' over-funded — check the figures'}`
+            : ' — matches the cost side ✓') + '<br>' +
+        `Principal repaid so far: €${f.principalRepaid.toLocaleString(undefined, { maximumFractionDigits: 2 })} (loan €${f.loanAmount.toLocaleString()} − balance €${f.loanBalance.toLocaleString()})<br>` +
+        `<b>Equity contributed</b> (total cost − current balance): €${f.equityEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
         `× ${eurUsdRate.toFixed(4)} = <b>${fd(realEstateUsd)}</b> (invested.real_estate)<br>` +
-        `tradfi = ${fd(tradfiUsd)} (real_estate + banks ${fd(banks)}) · ` +
-        `total = ${fd(totalUsd)} (tradfi + crypto ${fd(crypto)})<br>` +
+        `tradfi = ${fd(tradfiUsd)} (real_estate + banks ${fd(banks)}) · total = ${fd(totalUsd)} (tradfi + crypto ${fd(crypto)})<br>` +
         (newAtPct !== null
-            ? `All-time gain (total) becomes: <b>${newAtPct >= 0 ? '+' : ''}${newAtPct.toFixed(2)}%</b> — vs money actually put in, dated ${date}.`
-            : 'Net worth not loaded — save will still work, but the projected all-time figure is unavailable.');
+            ? `All-time gain (total) becomes: <b>${newAtPct >= 0 ? '+' : ''}${newAtPct.toFixed(2)}%</b> — net worth vs money actually put in, dated ${date}. With the mortgage cancelling out, this is the house's true P&L plus the liquid/crypto P&L.`
+            : 'Net worth not loaded — save will still work, but the projected all-time figure is unavailable.') +
+        loanWarn;
 }
 
 async function saveCostBasis() {
     const status = document.getElementById('eaCbStatus');
     const set = (msg, isErr) => { if (status) { status.textContent = msg; status.style.color = isErr ? 'var(--red)' : 'var(--text2)'; } };
-    const equityEur = costBasisEquityEur();
-    if (equityEur <= 0) { set('Enter the figures first.', true); return; }
+    const f = costBasisFigures();
+    if (f.totalCost <= 0) { set('Enter the cost side first.', true); return; }
     if (eurUsdRate === null) { set('Live EUR/USD rate not available yet — try again in a moment.', true); return; }
     if (!authToken) { set('Sign in first (top of this modal) — writes are never allowed through the public anon key.', true); return; }
+    if (f.loanBalance > f.loanAmount && f.loanAmount > 0) { set('Current loan balance is larger than the loan requested — check the figures.', true); return; }
     const inv = (dbData && dbData.invested) || {};
-    const realEstateUsd = equityEur * eurUsdRate;
+    const realEstateUsd = f.equityEur * eurUsdRate;
     const tradfiUsd = realEstateUsd + num(inv.tradfi_banks);
     const totalUsd = tradfiUsd + num(inv.crypto);
     const date = document.getElementById('eaCbDate').value || '(no date)';
     set('Saving…');
     try {
+        // Keep the tracked loan row in sync when the balance was corrected —
+        // otherwise net worth's debt and this cost basis disagree silently.
+        const loan = findHouseLoanHolding();
+        if (loan) {
+            const trackedEur = Math.abs(Number(loan.usd_value)) / eurUsdRate;
+            const balanceChanged = Math.abs(trackedEur - f.loanBalance) > 0.5;
+            const wantUpdate = document.getElementById('eaCbUpdateLoan').checked;
+            if (balanceChanged && wantUpdate) {
+                await rpcAuth('manual_loan_upsert', {
+                    p_label: loan.account_label,
+                    p_value: -(f.loanBalance * eurUsdRate),
+                    p_is_liquid: !!loan.is_liquid, p_scope_class: loan.scope_class || 'tradfi',
+                    p_currency: 'EUR', p_original_value: f.loanBalance,
+                });
+            }
+        }
         await rpcAuth('invested_set', { p_scope: 'real_estate', p_amount: realEstateUsd,
-            p_note: `Equity contributed: deposit + costs + principal repaid to ${date}. NOT the purchase price.` });
+            p_note: `Equity contributed: listing + improvements + taxes/paperwork − current loan balance, to ${date}. NOT the purchase price.` });
         await rpcAuth('invested_set', { p_scope: 'tradfi', p_amount: tradfiUsd,
             p_note: `real_estate (${realEstateUsd.toFixed(2)}) + tradfi_banks (${num(inv.tradfi_banks).toFixed(2)}).` });
         await rpcAuth('invested_set', { p_scope: 'total', p_amount: totalUsd,
             p_note: `tradfi + crypto — identity kept by the Cost basis form.` });
-        set(`Saved: real_estate ${fd(realEstateUsd)} · tradfi ${fd(tradfiUsd)} · total ${fd(totalUsd)}`);
+        set(`Saved: real_estate ${fd(realEstateUsd)} · tradfi ${fd(tradfiUsd)} · total ${fd(totalUsd)}` +
+            (loan ? ` · loan row ${document.getElementById('eaCbUpdateLoan').checked ? 'updated' : 'left as-is'}` : ''));
         await loadData();   // refresh dbData so the all-time card + this preview re-read the new basis
     } catch (err) {
         set(`Failed: ${err.message}`, true);
