@@ -545,6 +545,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 <span class="formula">Annualized rate = YTD return &times; 12 &divide; months elapsed</span>
                 Momentum = YTD monthly pace minus all-time monthly pace.
                 <span class="formula">Projected end of year / 1 year = today's net worth + (this year's realised monthly pace &times; months remaining)</span>
+                <span class="formula">"This year's pace" includes one-off revaluations — the September 2026 FX rebase moved every euro asset and the mortgage in a single step.</span>
                 <span class="formula">Projected 5 years = the FIRE projection's median investable value at year 5, plus property, vehicles and cash minus debt, held flat</span>
             </div>
             <div style="margin-top:10px;">
@@ -988,11 +989,23 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             </div>
             <div class="mrow-row">
                 <div style="flex:1;min-width:100px;">
+                    <label class="mlabel" style="margin-bottom:3px;">Your ownership share (%)</label>
+                    <input class="minput" id="eaCbShare" type="number" step="0.01" min="0.01" max="100"
+                           value="50" oninput="renderCostBasisPreview()">
+                    <div style="font-size:10px;color:var(--text2);margin-top:2px;">
+                        Enter the costs above for the <b>whole property</b>, as they appear on the deed.
+                        This is the share you own — the tracked asset ("House (half)") and the tracked
+                        loan balance are already your share only.
+                    </div>
+                </div>
+            </div>
+            <div class="mrow-row">
+                <div style="flex:1;min-width:100px;">
                     <label class="mlabel" style="margin-bottom:3px;">Initial capital — savings (EUR)<span class="fire-help" title="Your own money paid at purchase time (the down payment), not borrowed.">?</span></label>
                     <input class="minput" id="eaCbInitial" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
                 </div>
                 <div style="flex:1;min-width:100px;">
-                    <label class="mlabel" style="margin-bottom:3px;">Loan requested from the bank (EUR)</label>
+                    <label class="mlabel" style="margin-bottom:3px;">Loan requested from the bank (EUR)<span class="fire-help" title="Ambiguity flagged 2026-09-08 (correction C1): this form currently treats this figure as the WHOLE-PROPERTY loan requested (scaled by your ownership share below) to match the whole-property cost fields above it. If you actually entered this as your half-share of the loan, tell the dashboard's maintainer — the share multiplier needs to come off this field instead. It only affects the display-only 'principal repaid' figure, not the saved cost basis.">?</span></label>
                     <input class="minput" id="eaCbLoanAmount" type="number" step="0.01" min="0" oninput="renderCostBasisPreview()">
                 </div>
             </div>
@@ -1641,12 +1654,15 @@ function computeStaleness(data) {
     // only decide badge TEXT among the sources actually flagged stale
     // (worst offender) or, when nothing is stale, the freshest sync
     // (most reassuring number to show, not the slowest-but-healthy one).
-    let anyNull = false, worstStaleHours = 0, freshestHours = null;
-    Object.values(data.staleness).forEach(info => {
+    let anyNull = false, worstStaleHours = 0, worstSource = null, freshestHours = null;
+    // Naming the source matters now that fx_refresh keeps writing fresh
+    // snapshots on top of stale holdings — "stale · 3d ago" gives no clue
+    // which half of the net worth is old (correction C5).
+    Object.entries(data.staleness).forEach(([src, info]) => {
         if (!info || !info.last_success) { anyNull = true; return; }
         const hrs = (Date.now() - new Date(info.last_success).getTime()) / 3.6e6;
         if (freshestHours === null || hrs < freshestHours) freshestHours = hrs;
-        if (info.is_stale) worstStaleHours = Math.max(worstStaleHours, hrs);
+        if (info.is_stale && hrs >= worstStaleHours) { worstStaleHours = hrs; worstSource = src; }
     });
     if (anyNull) return {level: 'red', text: 'no successful sync'};
 
@@ -1661,9 +1677,12 @@ function computeStaleness(data) {
     if (snapHrs > 24) {
         return {level: 'red', text: `net worth frozen · ${fmtAgo(snapHrs)} ago`};
     }
-    if (worstStaleHours > 24) return {level: 'red', text: `stale · ${fmtAgo(worstStaleHours)} ago`};
+    if (worstStaleHours > 24) return {level: 'red', text: `${worstSource} stale · ${fmtAgo(worstStaleHours)} ago`};
     if (worstStaleHours > 0 || snapHrs > 6) {
-        return {level: 'amber', text: `as of ${fmtAgo(Math.max(worstStaleHours, snapHrs))} ago`};
+        const label = worstSource
+            ? `${worstSource} stale · ${fmtAgo(Math.max(worstStaleHours, snapHrs))} ago`
+            : `as of ${fmtAgo(Math.max(worstStaleHours, snapHrs))} ago`;
+        return {level: 'amber', text: label};
     }
     return {level: 'green', text: `live · ${fmtAgo(freshestHours)} ago`};
 }
@@ -2106,8 +2125,8 @@ function renderProjections() {
     const nw = getFilterNW();
     const pace = getFilterMonthly();               // ytd_abs / months elapsed
     const moLeft = Math.round((1 - N(1)) * 12);
-    put('c-proj-eoy', nw + pace * moLeft, "at this year's pace");
-    put('c-proj-1y',  nw + pace * 12,     "at this year's pace");
+    put('c-proj-eoy', nw + pace * moLeft, "at this year's pace (incl. one-off revaluations)");
+    put('c-proj-1y',  nw + pace * 12,     "at this year's pace (incl. one-off revaluations)");
 
     const p = _mainFireProjection;
     if (!p || !Array.isArray(p.p50s) || p.p50s.length < 6) {
@@ -2401,7 +2420,13 @@ function applyFireBlend(f) {
 }
 function renderPrj27Bridge() {
     const p = prj27Settings();
-    const apy = +p.apy || 0, trad = +p.tradfi || 7;
+    // Fall back to the plan's own return, not a hardcoded 7% (correction C6.1) —
+    // applyFireBlend() and renderFireSettings() already do this; this card was
+    // missed, so it displayed a blended rate computed at 7% while the engine
+    // used the plan's actual return.
+    const planRet = (_mainFireInputs && !isNaN(_mainFireInputs.planReturnPct))
+        ? _mainFireInputs.planReturnPct : 6;
+    const apy = +p.apy || 0, trad = has(p.tradfi) && +p.tradfi > 0 ? +p.tradfi : planRet;
     const sugg = computeCryptoSharePct();
     const share = sugg ? sugg.pct : 0;
     const nameEl = document.getElementById('prj27Name');
@@ -2477,6 +2502,10 @@ function pickPrj27Strategy(btn) {
 }
 function renderFireSettings() {
     const p = prj27Settings();
+    // Fall back to the plan's own saved return, not a hardcoded 7% (correction
+    // C6.1) — matches applyFireBlend()'s planReturnPct fallback.
+    const planRet = (_mainFireInputs && !isNaN(_mainFireInputs.planReturnPct))
+        ? _mainFireInputs.planReturnPct : 6;
     // Dropdown of synced PRJ27 strategies, pre-filled from the last
     // "Send to FIRE dashboard" sync; falls back to manual entry.
     const pick = document.getElementById('prj27Pick');
@@ -2509,7 +2538,7 @@ function renderFireSettings() {
         }
     }
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Tradfi', p.tradfi || 7);
+    set('prj27Variant', p.variant || ''); set('prj27Apy', p.apy || ''); set('prj27Tradfi', p.tradfi || planRet);
     // Crypto share is never asked for — it's computed from the user's own
     // assets every time (same investable basis as the distribution chart, and
     // the exact fire_investment_total inclusion list in Supabase mode).
@@ -2526,7 +2555,6 @@ function renderFireSettings() {
     // is active and changing the result. TradFi fallback matches
     // applyFireBlend(): the plan's own saved return, not the old hardcoded 7.
     const apy = +p.apy || 0, share = sugg ? sugg.pct : 0;
-    const planRet = _mainFireInputs && !isNaN(_mainFireInputs.planReturnPct) ? _mainFireInputs.planReturnPct : 6;
     const trad = has(p.tradfi) && +p.tradfi > 0 ? +p.tradfi : planRet;
     const t = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     t('fsApyCell', apy > 0 ? apy + '% / yr' : 'not set');
@@ -3977,10 +4005,22 @@ function costBasisFigures() {
     const eur = id => parseFloat(document.getElementById(id).value) || 0;
     const listing = eur('eaCbListing'), improvements = eur('eaCbImprovements'), taxes = eur('eaCbTaxes');
     const initial = eur('eaCbInitial'), loanAmount = eur('eaCbLoanAmount'), loanBalance = eur('eaCbLoanBalance');
-    const totalCost = listing + improvements + taxes;
-    const principalRepaid = Math.max(0, loanAmount - loanBalance);
+    // The cost side is whole-property (that is how a deed reads). The tracked
+    // asset is "House (half)" and the tracked loan balance is already the
+    // owner's share only — so the SHARE applies to the cost side, and to the
+    // cost side alone. Mixing the two bases produced invested.real_estate =
+    // $448,609 against a half-share ledger, and an all-time gain of −42.81%
+    // (2026-09-08 review, correction C1).
+    const sharePct = Math.min(100, Math.max(0.01, eur('eaCbShare') || 100));
+    const share = sharePct / 100;
+    const totalCostWhole = listing + improvements + taxes;
+    const totalCost = totalCostWhole * share;        // the owner's share of cost
+    const loanAmountShare = loanAmount * share;      // whole-property loan → share
+    const principalRepaid = Math.max(0, loanAmountShare - loanBalance);
     const equityEur = Math.max(0, totalCost - loanBalance);
-    return { listing, improvements, taxes, initial, loanAmount, loanBalance, totalCost, principalRepaid, equityEur };
+    return { listing, improvements, taxes, initial, loanAmount, loanAmountShare,
+             loanBalance, sharePct, share, totalCostWhole, totalCost,
+             principalRepaid, equityEur };
 }
 
 function renderCostBasisPreview() {
@@ -4010,7 +4050,7 @@ function renderCostBasisPreview() {
     const totalUsd = tradfiUsd + crypto;
     const totalNw = dbData && dbData.scopes && dbData.scopes.total ? num(dbData.scopes.total.net_worth) : null;
     const newAtPct = totalNw !== null && totalUsd > 0 ? ((totalNw - totalUsd) / totalUsd) * 100 : null;
-    const fundingGap = f.totalCost - (f.initial + f.loanAmount);
+    const fundingGap = f.totalCost - (f.initial + f.loanAmountShare);
     // Warn when the input balance disagrees with the tracked row and the
     // update box is unticked — debt and basis must not drift apart.
     const loan = findHouseLoanHolding();
@@ -4025,12 +4065,14 @@ function renderCostBasisPreview() {
     el.innerHTML =
         `<b>Total house cost:</b> €${f.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
         `(listing €${f.listing.toLocaleString()} + improvements €${f.improvements.toLocaleString()} + taxes/paperwork €${f.taxes.toLocaleString()})<br>` +
-        `<b>Funding:</b> initial capital €${f.initial.toLocaleString()} + bank loan €${f.loanAmount.toLocaleString()} = €${(f.initial + f.loanAmount).toLocaleString()}` +
+        `<b>Funding:</b> initial capital €${f.initial.toLocaleString()} + bank loan (your share) €${f.loanAmountShare.toLocaleString()} = €${(f.initial + f.loanAmountShare).toLocaleString()}` +
         (Math.abs(fundingGap) > 0.5
             ? ` — gap of €${Math.abs(fundingGap).toLocaleString(undefined, { maximumFractionDigits: 2 })}${fundingGap > 0 ? ' beyond the funding side (paid from later savings — included in the figure below)' : ' over-funded — check the figures'}`
             : ' — matches the cost side ✓') + '<br>' +
-        `Principal repaid so far: €${f.principalRepaid.toLocaleString(undefined, { maximumFractionDigits: 2 })} (loan €${f.loanAmount.toLocaleString()} − balance €${f.loanBalance.toLocaleString()})<br>` +
-        `<b>Equity contributed</b> (total cost − current balance): €${f.equityEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
+        `Principal repaid so far: €${f.principalRepaid.toLocaleString(undefined, { maximumFractionDigits: 2 })} (your share of the loan €${f.loanAmountShare.toLocaleString(undefined, { maximumFractionDigits: 2 })} − balance €${f.loanBalance.toLocaleString()})<br>` +
+        `Whole property: €${f.totalCostWhole.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
+        `× ${f.sharePct}% = <b>€${f.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b> your share<br>` +
+        `<b>Equity contributed</b> (your share of cost − current balance): €${f.equityEur.toLocaleString(undefined, { maximumFractionDigits: 2 })} ` +
         `× ${eurUsdRate.toFixed(4)} = <b>${fd(realEstateUsd)}</b> (invested.real_estate)<br>` +
         `tradfi = ${fd(tradfiUsd)} (real_estate + banks ${fd(banks)}) · total = ${fd(totalUsd)} (tradfi + crypto ${fd(crypto)})<br>` +
         (newAtPct !== null
@@ -4061,6 +4103,16 @@ async function saveCostBasis() {
             const trackedEur = Math.abs(Number(loan.usd_value)) / eurUsdRate;
             const balanceChanged = Math.abs(trackedEur - f.loanBalance) > 0.5;
             const wantUpdate = document.getElementById('eaCbUpdateLoan').checked;
+            // A whole-property balance typed into a half-share ledger would
+            // silently double the mortgage (correction C1). Refuse anything
+            // that moves the tracked balance by more than 25%.
+            const drift = trackedEur > 0 ? Math.abs(f.loanBalance - trackedEur) / trackedEur : 0;
+            if (balanceChanged && wantUpdate && drift > 0.25) {
+                set(`Loan balance €${f.loanBalance.toLocaleString()} is ${(drift*100).toFixed(0)}% away from ` +
+                    `the tracked €${trackedEur.toFixed(2)}. If you meant the whole-property balance, enter ` +
+                    `your share instead — or untick "also update the tracked loan balance".`, true);
+                return;
+            }
             if (balanceChanged && wantUpdate) {
                 await rpcAuth('manual_loan_upsert', {
                     p_label: loan.account_label,
