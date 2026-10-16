@@ -459,6 +459,42 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     .wcard{min-width:0;}
     body{overflow-x:hidden;}
 }
+
+/* ── Loan Payoff simulator ───────────────────────────────────────────────── */
+.lp-sec{margin-bottom:18px;}
+.lp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.lp-cell{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:0;}
+.lp-cell .k{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px;}
+.lp-cell .v{font-size:18px;font-weight:700;letter-spacing:-.3px;overflow-wrap:anywhere;}
+.lp-cell .s{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.lp-row{display:grid;gap:8px;align-items:center;margin-bottom:8px;}
+.lp-row-plat{grid-template-columns:minmax(0,1fr) 110px 90px 34px;}
+.lp-row-contrib{grid-template-columns:110px minmax(0,1fr) minmax(0,1.3fr) 34px;}
+.lp-row .minput{min-width:0;}
+.lp-x{padding:7px 0;width:34px;background:transparent;border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer;font-size:14px;}
+.lp-x:hover,.lp-x:focus-visible{color:var(--red);border-color:var(--red);}
+.lp-colhead{display:grid;gap:8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;}
+.lp-colhead.plat{grid-template-columns:minmax(0,1fr) 110px 90px 34px;}
+.lp-colhead.contrib{grid-template-columns:110px minmax(0,1fr) minmax(0,1.3fr) 34px;}
+.lp-total{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:8px;border-top:1px dashed rgba(255,255,255,.12);font-size:13.5px;}
+.lp-save{font-size:11.5px;min-height:16px;}
+.lp-headline{font-size:clamp(18px,2.4vw,26px);font-weight:800;color:var(--accent);letter-spacing:-.5px;line-height:1.2;margin-bottom:12px;}
+.lp-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+.lp-table th{font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;text-align:right;padding:6px 8px;font-weight:600;}
+.lp-table td{text-align:right;padding:6px 8px;border-top:1px dashed rgba(255,255,255,.08);}
+.lp-table th:first-child,.lp-table td:first-child{text-align:left;}
+.lp-chartbox{position:relative;height:300px;}
+.lp-err{color:var(--red);font-size:13px;margin-bottom:8px;}
+@media (max-width:640px){
+    .lp-row-plat{grid-template-columns:minmax(0,1fr) 84px 64px 34px;}
+    .lp-colhead.plat{grid-template-columns:minmax(0,1fr) 84px 64px 34px;}
+    .lp-row-contrib{grid-template-columns:84px minmax(0,1fr) 34px;}
+    .lp-row-contrib .lp-target{grid-column:1 / 3;grid-row:2;}
+    .lp-row-contrib .lp-x{grid-column:3;grid-row:1 / 3;height:100%;}
+    .lp-colhead.contrib{display:none;}
+    .lp-chartbox{height:240px;}
+    .lp-table th,.lp-table td{padding:6px 4px;font-size:12px;}
+}
     </style>
 </head>
 <body data-filter="portfolio">
@@ -734,6 +770,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
         <div class="wcard" style="cursor:pointer;" onclick="window.open('https://loan-pool-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, salary &amp; FIRE plan</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openLoanPayoff()"><div class="wtitle" style="margin-bottom:4px;">&#129518; Loan Payoff</div><div class="wnote" style="margin:0;">When your stable assets can repay the Aave loan</div></div>
     </div>
 </section>
 
@@ -747,6 +784,90 @@ details.dd tbody tr td:first-child{padding-left:26px;}
 </div>
 
 <div id="toast"></div>
+
+<!-- LOAN PAYOFF MODAL -->
+<div class="modal" id="lpModal">
+    <div class="mbox" style="width:980px;">
+        <div class="mtitle">&#129518; Loan Payoff</div>
+
+        <!-- Login form -->
+        <div id="lpLoginBox">
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to load your saved platforms and plan. Already signed in via Edit Assets or Cash Flow in this session? This unlocks automatically.</div>
+            <div class="mrow">
+                <label class="mlabel" for="lpEmail">Email</label>
+                <input class="minput" id="lpEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lpPassword').focus()">
+            </div>
+            <div class="mrow">
+                <label class="mlabel" for="lpPassword">Password</label>
+                <input class="minput" id="lpPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginLoanPayoff()">
+            </div>
+            <div id="lpLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
+            <div class="mactions">
+                <button class="mcancel" onclick="closeLoanPayoff()">Cancel</button>
+                <button class="mprimary" id="lpLoginBtn" onclick="loginLoanPayoff()">Sign In</button>
+            </div>
+        </div>
+
+        <!-- Panel -->
+        <div id="lpPanel" style="display:none;">
+            <div id="lpFatal" class="lp-err" style="display:none;"></div>
+
+            <!-- A: live loan -->
+            <div class="lp-sec">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                    <label class="mlabel" style="margin:0;">Your Aave loan (live, read-only)</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="lpUpdated" style="font-size:11.5px;color:var(--text2);"></span>
+                        <button class="mgray" style="padding:5px 10px;" id="lpRefreshBtn" onclick="lpRefreshLoan()" aria-label="Refresh loan data">&#10227; Refresh</button>
+                    </div>
+                </div>
+                <div id="lpLoanErr" class="lp-err" style="display:none;"></div>
+                <div class="lp-grid" id="lpLoanGrid"></div>
+            </div>
+
+            <!-- B: stable assets -->
+            <div class="lp-sec">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+                    <label class="mlabel" style="margin:0;">Stable assets (earning yield)</label>
+                    <span id="lpSaveState" class="lp-save" role="status" aria-live="polite"></span>
+                </div>
+                <div class="lp-colhead plat"><span>Platform</span><span>Value ($)</span><span>APR (%)</span><span></span></div>
+                <div id="lpPlatRows"></div>
+                <div style="margin:4px 0 10px;"><button class="mgray" id="lpAddPlat" onclick="lpAddPlatform()">+ Add platform</button></div>
+                <div class="lp-total"><span>Total: <b class="sensitive" id="lpPlatTotal">-</b></span><span>Weighted avg APR: <b id="lpPlatApr">-</b></span></div>
+            </div>
+
+            <!-- C: plan -->
+            <div class="lp-sec">
+                <label class="mlabel">Repay / invest plan</label>
+                <div class="lp-colhead contrib"><span>Amount ($)</span><span>Frequency</span><span>Target</span><span></span></div>
+                <div id="lpContribRows"></div>
+                <div style="margin:4px 0 10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+                    <button class="mgray" id="lpAddContrib" onclick="lpAddContribution()">+ Add contribution</button>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                        <input type="checkbox" id="lpReinvest" checked onchange="lpState.reinvest=this.checked;lpRecalc();"> Reinvest vault yield
+                    </label>
+                </div>
+            </div>
+
+            <!-- D: results -->
+            <div class="lp-sec">
+                <label class="mlabel">Results &middot; next 5 years</label>
+                <div id="lpResults"></div>
+                <div class="wcard sensitive" style="margin-top:12px;padding:12px;">
+                    <div class="lp-chartbox"><canvas id="lpChart" role="img" aria-label="Five year projection of debt, gross stable assets and net position"></canvas></div>
+                </div>
+                <div style="overflow-x:auto;"><table class="lp-table" id="lpTable"></table></div>
+                <div class="wnote">Projection only: assumes today's borrow rate and the APRs above stay constant, no fees, no price moves.</div>
+            </div>
+
+            <div class="mactions" style="margin-top:6px;">
+                <button class="mgray" onclick="logoutLoanPayoff()">Sign Out</button>
+                <button class="mcancel" onclick="closeLoanPayoff()">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- SETTINGS MODAL -->
 <div class="modal" id="modal">
@@ -6303,6 +6424,453 @@ async function loadCfCutSuggestions() {
 }
 
 document.getElementById('cfModal').addEventListener('click', e => { if (e.target === document.getElementById('cfModal')) closeCashFlow(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAN PAYOFF SIMULATOR
+// Section A reads the Aave v3 loan LIVE from public Arbitrum RPCs (eth_call,
+// nothing stored). Sections B/C (platform list + repay/invest plan) and the
+// wallet address live ONLY in the Supabase table loan_sim_config, reached via
+// loan_sim_get / loan_sim_save (owner-only). The wallet address and position
+// values are deliberately NOT in this file -- this page is public.
+// ─────────────────────────────────────────────────────────────────────────────
+const LP_RPCS = ['https://arbitrum-one.publicnode.com', 'https://arb1.arbitrum.io/rpc', 'https://1rpc.io/arb'];
+const LP_AAVE_POOL = '0x794a61358D6845594F94dc1DB02A252b5b4814aD';
+const LP_USDC = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+const LP_VAR_DEBT_USDC = '0xf611aeb5013fd2c0511c9cd55c7dc5c1140741a6';
+const LP_AWBTC = '0x078f358208685046a11c85e8ad32895ded33a249';
+const LP_MAX_PLATFORMS = 30, LP_MAX_CONTRIBS = 10;
+
+let lpState = { wallet: null, platforms: [], contributions: [], reinvest: true,
+                loan: null, loanErr: '', loadedAt: 0, saveTimer: null, saveSeq: 0 };
+let lpChart = null, lpTicker = null;
+
+// ── Pure maths (no DOM) ─────────────────────────────────────────────────────
+/* LP_SIM_START */
+function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, months = 60 }) {
+    let d = Math.max(0, Number(debt) || 0);
+    const vals = (platforms || []).map(p => Math.max(0, Number(p.value) || 0));
+    const gm = (platforms || []).map(p => Math.pow(1 + Math.max(-0.99, (Number(p.apr) || 0) / 100), 1 / 12) - 1);
+    const debtGrowth = Math.pow(1 + (Number(borrowApy) || 0), 1 / 12) - 1;
+    const plan = (contributions || []).map(c => ({
+        amount: Math.max(0, Number(c.amount) || 0), frequency: c.frequency, target: c.target }));
+    let cash = 0;
+    const sum = a => a.reduce((s, x) => s + x, 0);
+    const addToVaults = amt => {
+        if (amt <= 0) return;
+        if (!vals.length) { cash += amt; return; }
+        const tot = sum(vals);
+        for (let i = 0; i < vals.length; i++) vals[i] += tot > 0 ? amt * vals[i] / tot : amt / vals.length;
+    };
+    const series = [{ m: 0, debt: d, gross: sum(vals), net: sum(vals) - d, yield: 0, interest: 0 }];
+    for (let m = 1; m <= months; m++) {
+        // 1. loan interest accrues
+        const interest = d * debtGrowth;
+        d += interest;
+        // 2. vault yield accrues (compounds, or piles up as cash if not reinvested)
+        let y = 0;
+        for (let i = 0; i < vals.length; i++) {
+            const g = vals[i] * gm[i];
+            y += g;
+            if (reinvest) vals[i] += g; else cash += g;
+        }
+        // 3. contributions due this month
+        for (const c of plan) {
+            let amt = 0;
+            switch (c.frequency) {
+                case 'once': amt = m === 1 ? c.amount : 0; break;
+                case 'monthly': amt = c.amount; break;
+                case 'weekly': amt = c.amount * 52 / 12; break;
+                case 'quarterly': amt = m % 3 === 0 ? c.amount : 0; break;
+                case 'yearly': amt = m % 12 === 0 ? c.amount : 0; break;
+            }
+            if (amt <= 0) continue;
+            if (c.target === 'loan') {
+                const pay = Math.min(amt, d);
+                d -= pay;
+                addToVaults(amt - pay);
+            } else {
+                addToVaults(amt);
+            }
+        }
+        if (d < 0.005) d = 0;
+        // 4. record end of month
+        const gross = sum(vals) + cash;
+        series.push({ m, debt: d, gross, net: gross - d, yield: y, interest });
+    }
+    const first = f => { const r = series.find(f); return r ? r.m : null; };
+    const startDebt = series[0].debt;
+    return {
+        series,
+        coverageMonth: first(s => s.gross >= s.debt - 1e-9),
+        yieldCoverMonth: first(s => s.m >= 1 && s.interest > 0 && s.yield >= s.interest),
+        payoffMonth: startDebt <= 0 ? 0 : first(s => s.debt <= 0),
+    };
+}
+/* LP_SIM_END */
+
+// ── Live Aave read (browser -> public Arbitrum RPC) ─────────────────────────
+async function lpEthCall(to, data) {
+    let lastErr = null;
+    for (const url of LP_RPCS) {
+        const ctl = new AbortController();
+        const tid = setTimeout(() => ctl.abort(), 8000);
+        try {
+            const resp = await fetch(url, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+                body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] }),
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const j = await resp.json();
+            if (j.error || typeof j.result !== 'string' || !j.result.startsWith('0x') || j.result.length < 66)
+                throw new Error((j.error && j.error.message) || 'empty result');
+            return j.result;
+        } catch (e) {
+            lastErr = e;
+        } finally {
+            clearTimeout(tid);
+        }
+    }
+    throw new Error('All Arbitrum RPCs failed (' + (lastErr && lastErr.message ? lastErr.message : 'unknown') + ')');
+}
+function lpWords(hex) {
+    const h = hex.slice(2), out = [];
+    for (let i = 0; i + 64 <= h.length; i += 64) out.push(BigInt('0x' + h.slice(i, i + 64)));
+    return out;
+}
+function lpPad(addr) { return addr.toLowerCase().replace('0x', '').padStart(64, '0'); }
+
+async function lpFetchAave(wallet) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(wallet || '')) throw new Error('No valid wallet configured');
+    const [acct, reserve, debtHex, btcHex] = await Promise.all([
+        lpEthCall(LP_AAVE_POOL, '0xbf92857c' + lpPad(wallet)),
+        lpEthCall(LP_AAVE_POOL, '0x35ea6a75' + lpPad(LP_USDC)),
+        lpEthCall(LP_VAR_DEBT_USDC, '0x70a08231' + lpPad(wallet)),
+        lpEthCall(LP_AWBTC, '0x70a08231' + lpPad(wallet)),
+    ]);
+    const a = lpWords(acct), r = lpWords(reserve);
+    if (a.length < 6 || r.length < 5) throw new Error('Unexpected Aave response');
+    const borrowApr = Number(r[4]) / 1e27;
+    const secs = 31536000;
+    const borrowApy = Math.pow(1 + borrowApr / secs, secs) - 1;
+    const hfRaw = Number(a[5]) / 1e18;
+    return {
+        debtUsdc: Number(lpWords(debtHex)[0]) / 1e6,
+        collateralBtc: Number(lpWords(btcHex)[0]) / 1e8,
+        collateralUsd: Number(a[0]) / 1e8,
+        debtUsd: Number(a[1]) / 1e8,
+        liqThreshold: Number(a[3]) / 10000,
+        healthFactor: hfRaw > 1e6 ? Infinity : hfRaw,
+        borrowApr, borrowApy,
+    };
+}
+
+// ── Open / close / auth ─────────────────────────────────────────────────────
+function openLoanPayoff() {
+    const source = localStorage.getItem(LS.source) || 'sheets';
+    if (source !== 'supabase') {
+        toast('Loan Payoff requires Supabase mode — switch it on in Settings first.', true);
+        return;
+    }
+    if (!authToken) {
+        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
+        if (saved) authToken = saved;
+    }
+    document.getElementById('lpModal').classList.add('open');
+    updateLoanPayoffView();
+}
+
+function closeLoanPayoff() {
+    document.getElementById('lpModal').classList.remove('open');
+    const err = document.getElementById('lpLoginErr'); if (err) err.textContent = '';
+    clearInterval(lpTicker); lpTicker = null;
+}
+
+function updateLoanPayoffView() {
+    const loginBox = document.getElementById('lpLoginBox');
+    const panel = document.getElementById('lpPanel');
+    if (authToken) {
+        loginBox.style.display = 'none';
+        panel.style.display = 'block';
+        lpLoadAll();
+    } else {
+        loginBox.style.display = 'block';
+        panel.style.display = 'none';
+    }
+}
+
+async function loginLoanPayoff() {
+    const email = document.getElementById('lpEmail').value.trim();
+    const password = document.getElementById('lpPassword').value;
+    const errEl = document.getElementById('lpLoginErr');
+    const btn = document.getElementById('lpLoginBtn');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token) { errEl.textContent = 'Invalid credentials.'; return; }
+        authToken = data.access_token;
+        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
+        sessionStorage.setItem(SS_EMAIL_KEY, email);
+        document.getElementById('lpPassword').value = '';
+        updateLoanPayoffView();
+    } catch (err) {
+        errEl.textContent = 'Sign-in failed — check your connection and try again.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
+
+function logoutLoanPayoff() {
+    logoutEditAssets(); // shared session
+    clearInterval(lpTicker); lpTicker = null;
+    updateLoanPayoffView();
+}
+
+// ── Load: saved config, then live loan ──────────────────────────────────────
+async function lpLoadAll() {
+    const fatal = document.getElementById('lpFatal');
+    fatal.style.display = 'none';
+    try {
+        const cfg = await rpcAuth('loan_sim_get');
+        if (!cfg) {
+            fatal.textContent = 'No loan simulator config exists for this user yet.';
+            fatal.style.display = 'block';
+            lpState.wallet = null;
+        } else {
+            lpState.wallet = cfg.wallet;
+            lpState.platforms = Array.isArray(cfg.platforms) ? cfg.platforms.map(p => ({ name: p.name, value: Number(p.value) || 0, apr: Number(p.apr) || 0 })) : [];
+            lpState.contributions = Array.isArray(cfg.contributions) ? cfg.contributions.map(c => ({ amount: Number(c.amount) || 0, frequency: c.frequency, target: c.target })) : [];
+        }
+    } catch (e) {
+        if (!authToken) { updateLoanPayoffView(); return; }
+        fatal.textContent = 'Could not load your saved settings: ' + e.message;
+        fatal.style.display = 'block';
+    }
+    lpState.reinvest = document.getElementById('lpReinvest').checked;
+    lpSetSaveState('');
+    lpRenderRows();
+    lpRecalc();
+    clearInterval(lpTicker);
+    lpTicker = setInterval(lpTickUpdated, 1000);
+    await lpRefreshLoan();
+}
+
+async function lpRefreshLoan() {
+    const btn = document.getElementById('lpRefreshBtn');
+    const errEl = document.getElementById('lpLoanErr');
+    btn.disabled = true;
+    errEl.style.display = 'none';
+    try {
+        lpState.loan = await lpFetchAave(lpState.wallet);
+        lpState.loanErr = '';
+        lpState.loadedAt = Date.now();
+    } catch (e) {
+        lpState.loan = null;
+        lpState.loanErr = e.message;
+    } finally {
+        btn.disabled = false;
+    }
+    lpRenderLoan();
+    lpRecalc();
+}
+
+function lpTickUpdated() {
+    const el = document.getElementById('lpUpdated');
+    if (!el) return;
+    if (!lpState.loan) { el.textContent = ''; return; }
+    el.textContent = 'live · updated ' + Math.max(0, Math.round((Date.now() - lpState.loadedAt) / 1000)) + 's ago';
+}
+
+// ── Formatting ──────────────────────────────────────────────────────────────
+const lpUsd = n => (n < -0.5 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const lpUsd2 = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function lpMonthDate(m) { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + m, 1); }
+const lpMon = (m, long) => lpMonthDate(m).toLocaleDateString('en-US', { month: 'short', year: long ? 'numeric' : '2-digit' });
+function lpMonthsText(n) { return n + (n === 1 ? ' month' : ' months'); }
+
+function lpRenderLoan() {
+    const grid = document.getElementById('lpLoanGrid');
+    const errEl = document.getElementById('lpLoanErr');
+    if (!lpState.loan) {
+        grid.innerHTML = '';
+        errEl.innerHTML = escapeHtml(lpState.loanErr ? 'Could not read the live loan: ' + lpState.loanErr : 'Loan not loaded.') +
+            ' <button class="mgray" style="padding:4px 10px;margin-left:6px;" onclick="lpRefreshLoan()">Retry</button>';
+        errEl.style.display = 'block';
+        lpTickUpdated();
+        return;
+    }
+    const L = lpState.loan;
+    const hf = L.healthFactor === Infinity ? '∞' : L.healthFactor.toFixed(2);
+    grid.innerHTML = `
+        <div class="lp-cell"><span class="k">Debt (USDC)</span><span class="v sensitive">${lpUsd2(L.debtUsdc)}</span></div>
+        <div class="lp-cell"><span class="k">Borrow rate</span><span class="v">${(L.borrowApr * 100).toFixed(2)}% APR</span><div class="s">${(L.borrowApy * 100).toFixed(2)}% APY</div></div>
+        <div class="lp-cell"><span class="k">Collateral</span><span class="v sensitive">${L.collateralBtc.toFixed(4)} BTC</span><div class="s sensitive">${lpUsd(L.collateralUsd)}</div></div>
+        <div class="lp-cell"><span class="k">Health factor</span><span class="v">${hf}</span></div>`;
+    lpTickUpdated();
+}
+
+// ── Editable rows ───────────────────────────────────────────────────────────
+function lpRenderRows() {
+    document.getElementById('lpPlatRows').innerHTML = lpState.platforms.map((p, i) => `
+        <div class="lp-row lp-row-plat">
+            <input class="minput" type="text" maxlength="60" value="${escapeHtml(p.name)}" placeholder="Platform name" aria-label="Platform name" oninput="lpEditPlat(${i},'name',this.value)">
+            <input class="minput sensitive" type="number" min="0" step="any" inputmode="decimal" value="${p.value}" aria-label="Value in dollars" oninput="lpEditPlat(${i},'value',this.value)">
+            <input class="minput" type="number" min="-50" max="200" step="any" inputmode="decimal" value="${p.apr}" aria-label="APR percent" oninput="lpEditPlat(${i},'apr',this.value)">
+            <button class="lp-x" aria-label="Remove platform" onclick="lpRemovePlat(${i})">&#10005;</button>
+        </div>`).join('');
+    const freqs = [['once', 'One-off'], ['weekly', 'Weekly'], ['monthly', 'Monthly'], ['quarterly', 'Quarterly'], ['yearly', 'Yearly']];
+    const targets = [['loan', 'Repay loan'], ['vaults', 'Add to vaults/pools']];
+    const opts = (list, cur) => list.map(([v, t]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`).join('');
+    document.getElementById('lpContribRows').innerHTML = lpState.contributions.map((c, i) => `
+        <div class="lp-row lp-row-contrib">
+            <input class="minput sensitive" type="number" min="0" step="any" inputmode="decimal" value="${c.amount}" aria-label="Amount in dollars" oninput="lpEditContrib(${i},'amount',this.value)">
+            <select class="minput" aria-label="Frequency" onchange="lpEditContrib(${i},'frequency',this.value)">${opts(freqs, c.frequency)}</select>
+            <select class="minput lp-target" aria-label="Target" onchange="lpEditContrib(${i},'target',this.value)">${opts(targets, c.target)}</select>
+            <button class="lp-x" aria-label="Remove contribution" onclick="lpRemoveContrib(${i})">&#10005;</button>
+        </div>`).join('');
+    document.getElementById('lpAddPlat').disabled = lpState.platforms.length >= LP_MAX_PLATFORMS;
+    document.getElementById('lpAddContrib').disabled = lpState.contributions.length >= LP_MAX_CONTRIBS;
+}
+
+function lpEditPlat(i, field, raw) {
+    const p = lpState.platforms[i]; if (!p) return;
+    p[field] = field === 'name' ? raw : (parseFloat(raw) || 0);
+    lpChanged();
+}
+function lpEditContrib(i, field, raw) {
+    const c = lpState.contributions[i]; if (!c) return;
+    c[field] = field === 'amount' ? (parseFloat(raw) || 0) : raw;
+    lpChanged();
+}
+function lpAddPlatform() {
+    if (lpState.platforms.length >= LP_MAX_PLATFORMS) return;
+    lpState.platforms.push({ name: 'New platform', value: 0, apr: 0 });
+    lpRenderRows(); lpChanged();
+}
+function lpRemovePlat(i) { lpState.platforms.splice(i, 1); lpRenderRows(); lpChanged(); }
+function lpAddContribution() {
+    if (lpState.contributions.length >= LP_MAX_CONTRIBS) return;
+    lpState.contributions.push({ amount: 0, frequency: 'monthly', target: 'loan' });
+    lpRenderRows(); lpChanged();
+}
+function lpRemoveContrib(i) { lpState.contributions.splice(i, 1); lpRenderRows(); lpChanged(); }
+
+function lpChanged() {
+    lpRecalc();
+    lpSetSaveState('pending');
+    clearTimeout(lpState.saveTimer);
+    lpState.saveTimer = setTimeout(lpSave, 1000);
+}
+
+function lpSetSaveState(s, msg) {
+    const el = document.getElementById('lpSaveState');
+    if (!el) return;
+    if (s === 'saving') { el.textContent = 'Saving…'; el.style.color = 'var(--text2)'; }
+    else if (s === 'saved') { el.textContent = 'Saved ✓'; el.style.color = 'var(--green)'; }
+    else if (s === 'pending') { el.textContent = 'Unsaved changes…'; el.style.color = 'var(--text2)'; }
+    else if (s === 'failed') {
+        el.innerHTML = '<span style="color:var(--red)">Save failed' + (msg ? ' (' + escapeHtml(msg) + ')' : '') +
+            ' — </span><a href="#" style="color:var(--accent)" onclick="lpSave();return false;">retry</a>';
+    } else { el.textContent = ''; }
+}
+
+async function lpSave() {
+    clearTimeout(lpState.saveTimer);
+    const seq = ++lpState.saveSeq;
+    lpSetSaveState('saving');
+    try {
+        await rpcAuth('loan_sim_save', {
+            p_platforms: lpState.platforms.map(p => ({ name: String(p.name).trim(), value: p.value, apr: p.apr })),
+            p_contributions: lpState.contributions.map(c => ({ amount: c.amount, frequency: c.frequency, target: c.target })),
+        });
+        if (seq === lpState.saveSeq) lpSetSaveState('saved');
+    } catch (e) {
+        if (seq === lpState.saveSeq) lpSetSaveState('failed', e.message.replace(/^loan_sim_save failed: ?/, ''));
+        if (!authToken) updateLoanPayoffView();
+    }
+}
+
+// ── Results + chart ─────────────────────────────────────────────────────────
+function lpRecalc() {
+    const total = lpState.platforms.reduce((s, p) => s + (p.value || 0), 0);
+    const wApr = total > 0 ? lpState.platforms.reduce((s, p) => s + (p.value || 0) * (p.apr || 0), 0) / total : 0;
+    document.getElementById('lpPlatTotal').textContent = lpUsd(total);
+    document.getElementById('lpPlatApr').textContent = wApr.toFixed(2) + '%';
+
+    const res = document.getElementById('lpResults');
+    const table = document.getElementById('lpTable');
+    if (!lpState.loan) {
+        res.innerHTML = '<div class="wnote" style="margin:0;">Results appear once the live loan has loaded.</div>';
+        table.innerHTML = '';
+        lpDrawChart(null);
+        return;
+    }
+    const sim = lpSimulate({ debt: lpState.loan.debtUsdc, borrowApy: lpState.loan.borrowApy,
+        platforms: lpState.platforms, contributions: lpState.contributions, reinvest: lpState.reinvest, months: 60 });
+    const cm = sim.coverageMonth, ym = sim.yieldCoverMonth, pm = sim.payoffMonth, end = sim.series[60];
+    const head = cm === 0 ? 'Your stables can already repay the loan — today'
+        : cm === null ? 'Stables can\'t repay the loan within 5 years'
+        : `Stables can repay the loan in ${lpMonthsText(cm)} (≈ ${lpMon(cm, true)})`;
+    const yieldTxt = ym === null ? 'Not within 5 years' : `Month ${ym} (≈ ${lpMon(ym, true)})`;
+    const payTxt = pm === null ? 'Not within 5 years' : pm === 0 ? 'No debt' : `Month ${pm} (≈ ${lpMon(pm, true)})`;
+    res.innerHTML = `
+        <div class="lp-headline sensitive">${head}</div>
+        <div class="lp-grid">
+            <div class="lp-cell"><span class="k">Yield covers loan interest from</span><span class="v" style="font-size:15px;">${yieldTxt}</span></div>
+            <div class="lp-cell"><span class="k">Loan fully paid by contributions</span><span class="v" style="font-size:15px;">${payTxt}</span></div>
+            <div class="lp-cell"><span class="k">Debt in 5 years</span><span class="v sensitive" style="color:var(--red)">${lpUsd(end.debt)}</span></div>
+            <div class="lp-cell"><span class="k">Gross in 5 years</span><span class="v sensitive" style="color:var(--f-liq)">${lpUsd(end.gross)}</span></div>
+            <div class="lp-cell"><span class="k">Net in 5 years</span><span class="v sensitive" style="color:var(--accent)">${lpUsd(end.net)}</span></div>
+        </div>`;
+    table.innerHTML = '<thead><tr><th>When</th><th>Debt</th><th>Gross</th><th>Net</th></tr></thead><tbody>' +
+        [12, 24, 36, 48, 60].map(m => { const s = sim.series[m];
+            return `<tr><td>Year ${m / 12} · ${lpMon(m)}</td><td class="sensitive">${lpUsd(s.debt)}</td><td class="sensitive">${lpUsd(s.gross)}</td><td class="sensitive">${lpUsd(s.net)}</td></tr>`; }).join('') +
+        '</tbody>';
+    lpDrawChart(sim);
+}
+
+function lpDrawChart(sim) {
+    const canvas = document.getElementById('lpChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (!sim) { if (lpChart) { lpChart.destroy(); lpChart = null; } return; }
+    const css = getComputedStyle(document.body);
+    const col = n => css.getPropertyValue(n).trim() || '#888';
+    const labels = sim.series.map(s => lpMon(s.m));
+    const marker = sim.series.map(s => s.m === sim.coverageMonth ? s.gross : null);
+    const line = (label, key, color) => ({ label, data: sim.series.map(s => s[key]), borderColor: color,
+        backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 });
+    const datasets = [
+        line('Debt', 'debt', col('--red')),
+        line('Gross stables', 'gross', col('--f-liq')),
+        line('Net', 'net', col('--accent')),
+        { label: 'Stables cover loan', data: marker, borderColor: col('--text'), backgroundColor: col('--text'),
+          showLine: false, pointRadius: 7, pointHoverRadius: 8, pointStyle: 'rectRot' },
+    ];
+    if (lpChart) { lpChart.data.labels = labels; lpChart.data.datasets = datasets; lpChart.update('none'); return; }
+    lpChart = new Chart(canvas, {
+        type: 'line', data: { labels, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: col('--text2'), boxWidth: 12, usePointStyle: true } },
+                tooltip: { callbacks: { label: c => c.parsed.y === null ? null : `${c.dataset.label}: ${lpUsd(c.parsed.y)}` } },
+            },
+            scales: {
+                x: { ticks: { color: col('--text2'), maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(255,255,255,.05)' } },
+                y: { ticks: { color: col('--text2'), callback: v => (v < 0 ? '-$' : '$') + Math.abs(Math.round(v / 1000)) + 'k' }, grid: { color: 'rgba(255,255,255,.07)' } },
+            },
+        },
+    });
+}
+
+document.getElementById('lpModal').addEventListener('click', e => { if (e.target === document.getElementById('lpModal')) closeLoanPayoff(); });
 
 function toast(msg, isErr) {
     const t = document.getElementById('toast');
