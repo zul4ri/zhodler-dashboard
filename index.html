@@ -854,11 +854,16 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             <div class="lp-sec">
                 <label class="mlabel">Results &middot; next 5 years</label>
                 <div id="lpResults"></div>
+                <div style="margin:12px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">
+                    <label for="lpBtcGrowth">BTC price growth (%/yr)</label>
+                    <input class="minput" id="lpBtcGrowth" type="number" min="-90" max="500" step="any" inputmode="decimal" value="0" style="width:90px;" oninput="lpGrowthChanged(this.value)">
+                    <span id="lpBtcNote" style="font-size:11.5px;color:var(--text2);"></span>
+                </div>
                 <div class="wcard sensitive" style="margin-top:12px;padding:12px;">
-                    <div class="lp-chartbox"><canvas id="lpChart" role="img" aria-label="Five year projection of debt, gross stable assets and net position"></canvas></div>
+                    <div class="lp-chartbox"><canvas id="lpChart" role="img" aria-label="Five year projection of debt, gross stable assets, net position and total including BTC"></canvas></div>
                 </div>
                 <div style="overflow-x:auto;"><table class="lp-table" id="lpTable"></table></div>
-                <div class="wnote">Projection only: assumes today's borrow rate and the APRs above stay constant, no fees, no price moves.</div>
+                <div class="wnote">Projection only: assumes today's borrow rate and the APRs above stay constant, BTC grows at the rate you set (0% = today's price), no fees.</div>
             </div>
 
             <div class="mactions" style="margin-top:6px;">
@@ -6441,12 +6446,12 @@ const LP_AWBTC = '0x078f358208685046a11c85e8ad32895ded33a249';
 const LP_MAX_PLATFORMS = 30, LP_MAX_CONTRIBS = 10;
 
 let lpState = { wallet: null, platforms: [], contributions: [], reinvest: true,
-                loan: null, loanErr: '', loadedAt: 0, saveTimer: null, saveSeq: 0 };
+                loan: null, loanErr: '', loadedAt: 0, saveTimer: null, saveSeq: 0, btcGrowth: 0 };
 let lpChart = null, lpTicker = null;
 
 // ── Pure maths (no DOM) ─────────────────────────────────────────────────────
 /* LP_SIM_START */
-function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, months = 60 }) {
+function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, months = 60, btcQty = 0, btcPrice = 0, btcGrowthPct = 0 }) {
     let d = Math.max(0, Number(debt) || 0);
     const vals = (platforms || []).map(p => Math.max(0, Number(p.value) || 0));
     const gm = (platforms || []).map(p => Math.pow(1 + Math.max(-0.99, (Number(p.apr) || 0) / 100), 1 / 12) - 1);
@@ -6461,7 +6466,10 @@ function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, month
         const tot = sum(vals);
         for (let i = 0; i < vals.length; i++) vals[i] += tot > 0 ? amt * vals[i] / tot : amt / vals.length;
     };
-    const series = [{ m: 0, debt: d, gross: sum(vals), net: sum(vals) - d, yield: 0, interest: 0 }];
+    const btc0 = Math.max(0, Number(btcQty) || 0) * Math.max(0, Number(btcPrice) || 0);
+    const btcF = 1 + Math.min(500, Math.max(-90, Number(btcGrowthPct) || 0)) / 100;
+    const series = [{ m: 0, debt: d, gross: sum(vals), net: sum(vals) - d, yield: 0, interest: 0,
+                      btcValue: btc0, total: btc0 + sum(vals) }];
     for (let m = 1; m <= months; m++) {
         // 1. loan interest accrues
         const interest = d * debtGrowth;
@@ -6495,7 +6503,8 @@ function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, month
         if (d < 0.005) d = 0;
         // 4. record end of month
         const gross = sum(vals) + cash;
-        series.push({ m, debt: d, gross, net: gross - d, yield: y, interest });
+        const btcValue = btc0 * Math.pow(btcF, m / 12);
+        series.push({ m, debt: d, gross, net: gross - d, yield: y, interest, btcValue, total: btcValue + gross });
     }
     const first = f => { const r = series.find(f); return r ? r.m : null; };
     const startDebt = series[0].debt;
@@ -6653,6 +6662,8 @@ async function lpLoadAll() {
         fatal.style.display = 'block';
     }
     lpState.reinvest = document.getElementById('lpReinvest').checked;
+    lpState.btcGrowth = lpClampGrowth(lpLsGet('lp_btc_growth'));
+    document.getElementById('lpBtcGrowth').value = lpState.btcGrowth;
     lpSetSaveState('');
     lpRenderRows();
     lpRecalc();
@@ -6797,6 +6808,26 @@ async function lpSave() {
 }
 
 // ── Results + chart ─────────────────────────────────────────────────────────
+// BTC inputs come only from the live Aave read: quantity = aWBTC balance,
+// price = Aave oracle value of the collateral / quantity.
+const lpBtcPrice = L => (L && L.collateralBtc > 0) ? L.collateralUsd / L.collateralBtc : 0;
+const lpHasBtc = L => !!L && L.collateralBtc > 0 && isFinite(lpBtcPrice(L)) && lpBtcPrice(L) > 0;
+function lpUpdateBtcNote() {
+    const el = document.getElementById('lpBtcNote');
+    if (!el) return;
+    el.textContent = !lpState.loan ? 'BTC / total line hidden: the live Aave read has not loaded.'
+        : !lpHasBtc(lpState.loan) ? 'BTC / total line hidden: no BTC collateral found in the live Aave read.'
+        : 'BTC price today: ' + lpUsd(lpBtcPrice(lpState.loan)) + ' (Aave oracle)';
+}
+function lpLsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lpLsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked: panel still works */ } }
+function lpClampGrowth(raw) { const n = parseFloat(raw); return isFinite(n) ? Math.min(500, Math.max(-90, n)) : 0; }
+function lpGrowthChanged(raw) {
+    lpState.btcGrowth = lpClampGrowth(raw);
+    lpLsSet('lp_btc_growth', String(lpState.btcGrowth));
+    lpRecalc();   // UI-only: deliberately does NOT trigger lpSave
+}
+
 function lpRecalc() {
     const total = lpState.platforms.reduce((s, p) => s + (p.value || 0), 0);
     const wApr = total > 0 ? lpState.platforms.reduce((s, p) => s + (p.value || 0) * (p.apr || 0), 0) / total : 0;
@@ -6806,13 +6837,18 @@ function lpRecalc() {
     const res = document.getElementById('lpResults');
     const table = document.getElementById('lpTable');
     if (!lpState.loan) {
+        lpUpdateBtcNote();
         res.innerHTML = '<div class="wnote" style="margin:0;">Results appear once the live loan has loaded.</div>';
         table.innerHTML = '';
         lpDrawChart(null);
         return;
     }
+    const hasBtc = lpHasBtc(lpState.loan);
     const sim = lpSimulate({ debt: lpState.loan.debtUsdc, borrowApy: lpState.loan.borrowApy,
-        platforms: lpState.platforms, contributions: lpState.contributions, reinvest: lpState.reinvest, months: 60 });
+        platforms: lpState.platforms, contributions: lpState.contributions, reinvest: lpState.reinvest, months: 60,
+        btcQty: hasBtc ? lpState.loan.collateralBtc : 0, btcPrice: hasBtc ? lpBtcPrice(lpState.loan) : 0,
+        btcGrowthPct: lpState.btcGrowth });
+    lpUpdateBtcNote();
     const cm = sim.coverageMonth, ym = sim.yieldCoverMonth, pm = sim.payoffMonth, end = sim.series[60];
     const head = cm === 0 ? 'Your stables can already repay the loan — today'
         : cm === null ? 'Stables can\'t repay the loan within 5 years'
@@ -6827,13 +6863,16 @@ function lpRecalc() {
             <div class="lp-cell"><span class="k">Debt in 5 years</span><span class="v sensitive" style="color:var(--red)">${lpUsd(end.debt)}</span></div>
             <div class="lp-cell"><span class="k">Gross in 5 years</span><span class="v sensitive" style="color:var(--f-liq)">${lpUsd(end.gross)}</span></div>
             <div class="lp-cell"><span class="k">Net in 5 years</span><span class="v sensitive" style="color:var(--accent)">${lpUsd(end.net)}</span></div>
+            ${hasBtc ? `<div class="lp-cell"><span class="k">Total in 5 years</span><span class="v sensitive" style="color:var(--f-cryp)">${lpUsd(end.total)}</span></div>` : ''}
         </div>`;
-    table.innerHTML = '<thead><tr><th>When</th><th>Debt</th><th>Gross</th><th>Net</th></tr></thead><tbody>' +
+    table.innerHTML = `<thead><tr><th>When</th><th>Debt</th><th>Gross</th><th>Net</th>${hasBtc ? '<th>Total</th>' : ''}</tr></thead><tbody>` +
         [12, 24, 36, 48, 60].map(m => { const s = sim.series[m];
-            return `<tr><td>Year ${m / 12} · ${lpMon(m)}</td><td class="sensitive">${lpUsd(s.debt)}</td><td class="sensitive">${lpUsd(s.gross)}</td><td class="sensitive">${lpUsd(s.net)}</td></tr>`; }).join('') +
+            return `<tr><td>Year ${m / 12} · ${lpMon(m)}</td><td class="sensitive">${lpUsd(s.debt)}</td><td class="sensitive">${lpUsd(s.gross)}</td><td class="sensitive">${lpUsd(s.net)}</td>${hasBtc ? `<td class="sensitive">${lpUsd(s.total)}</td>` : ''}</tr>`; }).join('') +
         '</tbody>';
     lpDrawChart(sim);
 }
+
+const lpK = v => (v < 0 ? '-$' : '$') + Math.abs(Math.round(v / 1000)) + 'k';
 
 function lpDrawChart(sim) {
     const canvas = document.getElementById('lpChart');
@@ -6845,6 +6884,7 @@ function lpDrawChart(sim) {
     const marker = sim.series.map(s => s.m === sim.coverageMonth ? s.gross : null);
     const line = (label, key, color) => ({ label, data: sim.series.map(s => s[key]), borderColor: color,
         backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 });
+    const hasBtc = lpHasBtc(lpState.loan);
     const datasets = [
         line('Debt', 'debt', col('--red')),
         line('Gross stables', 'gross', col('--f-liq')),
@@ -6852,7 +6892,8 @@ function lpDrawChart(sim) {
         { label: 'Stables cover loan', data: marker, borderColor: col('--text'), backgroundColor: col('--text'),
           showLine: false, pointRadius: 7, pointHoverRadius: 8, pointStyle: 'rectRot' },
     ];
-    if (lpChart) { lpChart.data.labels = labels; lpChart.data.datasets = datasets; lpChart.update('none'); return; }
+    if (hasBtc) datasets.push(Object.assign(line('Total (BTC + stables)', 'total', col('--f-cryp')), { yAxisID: 'y1' }));
+    if (lpChart) { lpChart.data.labels = labels; lpChart.data.datasets = datasets; lpChart.options.scales.y1.display = hasBtc; lpChart.update('none'); return; }
     lpChart = new Chart(canvas, {
         type: 'line', data: { labels, datasets },
         options: {
@@ -6864,7 +6905,8 @@ function lpDrawChart(sim) {
             },
             scales: {
                 x: { ticks: { color: col('--text2'), maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(255,255,255,.05)' } },
-                y: { ticks: { color: col('--text2'), callback: v => (v < 0 ? '-$' : '$') + Math.abs(Math.round(v / 1000)) + 'k' }, grid: { color: 'rgba(255,255,255,.07)' } },
+                y: { ticks: { color: col('--text2'), callback: lpK }, grid: { color: 'rgba(255,255,255,.07)' } },
+                y1: { display: hasBtc, position: 'right', ticks: { color: col('--f-cryp'), callback: lpK }, grid: { drawOnChartArea: false } },
             },
         },
     });
