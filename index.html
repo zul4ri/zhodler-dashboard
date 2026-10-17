@@ -2510,14 +2510,16 @@ function renderVelocity() {
     if (p) {
         // Supabase + nw_pace(): honest recent window, like-for-like momentum.
         if (legacyNote) legacyNote.style.display = 'none';
-        const sgn = n => (n > 0 ? '+' : '') + fd(n);
+        // Whole dollars under $1k: cents read as false precision on a pace estimate.
+        const fdr = n => Math.abs(n) < 1000 ? (n < 0 ? '-$' : '$') + Math.round(Math.abs(n)) : fd(n);
+        const sgn = n => (n > 0 ? '+' : '') + fdr(n);
         const win = num(p.window_days), chg = num(p.change_abs), pm = num(p.pace_month);
         const pct = has(p.change_pct) ? ` (${num(p.change_pct) >= 0 ? '+' : ''}${num(p.change_pct).toFixed(1)}%)` : '';
         sv('c-vel-annual', sgn(chg), cc(chg));
-        gi('c-vel-sub', `in the last ${win} days${pct}<br><span class="sensitive">&asymp; ${fd(pm)}/month &middot; &asymp; ${fd(pm * 12)}/year at this pace</span>`);
+        gi('c-vel-sub', `in the last ${win} days${pct}<br><span class="sensitive">&asymp; ${fdr(pm)}/month &middot; &asymp; ${fdr(pm * 12)}/year at this pace</span>`);
         if (has(p.last30_pace_month) && num(p.last30_days) > 0) {
             const l30 = num(p.last30_pace_month), tol = 0.1 * Math.abs(pm);
-            const detail = ` &mdash; last ${num(p.last30_days)} days: <span class="sensitive">${sgn(num(p.last30_change))} (&asymp; ${fd(l30)}/month vs ${fd(pm)})</span>`;
+            const detail = ` &mdash; last ${num(p.last30_days)} days: <span class="sensitive">${sgn(num(p.last30_change))} (&asymp; ${fdr(l30)}/month vs ${fdr(pm)})</span>`;
             if (l30 > pm + tol)      setMom('&#9650; Speeding up' + detail, 'pos');
             else if (l30 < pm - tol) setMom('&#9660; Slowing' + detail, 'neg');
             else                     setMom('&#9679; Steady' + detail, '');
