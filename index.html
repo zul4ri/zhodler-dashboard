@@ -484,7 +484,25 @@ details.dd tbody tr td:first-child{padding-left:26px;}
 .lp-table td{text-align:right;padding:6px 8px;border-top:1px dashed rgba(255,255,255,.08);}
 .lp-table th:first-child,.lp-table td:first-child{text-align:left;}
 .lp-chartbox{position:relative;height:300px;}
+.lp-inc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:8px;}
+.lp-inc-f label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;}
+.lp-inc-r{display:flex;align-items:center;gap:8px;}
+.lp-inc-r .minput{width:100px;min-width:0;}
+.info-pop a{color:var(--accent);}
+.lp-inc-r .info-btn{margin-left:0;}
 .lp-err{color:var(--red);font-size:13px;margin-bottom:8px;}
+.lp-sale-box{margin:4px 0 12px;}
+.lp-sale-box .mgray:disabled{opacity:.4;cursor:not-allowed;}
+.lp-sale-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;}
+.lp-sale-rem{font-size:13px;color:var(--text2);}
+.lp-sale-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-bottom:8px;font-size:13px;color:var(--text2);}
+.lp-sale-row .minput{width:84px;min-width:0;}
+.lp-sale-row .minput.px{width:110px;}
+.lp-sale-msg{font-size:12px;color:var(--yellow,#e0b341);margin:0 0 6px;}
+.lp-sale-msg:empty{display:none;}
+.lp-sale-sum{margin-top:10px;font-size:13px;line-height:1.7;}
+.lp-sale-sum .hint{color:var(--text2);}
+.lp-sale-sum div{margin-bottom:2px;}
 @media (max-width:640px){
     .lp-row-plat{grid-template-columns:minmax(0,1fr) 84px 64px 34px;}
     .lp-colhead.plat{grid-template-columns:minmax(0,1fr) 84px 64px 34px;}
@@ -492,6 +510,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     .lp-row-contrib .lp-target{grid-column:1 / 3;grid-row:2;}
     .lp-row-contrib .lp-x{grid-column:3;grid-row:1 / 3;height:100%;}
     .lp-colhead.contrib{display:none;}
+    .lp-chartbox{height:360px;}
     .lp-chartbox{height:240px;}
     .lp-table th,.lp-table td{padding:6px 4px;font-size:12px;}
 }
@@ -850,20 +869,74 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 </div>
             </div>
 
+
+            <!-- C2: income target -->
+            <div class="lp-sec">
+                <label class="mlabel">Income target &middot; when does the yield cover your spending?</label>
+                <div class="lp-inc-grid">
+                    <div class="lp-inc-f">
+                        <label for="lpTarget">Target income ($/month)</label>
+                        <div class="lp-inc-r"><input class="minput sensitive" id="lpTarget" type="number" min="0" step="any" inputmode="decimal" value="2000" oninput="lpIncChanged()"><span class="wnote sensitive" id="lpTargetDay" style="margin:0;white-space:nowrap;"></span></div>
+                    </div>
+                    <div class="lp-inc-f">
+                        <label for="lpInfl">Inflation (%/yr)</label>
+                        <div class="lp-inc-r"><input class="minput" id="lpInfl" type="number" min="0" max="20" step="any" inputmode="decimal" value="2.5" oninput="lpIncChanged()"></div>
+                    </div>
+                    <div class="lp-inc-f">
+                        <label for="lpTax">Tax on yield (%)</label>
+                        <div class="lp-inc-r"><input class="minput" id="lpTax" type="number" min="0" max="60" step="any" inputmode="decimal" value="0" oninput="lpIncChanged()">
+                            <button class="info-btn" type="button" aria-label="More about taxes on DeFi yield in Portugal" onclick="toggleInfo(this,'i-lptax')">i</button></div>
+                    </div>
+                </div>
+                <div class="wnote">PT reference (2026): DeFi yield paid in crypto (lending interest, LP fees, token rewards, Pendle PT discount) is not taxed on receipt. It is taxed as a capital gain at 28% when converted to euros (Arts. 5.&ordm; n.&ordm; 11 and 10.&ordm; CIRS). It is exempt if the crypto was held &ge;365 days. Prudent setting: 28%. Not tax advice; confirm with a Contabilista Certificado.</div>
+                <div class="info-pop" id="i-lptax">
+                    <ul style="margin:0 0 8px 18px;padding:0;">
+                        <li><b>Biggest uncertainty:</b> DeFi has no identifiable payer. If the AT treats it as non-EU (Art. 10.&ordm; n.&ordm; 24), yield could be taxed every year as received &mdash; possibly at 35%.</li>
+                        <li>The 365-day clock may restart on each deposit, claim or swap, so treat 28% as the realistic rate for yield you spend.</li>
+                        <li>If this yield becomes your main income, the AT could reclassify it as business income (Cat. B, progressive rates).</li>
+                    </ul>
+                    <a href="https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/Folhetos_informativos/Documents/Criptoativos.pdf" target="_blank" rel="noopener">AT leaflet</a> &middot;
+                    <a href="https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs5.aspx" target="_blank" rel="noopener">CIRS Art. 5.&ordm;</a> &middot;
+                    <a href="https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs10.aspx" target="_blank" rel="noopener">CIRS Art. 10.&ordm;</a>
+                    <div style="margin-top:8px;">Researched 17 Oct 2026 (OE 2026 / Lei 73-A/2025, DL 97/2026). Rules change yearly.</div>
+                </div>
+                <div class="lp-sale-box">
+                    <div class="lp-sale-head">
+                        <label class="mlabel" style="margin:0;">BTC sale plan</label>
+                        <span class="lp-sale-rem" id="lpSaleRem"></span>
+                    </div>
+                    <div class="wnote" style="margin:4px 0 8px;">Percent is of your original BTC. Leave the price blank to use your BTC growth assumption. Proceeds repay the loan first; the rest goes to the earning stables.</div>
+                    <div id="lpSaleRows"></div>
+                    <div class="lp-sale-msg" id="lpSaleMsg" role="status" aria-live="polite"></div>
+                    <button class="mgray" id="lpAddSale" type="button" onclick="lpAddSale()">+ Add sale</button>
+                    <div class="lp-sale-sum" id="lpSaleSum"></div>
+                </div>
+                <div id="lpIncKpis"></div>
+                <div class="wcard sensitive" style="margin-top:12px;padding:12px;">
+                    <div class="wtitle" style="margin-bottom:6px;">Monthly income from yield (after tax)</div>
+                    <div class="lp-chartbox"><canvas id="lpIncChart" role="img" aria-label="Monthly income from stable yield after tax, with and without the BTC sale plan, against the inflation-adjusted target"></canvas></div>
+                </div>
+            </div>
+
             <!-- D: results -->
             <div class="lp-sec">
-                <label class="mlabel">Results &middot; next 5 years</label>
+                <label class="mlabel" id="lpResTitle">Results &middot; next 20 years</label>
                 <div id="lpResults"></div>
                 <div style="margin:12px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;">
+                    <label for="lpHorizon">Horizon</label>
+                    <select class="minput" id="lpHorizon" style="width:110px;" onchange="lpHorizonChanged(this.value)">
+                        <option value="5">5 years</option><option value="10">10 years</option><option value="20" selected>20 years</option><option value="30">30 years</option><option value="40">40 years</option>
+                    </select>
                     <label for="lpBtcGrowth">BTC price growth (%/yr)</label>
                     <input class="minput" id="lpBtcGrowth" type="number" min="-90" max="500" step="any" inputmode="decimal" value="0" style="width:90px;" oninput="lpGrowthChanged(this.value)">
                     <span id="lpBtcNote" style="font-size:11.5px;color:var(--text2);"></span>
                 </div>
                 <div class="wcard sensitive" style="margin-top:12px;padding:12px;">
-                    <div class="lp-chartbox"><canvas id="lpChart" role="img" aria-label="Five year projection of debt, gross stable assets, net position and total including BTC"></canvas></div>
+                    <div class="lp-chartbox"><canvas id="lpChart" role="img" aria-label="Projection of debt, gross stable assets, net position and total including BTC over the chosen horizon"></canvas></div>
                 </div>
+                <div class="wnote" id="lpBalNote" style="margin-top:6px;">Balances &mdash; keeping BTC</div>
                 <div style="overflow-x:auto;"><table class="lp-table" id="lpTable"></table></div>
-                <div class="wnote">Projection only: assumes today's borrow rate and the APRs above stay constant, BTC grows at the rate you set (0% = today's price), no fees.</div>
+                <div class="wnote">Projection only: assumes today's borrow rate and the APRs above stay constant, BTC grows at the rate you set (0% = today's price), no fees. Income = vault yield after the tax % you set; reinvested yield is not taxed until converted to euros. BTC sales use your price, or your growth assumption when left blank, and are shown before any tax on the sale.</div>
             </div>
 
             <div class="mactions" style="margin-top:6px;">
@@ -6446,30 +6519,69 @@ const LP_AWBTC = '0x078f358208685046a11c85e8ad32895ded33a249';
 const LP_MAX_PLATFORMS = 30, LP_MAX_CONTRIBS = 10;
 
 let lpState = { wallet: null, platforms: [], contributions: [], reinvest: true,
-                loan: null, loanErr: '', loadedAt: 0, saveTimer: null, saveSeq: 0, btcGrowth: 0 };
-let lpChart = null, lpTicker = null;
+                loan: null, loanErr: '', loadedAt: 0, saveTimer: null, saveSeq: 0, btcGrowth: 0,
+                horizon: 20, target: 2000, infl: 2.5, tax: 0, sales: [], salesMsg: '' };
+let lpChart = null, lpIncChart = null, lpTicker = null;
 
 // ── Pure maths (no DOM) ─────────────────────────────────────────────────────
 /* LP_SIM_START */
-function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, months = 60, btcQty = 0, btcPrice = 0, btcGrowthPct = 0 }) {
+function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, months = 60, btcQty = 0, btcPrice = 0, btcGrowthPct = 0,
+                     targetMonthly = 0, inflationPct = 0, taxPct = 0, sales = null }) {
     let d = Math.max(0, Number(debt) || 0);
     const vals = (platforms || []).map(p => Math.max(0, Number(p.value) || 0));
-    const gm = (platforms || []).map(p => Math.pow(1 + Math.max(-0.99, (Number(p.apr) || 0) / 100), 1 / 12) - 1);
+    const aprs = (platforms || []).map(p => Number(p.apr) || 0);
+    const gm = aprs.map(a => Math.pow(1 + Math.max(-0.99, a / 100), 1 / 12) - 1);
     const debtGrowth = Math.pow(1 + (Number(borrowApy) || 0), 1 / 12) - 1;
     const plan = (contributions || []).map(c => ({
         amount: Math.max(0, Number(c.amount) || 0), frequency: c.frequency, target: c.target }));
     let cash = 0;
     const sum = a => a.reduce((s, x) => s + x, 0);
+    // New money goes only to platforms that actually earn (apr > 0), pro rata to their value.
+    // If none earns, fall back to all platforms (pro rata, or equal if all are empty).
     const addToVaults = amt => {
         if (amt <= 0) return;
         if (!vals.length) { cash += amt; return; }
-        const tot = sum(vals);
-        for (let i = 0; i < vals.length; i++) vals[i] += tot > 0 ? amt * vals[i] / tot : amt / vals.length;
+        let idx = [];
+        for (let i = 0; i < vals.length; i++) if (aprs[i] > 0) idx.push(i);
+        if (!idx.length) idx = vals.map((_, i) => i);
+        const tot = idx.reduce((s, i) => s + vals[i], 0);
+        for (const i of idx) vals[i] += tot > 0 ? amt * vals[i] / tot : amt / idx.length;
     };
-    const btc0 = Math.max(0, Number(btcQty) || 0) * Math.max(0, Number(btcPrice) || 0);
     const btcF = 1 + Math.min(500, Math.max(-90, Number(btcGrowthPct) || 0)) / 100;
-    const series = [{ m: 0, debt: d, gross: sum(vals), net: sum(vals) - d, yield: 0, interest: 0,
-                      btcValue: btc0, total: btc0 + sum(vals) }];
+    const tgt0 = Math.max(0, Number(targetMonthly) || 0);
+    const infl = 1 + (Number(inflationPct) || 0) / 100;
+    const keepFrac = 1 - Math.min(100, Math.max(0, Number(taxPct) || 0)) / 100;
+    // BTC sale plan: pct is a share of the ORIGINAL holding; blank price = growth assumption.
+    const qty0 = Math.max(0, Number(btcQty) || 0), px0 = Math.max(0, Number(btcPrice) || 0);
+    let remQty = qty0;
+    const saleEvents = [];
+    const sched = (Array.isArray(sales) ? sales : []).map((x, i) => ({
+        i, pct: Math.max(0, Number(x && x.pct) || 0),
+        price: (x && x.price !== null && x.price !== undefined && x.price !== '' && Number(x.price) > 0) ? Number(x.price) : null,
+        month: Math.max(0, Math.round((Number(x && x.year) || 0) * 12)) }))
+        .filter(x => x.pct > 0).sort((p, q) => p.month - q.month || p.i - q.i);
+    let si = 0;
+    const doSales = m => {   // proceeds repay the loan first, the rest goes to earning vaults
+        while (si < sched.length && sched[si].month === m) {
+            const sl = sched[si++];
+            const q = Math.min(sl.pct / 100 * qty0, remQty);
+            if (q <= 0) continue;
+            remQty -= q;
+            const price = sl.price !== null ? sl.price : px0 * Math.pow(btcF, m / 12);
+            const proceeds = q * price;
+            const pay = Math.min(proceeds, d);
+            d -= pay;
+            addToVaults(proceeds - pay);
+            if (d < 0.005) d = 0;
+            saleEvents.push({ month: m, qty: q, price, proceeds, toLoan: pay, toStables: proceeds - pay });
+        }
+    };
+    while (si < sched.length && sched[si].month < 0) si++;
+    doSales(0);
+    const btcAt = m => remQty * px0 * Math.pow(btcF, m / 12);
+    const series = [{ m: 0, debt: d, gross: sum(vals) + cash, net: sum(vals) + cash - d, yield: 0, interest: 0,
+                      btcValue: btcAt(0), total: btcAt(0) + sum(vals) + cash,
+                      grossYield: 0, afterTaxYield: 0, target: tgt0 }];
     for (let m = 1; m <= months; m++) {
         // 1. loan interest accrues
         const interest = d * debtGrowth;
@@ -6501,18 +6613,22 @@ function lpSimulate({ debt, borrowApy, platforms, contributions, reinvest, month
             }
         }
         if (d < 0.005) d = 0;
+        // 3b. BTC sales scheduled for this month (after growth and contributions)
+        doSales(m);
         // 4. record end of month
         const gross = sum(vals) + cash;
-        const btcValue = btc0 * Math.pow(btcF, m / 12);
-        series.push({ m, debt: d, gross, net: gross - d, yield: y, interest, btcValue, total: btcValue + gross });
+        const btcValue = btcAt(m);
+        series.push({ m, debt: d, gross, net: gross - d, yield: y, interest, btcValue, total: btcValue + gross,
+                      grossYield: y, afterTaxYield: y * keepFrac, target: tgt0 * Math.pow(infl, m / 12) });
     }
     const first = f => { const r = series.find(f); return r ? r.m : null; };
     const startDebt = series[0].debt;
     return {
-        series,
+        series, saleEvents, btcKept: remQty,
         coverageMonth: first(s => s.gross >= s.debt - 1e-9),
         yieldCoverMonth: first(s => s.m >= 1 && s.interest > 0 && s.yield >= s.interest),
         payoffMonth: startDebt <= 0 ? 0 : first(s => s.debt <= 0),
+        incomeHitMonth: tgt0 > 0 ? first(s => s.m >= 1 && s.afterTaxYield >= s.target) : null,
     };
 }
 /* LP_SIM_END */
@@ -6655,6 +6771,9 @@ async function lpLoadAll() {
             lpState.wallet = cfg.wallet;
             lpState.platforms = Array.isArray(cfg.platforms) ? cfg.platforms.map(p => ({ name: p.name, value: Number(p.value) || 0, apr: Number(p.apr) || 0 })) : [];
             lpState.contributions = Array.isArray(cfg.contributions) ? cfg.contributions.map(c => ({ amount: Number(c.amount) || 0, frequency: c.frequency, target: c.target })) : [];
+            lpState.sales = Array.isArray(cfg.sales) ? cfg.sales.map(x => ({ pct: Number(x.pct) || 0,
+                price: (x.price === null || x.price === undefined || !(Number(x.price) > 0)) ? null : Number(x.price),
+                year: lpNum(x.year, 0, 40, 0) })) : [];
         }
     } catch (e) {
         if (!authToken) { updateLoanPayoffView(); return; }
@@ -6664,8 +6783,10 @@ async function lpLoadAll() {
     lpState.reinvest = document.getElementById('lpReinvest').checked;
     lpState.btcGrowth = lpClampGrowth(lpLsGet('lp_btc_growth'));
     document.getElementById('lpBtcGrowth').value = lpState.btcGrowth;
+    lpLoadIncomeInputs();
     lpSetSaveState('');
     lpRenderRows();
+    lpRenderSaleRows();
     lpRecalc();
     clearInterval(lpTicker);
     lpTicker = setInterval(lpTickUpdated, 1000);
@@ -6772,6 +6893,75 @@ function lpAddContribution() {
 }
 function lpRemoveContrib(i) { lpState.contributions.splice(i, 1); lpRenderRows(); lpChanged(); }
 
+// ── BTC sale plan (saved to the account with platforms + contributions) ──────
+const LP_MAX_SALES = 20;
+const lpSalePctSum = skip => Math.round(lpState.sales.reduce((s, x, i) => i === skip ? s : s + (Number(x.pct) || 0), 0) * 1e6) / 1e6;
+const lpSaleLeft = () => Math.max(0, Math.round((100 - lpSalePctSum(-1)) * 1e6) / 1e6);
+const lpSalesActive = () => lpState.sales.filter(x => x.pct > 0);
+const lpSalesForSave = () => lpSalesActive().map(x => ({ pct: x.pct, price: x.price > 0 ? x.price : null, year: x.year }));
+function lpRenderSaleRows() {
+    document.getElementById('lpSaleRows').innerHTML = lpState.sales.map((x, i) => `
+        <div class="lp-sale-row">
+            <span>Sell</span>
+            <input class="minput" type="number" min="0" max="100" step="any" inputmode="decimal" value="${x.pct}" aria-label="Percent of original BTC to sell" oninput="lpEditSale(${i},'pct',this)">
+            <span>% at $</span>
+            <input class="minput px sensitive" type="number" min="0" step="any" inputmode="decimal" value="${x.price === null ? '' : x.price}" placeholder="growth" aria-label="Sale price in dollars (blank uses the growth assumption)" oninput="lpEditSale(${i},'price',this)">
+            <span>in year</span>
+            <input class="minput" type="number" min="0" max="40" step="0.5" inputmode="decimal" value="${x.year}" aria-label="Year of the sale (0 = today, 1.5 = 18 months)" oninput="lpEditSale(${i},'year',this)">
+            <button class="lp-x" type="button" aria-label="Remove sale" onclick="lpRemoveSale(${i})">&#10005;</button>
+        </div>`).join('');
+    lpUpdateSaleHeader();
+}
+function lpUpdateSaleHeader() {
+    const left = lpSaleLeft();
+    const L = lpState.loan, qty = (L && L.collateralBtc > 0) ? L.collateralBtc : null;
+    document.getElementById('lpSaleRem').textContent = 'Remaining BTC: ' + +left.toFixed(2) + '%' +
+        (qty === null ? '' : ' (' + (qty * left / 100).toFixed(4) + ' BTC)');
+    document.getElementById('lpAddSale').disabled = left < 0.0001 || lpState.sales.length >= LP_MAX_SALES;
+    document.getElementById('lpSaleMsg').textContent = lpState.salesMsg || '';
+}
+function lpEditSale(i, field, el) {
+    const x = lpState.sales[i]; if (!x) return;
+    lpState.salesMsg = '';
+    if (field === 'pct') {
+        let v = Math.max(0, parseFloat(el.value) || 0);
+        const room = Math.max(0, Math.round((100 - lpSalePctSum(i)) * 1e6) / 1e6);
+        if (v > room + 1e-9) {
+            v = room; el.value = v;
+            lpState.salesMsg = 'Capped at ' + +room.toFixed(4) + '%: the plan cannot sell more than 100% of your BTC.';
+        }
+        x.pct = v;
+    } else if (field === 'price') {
+        const v = parseFloat(el.value);
+        x.price = (el.value.trim() === '' || !isFinite(v) || v <= 0) ? null : v;
+    } else {
+        const raw = parseFloat(el.value);
+        const v = lpNum(raw, 0, 40, 0);
+        if (isFinite(raw) && v !== raw) el.value = v;
+        x.year = v;
+    }
+    lpChanged();
+}
+function lpAddSale() {
+    const left = lpSaleLeft();
+    if (left < 0.0001 || lpState.sales.length >= LP_MAX_SALES) return;
+    const lastYear = lpState.sales.reduce((m, x) => Math.max(m, x.year), 0);
+    lpState.sales.push({ pct: Math.min(25, left), price: null, year: Math.min(40, lpState.sales.length ? lastYear + 1 : 1) });
+    lpState.salesMsg = '';
+    lpRenderSaleRows(); lpChanged();
+}
+function lpRemoveSale(i) { lpState.sales.splice(i, 1); lpState.salesMsg = ''; lpRenderSaleRows(); lpChanged(); }
+function lpRenderSaleSummary(sim) {
+    const el = document.getElementById('lpSaleSum');
+    lpUpdateSaleHeader();
+    if (!lpSalesActive().length) { el.innerHTML = '<div class="hint">Add a sale to compare against keeping BTC.</div>'; return; }
+    if (!sim) { el.innerHTML = '<div class="hint">The sale summary appears once the live loan and its BTC have loaded.</div>'; return; }
+    const yr = m => m === 0 ? 'Now' : 'Year ' + +(m / 12).toFixed(2);
+    el.innerHTML = sim.saleEvents.map(e =>
+        `<div>${yr(e.month)} &middot; ${e.qty.toFixed(3)} BTC &times; <span class="sensitive">${lpUsd(e.price)}</span> = <span class="sensitive">${lpUsd(e.proceeds)}</span> &rarr; <span class="sensitive">${lpUsd(e.toLoan)}</span> to loan, <span class="sensitive">${lpUsd(e.toStables)}</span> to stables</div>`).join('') +
+        `<div style="margin-top:4px;"><b>BTC kept: ${sim.btcKept.toFixed(3)} BTC</b></div>`;
+}
+
 function lpChanged() {
     lpRecalc();
     lpSetSaveState('pending');
@@ -6799,6 +6989,7 @@ async function lpSave() {
         await rpcAuth('loan_sim_save', {
             p_platforms: lpState.platforms.map(p => ({ name: String(p.name).trim(), value: p.value, apr: p.apr })),
             p_contributions: lpState.contributions.map(c => ({ amount: c.amount, frequency: c.frequency, target: c.target })),
+            p_sales: lpSalesForSave(),
         });
         if (seq === lpState.saveSeq) lpSetSaveState('saved');
     } catch (e) {
@@ -6827,49 +7018,114 @@ function lpGrowthChanged(raw) {
     lpLsSet('lp_btc_growth', String(lpState.btcGrowth));
     lpRecalc();   // UI-only: deliberately does NOT trigger lpSave
 }
+// Horizon + income-target inputs: UI-only (localStorage), never sent to loan_sim_save.
+const lpNum = (raw, lo, hi, def) => { const n = parseFloat(raw); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };
+function lpLoadIncomeInputs() {
+    const h = parseInt(lpLsGet('lp_horizon'), 10);
+    lpState.horizon = [5, 10, 20, 30, 40].includes(h) ? h : 20;
+    const t = lpLsGet('lp_target');
+    lpState.target = t === null ? 2000 : lpNum(t, 0, 1e9, 2000);
+    lpState.infl = lpNum(lpLsGet('lp_infl'), 0, 20, 2.5);
+    lpState.tax = lpNum(lpLsGet('lp_tax'), 0, 60, 0);
+    document.getElementById('lpHorizon').value = lpState.horizon;
+    document.getElementById('lpTarget').value = lpState.target;
+    document.getElementById('lpInfl').value = lpState.infl;
+    document.getElementById('lpTax').value = lpState.tax;
+}
+function lpHorizonChanged(raw) {
+    const h = parseInt(raw, 10);
+    lpState.horizon = [5, 10, 20, 30, 40].includes(h) ? h : 20;
+    lpLsSet('lp_horizon', String(lpState.horizon));
+    lpRecalc();
+}
+function lpIncChanged() {
+    lpState.target = lpNum(document.getElementById('lpTarget').value, 0, 1e9, 0);
+    lpState.infl = lpNum(document.getElementById('lpInfl').value, 0, 20, 0);
+    lpState.tax = lpNum(document.getElementById('lpTax').value, 0, 60, 0);
+    lpLsSet('lp_target', String(lpState.target));
+    lpLsSet('lp_infl', String(lpState.infl));
+    lpLsSet('lp_tax', String(lpState.tax));
+    lpRecalc();   // UI-only: deliberately does NOT trigger lpSave
+}
 
 function lpRecalc() {
     const total = lpState.platforms.reduce((s, p) => s + (p.value || 0), 0);
     const wApr = total > 0 ? lpState.platforms.reduce((s, p) => s + (p.value || 0) * (p.apr || 0), 0) / total : 0;
     document.getElementById('lpPlatTotal').textContent = lpUsd(total);
     document.getElementById('lpPlatApr').textContent = wApr.toFixed(2) + '%';
+    document.getElementById('lpTargetDay').textContent = '\u2248 ' + lpUsd(lpState.target * 12 / 365) + '/day';
 
     const res = document.getElementById('lpResults');
     const table = document.getElementById('lpTable');
+    const H = lpState.horizon, months = H * 12;
+    document.getElementById('lpResTitle').innerHTML = 'Results &middot; next ' + H + ' years';
     if (!lpState.loan) {
         lpUpdateBtcNote();
         res.innerHTML = '<div class="wnote" style="margin:0;">Results appear once the live loan has loaded.</div>';
         table.innerHTML = '';
+        document.getElementById('lpIncKpis').innerHTML = '';
+        lpRenderSaleSummary(null);
         lpDrawChart(null);
+        lpDrawIncChart(null);
         return;
     }
     const hasBtc = lpHasBtc(lpState.loan);
-    const sim = lpSimulate({ debt: lpState.loan.debtUsdc, borrowApy: lpState.loan.borrowApy,
-        platforms: lpState.platforms, contributions: lpState.contributions, reinvest: lpState.reinvest, months: 60,
+    const base = { debt: lpState.loan.debtUsdc, borrowApy: lpState.loan.borrowApy,
+        platforms: lpState.platforms, contributions: lpState.contributions, reinvest: lpState.reinvest, months,
         btcQty: hasBtc ? lpState.loan.collateralBtc : 0, btcPrice: hasBtc ? lpBtcPrice(lpState.loan) : 0,
-        btcGrowthPct: lpState.btcGrowth });
+        btcGrowthPct: lpState.btcGrowth, targetMonthly: lpState.target, inflationPct: lpState.infl, taxPct: lpState.tax };
+    const sim = lpSimulate(Object.assign({}, base, { sales: null }));
+    const planned = lpSalesActive().length > 0;
+    const simSale = (hasBtc && planned) ? lpSimulate(Object.assign({}, base, { sales: lpSalesActive() })) : null;
+    lpRenderSaleSummary(simSale);
     lpUpdateBtcNote();
-    const cm = sim.coverageMonth, ym = sim.yieldCoverMonth, pm = sim.payoffMonth, end = sim.series[60];
+    const cm = sim.coverageMonth, ym = sim.yieldCoverMonth, pm = sim.payoffMonth, end = sim.series[months];
     const head = cm === 0 ? 'Your stables can already repay the loan — today'
-        : cm === null ? 'Stables can\'t repay the loan within 5 years'
+        : cm === null ? `Stables can't repay the loan within ${H} years`
         : `Stables can repay the loan in ${lpMonthsText(cm)} (≈ ${lpMon(cm, true)})`;
-    const yieldTxt = ym === null ? 'Not within 5 years' : `Month ${ym} (≈ ${lpMon(ym, true)})`;
-    const payTxt = pm === null ? 'Not within 5 years' : pm === 0 ? 'No debt' : `Month ${pm} (≈ ${lpMon(pm, true)})`;
+    const none = `Not within ${H} years`;
+    const yieldTxt = ym === null ? none : `Month ${ym} (≈ ${lpMon(ym, true)})`;
+    const payTxt = pm === null ? none : pm === 0 ? 'No debt' : `Month ${pm} (≈ ${lpMon(pm, true)})`;
     res.innerHTML = `
         <div class="lp-headline sensitive">${head}</div>
         <div class="lp-grid">
             <div class="lp-cell"><span class="k">Yield covers loan interest from</span><span class="v" style="font-size:15px;">${yieldTxt}</span></div>
             <div class="lp-cell"><span class="k">Loan fully paid by contributions</span><span class="v" style="font-size:15px;">${payTxt}</span></div>
-            <div class="lp-cell"><span class="k">Debt in 5 years</span><span class="v sensitive" style="color:var(--red)">${lpUsd(end.debt)}</span></div>
-            <div class="lp-cell"><span class="k">Gross in 5 years</span><span class="v sensitive" style="color:var(--f-liq)">${lpUsd(end.gross)}</span></div>
-            <div class="lp-cell"><span class="k">Net in 5 years</span><span class="v sensitive" style="color:var(--accent)">${lpUsd(end.net)}</span></div>
-            ${hasBtc ? `<div class="lp-cell"><span class="k">Total in 5 years</span><span class="v sensitive" style="color:var(--f-cryp)">${lpUsd(end.total)}</span></div>` : ''}
+            <div class="lp-cell"><span class="k">Debt in ${H} years</span><span class="v sensitive" style="color:var(--red)">${lpUsd(end.debt)}</span></div>
+            <div class="lp-cell"><span class="k">Gross in ${H} years</span><span class="v sensitive" style="color:var(--f-liq)">${lpUsd(end.gross)}</span></div>
+            <div class="lp-cell"><span class="k">Net in ${H} years</span><span class="v sensitive" style="color:var(--accent)">${lpUsd(end.net)}</span></div>
+            ${hasBtc ? `<div class="lp-cell"><span class="k">Total in ${H} years</span><span class="v sensitive" style="color:var(--f-cryp)">${lpUsd(end.total)}</span></div>` : ''}
         </div>`;
+    const step = H <= 10 ? 12 : 60;
+    const rowMonths = []; for (let m = step; m <= months; m += step) rowMonths.push(m);
     table.innerHTML = `<thead><tr><th>When</th><th>Debt</th><th>Gross</th><th>Net</th>${hasBtc ? '<th>Total</th>' : ''}</tr></thead><tbody>` +
-        [12, 24, 36, 48, 60].map(m => { const s = sim.series[m];
+        rowMonths.map(m => { const s = sim.series[m];
             return `<tr><td>Year ${m / 12} · ${lpMon(m)}</td><td class="sensitive">${lpUsd(s.debt)}</td><td class="sensitive">${lpUsd(s.gross)}</td><td class="sensitive">${lpUsd(s.net)}</td>${hasBtc ? `<td class="sensitive">${lpUsd(s.total)}</td>` : ''}</tr>`; }).join('') +
         '</tbody>';
     lpDrawChart(sim);
+    lpRenderIncome(sim, simSale, H, planned);
+}
+
+// Income section: KPIs + chart (keep-BTC vs with-sale-plan scenarios)
+function lpRenderIncome(sim, simSale, H, planned) {
+    const hit = (r, label) => {
+        if (!r) return `<div class="lp-cell"><span class="k">${label}</span><span class="v" style="font-size:15px;">No BTC found</span></div>`;
+        const m = r.incomeHitMonth;
+        const txt = lpState.target <= 0 ? 'Set a target above 0' : m === null ? `Not within ${H} years`
+            : `Year ${(m / 12).toFixed(1)} (≈ ${lpMon(m, true)})`;
+        return `<div class="lp-cell"><span class="k">${label}</span><span class="v" style="font-size:15px;">${txt}</span></div>`;
+    };
+    const earning = lpState.platforms.filter(p => (p.apr || 0) > 0);
+    const ev = earning.reduce((s, p) => s + (p.value || 0), 0);
+    const apr = ev > 0 ? earning.reduce((s, p) => s + (p.value || 0) * p.apr, 0) / ev
+        : earning.length ? earning.reduce((s, p) => s + p.apr, 0) / earning.length : 0;
+    const need = (apr > 0 && lpState.target > 0) ? lpState.target * 12 / (1 - lpState.tax / 100) / (apr / 100) : null;
+    document.getElementById('lpIncKpis').innerHTML = `<div class="lp-grid">
+        ${hit(sim, 'Keep BTC: target reached')}
+        ${planned ? hit(simSale, 'With sale plan: target reached') : ''}
+        ${need === null ? '' : `<div class="lp-cell"><span class="k">Stables needed today for the target</span><span class="v sensitive" style="font-size:15px;">${lpUsd(need)}</span><div class="s">at ${apr.toFixed(2)}% avg APR of earning platforms</div></div>`}
+    </div>`;
+    lpDrawIncChart(sim, simSale);
 }
 
 const lpK = v => (v < 0 ? '-$' : '$') + Math.abs(Math.round(v / 1000)) + 'k';
@@ -6910,6 +7166,46 @@ function lpDrawChart(sim) {
             },
         },
     });
+}
+
+function lpDrawIncChart(sim, simSale) {
+    const canvas = document.getElementById('lpIncChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (!sim) { if (lpIncChart) { lpIncChart.destroy(); lpIncChart = null; } return; }
+    const css = getComputedStyle(document.body);
+    const col = n => css.getPropertyValue(n).trim() || '#888';
+    const labels = sim.series.map(s => lpMon(s.m));
+    const line = (label, r, key, color, extra) => Object.assign({ label, data: r.series.map(s => s[key]), borderColor: color,
+        backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 }, extra || {});
+    const mark = (label, r, key, color) => ({ label, data: r.series.map(s => s.m === r.incomeHitMonth ? s[key] : null),
+        borderColor: color, backgroundColor: color, showLine: false, pointRadius: 8, pointHoverRadius: 9, pointStyle: 'rectRot' });
+    const cKeep = col('--f-liq'), cSell = col('--f-cryp');
+    const sellLabel = 'With sale plan';
+    const datasets = [line('Keep BTC', sim, 'afterTaxYield', cKeep)];
+    if (simSale) datasets.push(line(sellLabel, simSale, 'afterTaxYield', cSell));
+    datasets.push(line('Target (with inflation)', sim, 'target', col('--text2') || '#fff', { borderDash: [6, 4], borderWidth: 1.5 }));
+    datasets.push(mark('Keep BTC: target reached', sim, 'afterTaxYield', cKeep));
+    if (simSale) {
+        datasets.push(mark(sellLabel + ': target reached', simSale, 'afterTaxYield', cSell));
+        const sm = new Set(simSale.saleEvents.map(e => e.month));
+        datasets.push({ label: 'BTC sale', data: simSale.series.map(s => sm.has(s.m) ? s.afterTaxYield : null),
+            borderColor: cSell, backgroundColor: cSell, borderWidth: 2, showLine: false,
+            pointRadius: 6, pointHoverRadius: 8, pointStyle: 'triangle' });
+    }
+    const opts = {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { labels: { color: col('--text2'), boxWidth: 12, usePointStyle: true } },
+            tooltip: { callbacks: { label: c => c.parsed.y === null ? null : `${c.dataset.label}: ${lpUsd(c.parsed.y)}/mo` } },
+        },
+        scales: {
+            x: { ticks: { color: col('--text2'), maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(255,255,255,.05)' } },
+            y: { beginAtZero: true, ticks: { color: col('--text2'), callback: v => lpUsd(v) }, grid: { color: 'rgba(255,255,255,.07)' } },
+        },
+    };
+    if (lpIncChart) { lpIncChart.data.labels = labels; lpIncChart.data.datasets = datasets; lpIncChart.update('none'); return; }
+    lpIncChart = new Chart(canvas, { type: 'line', data: { labels, datasets }, options: opts });
 }
 
 document.getElementById('lpModal').addEventListener('click', e => { if (e.target === document.getElementById('lpModal')) closeLoanPayoff(); });
