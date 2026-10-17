@@ -529,22 +529,22 @@ details.dd tbody tr td:first-child{padding-left:26px;}
 
 <!-- ═══ SIGN-IN GATE: the single front door. Nothing else renders until unlocked. ═══ -->
 <div id="zhGate">
-    <div class="mbox" style="width:380px;">
+    <form class="mbox" style="width:380px;" autocomplete="on" onsubmit="event.preventDefault();zhSignIn();">
         <div class="mtitle">Zhodler &middot; Sign in</div>
         <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account. You stay signed in on this device for up to 30 days.</div>
         <div class="mrow">
             <label class="mlabel" for="zhEmail">Email</label>
-            <input class="minput" id="zhEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('zhPassword').focus()">
+            <input class="minput" id="zhEmail" name="email" type="email" autocomplete="username" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('zhPassword').focus();}">
         </div>
         <div class="mrow">
             <label class="mlabel" for="zhPassword">Password</label>
-            <input class="minput" id="zhPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')zhSignIn()">
+            <input class="minput" id="zhPassword" name="password" type="password" autocomplete="current-password">
         </div>
         <div id="zhLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
         <div class="mactions">
-            <button class="mprimary" id="zhLoginBtn" onclick="zhSignIn()">Sign In</button>
+            <button class="mprimary" id="zhLoginBtn" type="submit">Sign In</button>
         </div>
-    </div>
+    </form>
 </div>
 
 <!-- ═══ APP SHELL: fixed sidebar + scrollable main ═══ -->
