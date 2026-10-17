@@ -816,6 +816,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     <div class="sgrid sg-3">
         <div class="wcard" style="cursor:pointer;" onclick="openTool('https://bot-dashboard-weld.vercel.app')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openTool('https://loan-pool-simulator.vercel.app')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openTool('https://loan-pool-simulator.vercel.app','/v3')"><div class="wtitle" style="margin-bottom:4px;">&#128302; Simulator v3</div><div class="wnote" style="margin:0;">Your full current situation: debts, yield, assets</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, salary &amp; FIRE plan</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openLoanPayoff()"><div class="wtitle" style="margin-bottom:4px;">&#129518; Loan Payoff</div><div class="wnote" style="margin:0;">When your stable assets can repay the Aave loan</div></div>
@@ -1806,12 +1807,13 @@ async function zhSignIn() {
 // Open a linked tool site (PRJ15 / PRJ27) already signed in. The token travels
 // in the URL FRAGMENT (never sent to a server / never in logs); the tool's
 // /handoff page verifies it server-side and sets its own session cookie.
-async function openTool(baseUrl) {
+async function openTool(baseUrl, nextPath) {
     const win = window.open('about:blank', '_blank');   // opened synchronously so popup blockers allow it
     if (win) { try { win.opener = null; } catch (e) {} }
     try {
         const token = await ensureFreshToken();          // never hand over a stale token
-        const url = `${baseUrl}/handoff#zh=${encodeURIComponent(token)}`;
+        // Optional nextPath (e.g. '/v3') = where the tool lands after sign-in; the tool only accepts same-site paths.
+        const url = `${baseUrl}/handoff#zh=${encodeURIComponent(token)}` + (nextPath ? `&next=${encodeURIComponent(nextPath)}` : '');
         if (win) win.location.href = url; else window.location.href = url;
     } catch (e) {
         if (win) win.close();
