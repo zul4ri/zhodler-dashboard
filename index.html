@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zhodler Dashboard</title>
+    <style id="zh-gate-css">
+/* SIGN-IN GATE. The app is hidden by default (before any script runs); it is
+   only revealed when JS adds html.zh-unlocked after a valid session is
+   confirmed. If JS fails entirely the page stays blank - fail closed. */
+html{background:#000;}
+html:not(.zh-unlocked) body > *:not(#zhGate){display:none !important;}
+#zhGate{display:none;}
+html.zh-gate #zhGate{display:flex;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;background:var(--bg);padding:16px;}
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
 /* ── THEMES ──────────────────────────────────────────────────────────────── */
@@ -518,6 +527,26 @@ details.dd tbody tr td:first-child{padding-left:26px;}
 </head>
 <body data-filter="portfolio">
 
+<!-- ═══ SIGN-IN GATE: the single front door. Nothing else renders until unlocked. ═══ -->
+<div id="zhGate">
+    <div class="mbox" style="width:380px;">
+        <div class="mtitle">Zhodler &middot; Sign in</div>
+        <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account. You stay signed in on this device for up to 30 days.</div>
+        <div class="mrow">
+            <label class="mlabel" for="zhEmail">Email</label>
+            <input class="minput" id="zhEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('zhPassword').focus()">
+        </div>
+        <div class="mrow">
+            <label class="mlabel" for="zhPassword">Password</label>
+            <input class="minput" id="zhPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')zhSignIn()">
+        </div>
+        <div id="zhLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
+        <div class="mactions">
+            <button class="mprimary" id="zhLoginBtn" onclick="zhSignIn()">Sign In</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ APP SHELL: fixed sidebar + scrollable main ═══ -->
 <div class="app">
 <aside class="sidebar">
@@ -772,7 +801,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             <div class="wcell"><span class="k">Crypto share</span><span class="wbig" id="prj27ShareTxt">—</span></div>
             <div class="wcell"><span class="k">Blend</span><span class="wbig" id="prj27BlendTxt">—</span></div>
         </div>
-        <a class="cta-link" href="https://loan-pool-simulator.vercel.app" target="_blank" rel="noopener noreferrer">&#8599; Open full simulator &rarr;</a>
+        <a class="cta-link" href="https://loan-pool-simulator.vercel.app" onclick="openTool('https://loan-pool-simulator.vercel.app');return false;">&#8599; Open full simulator &rarr;</a>
         <button class="mgray" style="margin-left:8px;vertical-align:middle;" onclick="toggleInfo(document.querySelector('#sec-prj27 .info-btn'),'fireSettings')">Edit variant / blend</button>
         <div id="prj27SyncList" style="margin-top:8px;"></div>
         <div class="info-pop" id="i-prj27">
@@ -785,8 +814,8 @@ details.dd tbody tr td:first-child{padding-left:26px;}
 <section class="sec" id="sec-tools">
     <div class="sec-head"><h2>Tools &amp; Links</h2></div>
     <div class="sgrid sg-3">
-        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://bot-dashboard-weld.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
-        <div class="wcard" style="cursor:pointer;" onclick="window.open('https://loan-pool-simulator.vercel.app','_blank','noopener')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openTool('https://bot-dashboard-weld.vercel.app')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
+        <div class="wcard" style="cursor:pointer;" onclick="openTool('https://loan-pool-simulator.vercel.app')"><div class="wtitle" style="margin-bottom:4px;">&#127922; Strategy Simulator &middot; PRJ27</div><div class="wnote" style="margin:0;">Loan + pool Monte Carlo — source of the FIRE crypto sleeve</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, salary &amp; FIRE plan</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openLoanPayoff()"><div class="wtitle" style="margin-bottom:4px;">&#129518; Loan Payoff</div><div class="wnote" style="margin:0;">When your stable assets can repay the Aave loan</div></div>
@@ -809,26 +838,8 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     <div class="mbox" style="width:980px;">
         <div class="mtitle">&#129518; Loan Payoff</div>
 
-        <!-- Login form -->
-        <div id="lpLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to load your saved platforms and plan. Already signed in via Edit Assets or Cash Flow in this session? This unlocks automatically.</div>
-            <div class="mrow">
-                <label class="mlabel" for="lpEmail">Email</label>
-                <input class="minput" id="lpEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lpPassword').focus()">
-            </div>
-            <div class="mrow">
-                <label class="mlabel" for="lpPassword">Password</label>
-                <input class="minput" id="lpPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginLoanPayoff()">
-            </div>
-            <div id="lpLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
-            <div class="mactions">
-                <button class="mcancel" onclick="closeLoanPayoff()">Cancel</button>
-                <button class="mprimary" id="lpLoginBtn" onclick="loginLoanPayoff()">Sign In</button>
-            </div>
-        </div>
-
         <!-- Panel -->
-        <div id="lpPanel" style="display:none;">
+        <div id="lpPanel">
             <div id="lpFatal" class="lp-err" style="display:none;"></div>
 
             <!-- A: live loan -->
@@ -940,7 +951,6 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             </div>
 
             <div class="mactions" style="margin-top:6px;">
-                <button class="mgray" onclick="logoutLoanPayoff()">Sign Out</button>
                 <button class="mcancel" onclick="closeLoanPayoff()">Close</button>
             </div>
         </div>
@@ -967,6 +977,13 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             <label class="mlabel">Google Sheet URL or ID</label>
             <input class="minput" id="sheetInput" placeholder="Paste URL or Sheet ID">
         </div>
+        <div class="mrow">
+            <label class="mlabel">Account</label>
+            <div class="mrow-row" style="align-items:center;">
+                <span style="font-size:clamp(11px,1.1vw,13px);color:var(--text2);" id="zhSignedInAs">Signed in</span>
+                <button class="mgray" onclick="zhSignOut()">Sign Out</button>
+            </div>
+        </div>
         <div class="mactions">
             <button class="mcancel"  onclick="closeSettings()">Cancel</button>
             <button class="mprimary" onclick="saveAndReload()">Save &amp; Reload</button>
@@ -979,29 +996,10 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     <div class="mbox" style="width:720px;">
         <div class="mtitle">Edit Assets</div>
 
-        <!-- Login form — shown until signed in -->
-        <div id="eaLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to add, edit, or remove manual TradFi assets and loans (bank accounts, real estate, vehicles, personal loans) — plus bank subtype, loan details, vehicle purchase info, and auto-revaluation settings.</div>
-            <div class="mrow">
-                <label class="mlabel">Email</label>
-                <input class="minput" id="eaEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('eaPassword').focus()">
-            </div>
-            <div class="mrow">
-                <label class="mlabel">Password</label>
-                <input class="minput" id="eaPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginEditAssets()">
-            </div>
-            <div id="eaLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
-            <div class="mactions">
-                <button class="mcancel"  onclick="closeEditAssets()">Cancel</button>
-                <button class="mprimary" id="eaLoginBtn" onclick="loginEditAssets()">Sign In</button>
-            </div>
-        </div>
-
         <!-- Edit panel — shown once signed in -->
-        <div id="eaPanel" style="display:none;">
+        <div id="eaPanel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
                 <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);" id="eaSignedInAs"></div>
-                <button class="mgray" style="padding:6px 12px;" onclick="logoutEditAssets()">Sign Out</button>
             </div>
             <div id="eaStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
             <div class="twrap" id="eaListWrap" style="max-height:420px;overflow:auto;"></div>
@@ -1261,26 +1259,8 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     <div class="mbox" style="width:980px;">
         <div class="mtitle">Cash Flow</div>
 
-        <!-- Login form -->
-        <div id="cfLoginBox">
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-bottom:14px;">Sign in with the owner account to see and manage your everyday income/expense ledger. Already signed in via Edit Assets in this session? This unlocks automatically.</div>
-            <div class="mrow">
-                <label class="mlabel">Email</label>
-                <input class="minput" id="cfEmail" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('cfPassword').focus()">
-            </div>
-            <div class="mrow">
-                <label class="mlabel">Password</label>
-                <input class="minput" id="cfPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginCashFlow()">
-            </div>
-            <div id="cfLoginErr" style="color:var(--red);font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:2px;"></div>
-            <div class="mactions">
-                <button class="mcancel" onclick="closeCashFlow()">Cancel</button>
-                <button class="mprimary" id="cfLoginBtn" onclick="loginCashFlow()">Sign In</button>
-            </div>
-        </div>
-
         <!-- Panel -->
-        <div id="cfPanel" style="display:none;">
+        <div id="cfPanel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     <button class="mgray" id="cfTabBtn-txns" onclick="switchCfTab('txns')">Transactions</button>
@@ -1291,7 +1271,6 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                     <button class="mgray" id="cfTabBtn-categories" onclick="switchCfTab('categories')">Categories</button>
                     <button class="mgray" id="cfTabBtn-tags" onclick="switchCfTab('tags')">Tags</button>
                 </div>
-                <button class="mgray" style="padding:6px 12px;" onclick="logoutCashFlow()">Sign Out</button>
             </div>
             <div id="cfStatusMsg" style="font-size:clamp(9px,0.85vw,11px);min-height:15px;margin-bottom:6px;"></div>
 
@@ -1612,11 +1591,15 @@ const LS = {
 const SUPABASE_URL      = 'https://lvyyewyaatuiwawxjtmv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXlld3lhYXR1aXdhd3hqdG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTcwNjQsImV4cCI6MjA5OTUzMzA2NH0._HoBCWSOemshCeKSG-qbTv39fu23AnFGz3C_K__eg4A';
 
-// Edit Assets auth — access_token lives in memory + sessionStorage only (never
-// localStorage, never embedded in code). Cleared on sign-out or a failed/expired
-// authenticated call. Writes always go through rpcAuth(), never the anon rpc().
-const SS_TOKEN_KEY = 'zh-ea-token';
-const SS_EMAIL_KEY = 'zh-ea-email';
+// Single sign-in (one front door). The whole site is gated; there are no
+// per-module logins. The session lives in localStorage so it survives closing
+// the tab/browser: access_token (short-lived, ~1h), refresh_token (used to
+// renew it silently), expires_at (ms) and a hard 30-day signed_in_until cap.
+// ensureFreshToken() runs before every authenticated request.
+const ZH_SESSION_KEY  = 'zh-session';
+const ZH_SESSION_DAYS = 30;
+const ZH_GATE_MSG_KEY = 'zh-gate-msg';   // sessionStorage: why the gate re-appeared
+const ZH_LEGACY_KEYS  = ['zh-ea-token', 'zh-ea-email']; // old per-tab session (sessionStorage)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATE
@@ -1627,7 +1610,7 @@ let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
 let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
 let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
-let authToken = null; // Edit Assets: Supabase access_token once signed in, else null
+let authToken = null; // current Supabase access_token (mirror of the stored session; kept fresh by ensureFreshToken)
 let _eaItems = [];    // Edit Assets: cache of manual_assets_list() rows for save/remove by index
 let _eaLoanDetails = {};    // Edit Assets: label(lowercase) -> loan_details_list() row
 let _eaVehicleDetails = {}; // Edit Assets: label(lowercase) -> vehicle_details_list() row
@@ -1655,38 +1638,115 @@ let eurRateIsStale = false; // Edit Assets: true if using the hardcoded fallback
 // within ~2% of the real rate and update it when you touch this file.
 const EUR_USD_FALLBACK_RATE = 1.16; // ECB reference, 2026-09-07
 
-// Thin PostgREST RPC helper (anon key is read-only + RLS-locked).
-async function rpc(name, args) {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-        method: 'POST',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(args || {}),
-    });
-    if (!resp.ok) throw new Error(`${name}: HTTP ${resp.status}`);
-    return resp.json();
+// ── Session handling ──────────────────────────────────────────────────────
+function zhLoadSession() {
+    try {
+        const ss = JSON.parse(localStorage.getItem(ZH_SESSION_KEY));
+        if (ss && ss.access_token && ss.refresh_token && ss.signed_in_until > Date.now()) return ss;
+    } catch (e) {}
+    return null;
 }
+function zhSaveSession(ss) {
+    localStorage.setItem(ZH_SESSION_KEY, JSON.stringify(ss));
+    authToken = ss.access_token;
+}
+function zhClearSession() {
+    authToken = null;
+    localStorage.removeItem(ZH_SESSION_KEY);
+    ZH_LEGACY_KEYS.forEach(k => sessionStorage.removeItem(k));
+}
+// Session ended (expired / refused): wipe it and reload so no data stays in
+// memory; the gate comes back with an explanation.
+function zhExpire(msg) {
+    zhClearSession();
+    try { sessionStorage.setItem(ZH_GATE_MSG_KEY, msg || 'Please sign in again.'); } catch (e) {}
+    location.reload();
+}
+function zhSignOut() {
+    zhClearSession();
+    location.reload();
+}
+// Turn a Supabase token response into a stored session. `keepUntil` carries
+// the original 30-day cap across refreshes (a refresh never extends it).
+function zhSessionFromTokenResponse(data, email, keepUntil) {
+    const expiresAt = data.expires_at ? data.expires_at * 1000 : Date.now() + (data.expires_in || 3600) * 1000;
+    return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: expiresAt,
+        signed_in_until: keepUntil || (Date.now() + ZH_SESSION_DAYS * 86400000),
+        email: (data.user && data.user.email) || email || '',
+    };
+}
+let _zhRefreshing = null;
+// Returns a valid access token, refreshing it first if it expires within ~60s.
+// `staleToken`: pass the token that just got a 401 to force a refresh (unless
+// another tab already replaced it). Throws on a transient network failure
+// WITHOUT ending the session; ends the session only when Supabase refuses the
+// refresh token or the 30-day cap has passed.
+async function ensureFreshToken(staleToken) {
+    const first = zhLoadSession();
+    if (!first) { zhExpire('Your session has ended. Please sign in again.'); throw new Error('Not signed in'); }
+    const isFresh = ss => ss.expires_at - Date.now() > 60000 && ss.access_token !== staleToken;
+    if (isFresh(first)) { authToken = first.access_token; return first.access_token; }
+    if (_zhRefreshing) return _zhRefreshing;
+    const run = async () => {
+        const cur = zhLoadSession();   // re-read: another tab may have refreshed meanwhile
+        if (!cur) { zhExpire('Your session has ended. Please sign in again.'); throw new Error('Not signed in'); }
+        if (isFresh(cur)) { authToken = cur.access_token; return cur.access_token; }
+        let resp;
+        try {
+            resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: cur.refresh_token }),
+            });
+        } catch (e) {
+            throw new Error('Could not reach the server to renew your sign-in — check your connection.');
+        }
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token || !data.refresh_token) {
+            if (resp.status >= 400 && resp.status < 500) {
+                zhExpire('Your session expired. Please sign in again.');
+                throw new Error('Session expired');
+            }
+            throw new Error('Could not renew your sign-in (server error) — try again.');
+        }
+        const next = zhSessionFromTokenResponse(data, cur.email, cur.signed_in_until);
+        zhSaveSession(next);
+        return next.access_token;
+    };
+    _zhRefreshing = (async () => {
+        try { return navigator.locks ? await navigator.locks.request('zh-token-refresh', run) : await run(); }
+        finally { _zhRefreshing = null; }
+    })();
+    return _zhRefreshing;
+}
+// Signing out (or expiry) in one tab locks the others too.
+window.addEventListener('storage', e => {
+    if (e.key === ZH_SESSION_KEY && !e.newValue) location.reload();
+});
 
-// Authenticated RPC helper for Edit Assets writes — same shape as rpc() but
-// signs with the owner's access_token instead of the anon key. Writes are
-// impossible without a valid token (RLS-enforced server-side too).
+// ── Authenticated RPC ─────────────────────────────────────────────────────
+// Every call to the database goes out signed with the owner's access_token -
+// the database no longer answers anonymous callers (schema phase 45). A 401
+// triggers one forced refresh + retry; if that fails the gate comes back.
 async function rpcAuth(name, args) {
-    if (!authToken) throw new Error('Not signed in');
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    const call = token => fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
         method: 'POST',
         headers: {
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(args || {}),
     });
-    if (resp.status === 401 || resp.status === 403) {
-        logoutEditAssets();
-        throw new Error('Session expired — please sign in again.');
+    let token = await ensureFreshToken();
+    let resp = await call(token);
+    if (resp.status === 401) {
+        token = await ensureFreshToken(token);
+        resp = await call(token);
+        if (resp.status === 401) { zhExpire('Your session expired. Please sign in again.'); throw new Error('Session expired'); }
     }
     if (!resp.ok) {
         let detail = '';
@@ -1695,6 +1755,68 @@ async function rpcAuth(name, args) {
     }
     const text = await resp.text();
     return text ? JSON.parse(text) : null;
+}
+// Reads used to go out with the public anon key; now that the page is gated
+// and the database refuses anon callers, they use the same signed path.
+const rpc = rpcAuth;
+
+// ── The sign-in gate ──────────────────────────────────────────────────────
+function zhShowGate(msg) {
+    document.documentElement.classList.add('zh-gate');
+    const err = document.getElementById('zhLoginErr');
+    if (err) err.textContent = msg || '';
+    const em = document.getElementById('zhEmail');
+    if (em) setTimeout(() => em.focus(), 0);
+}
+function zhUnlock() {
+    document.documentElement.classList.remove('zh-gate');
+    document.documentElement.classList.add('zh-unlocked');
+    const pw = document.getElementById('zhPassword'); if (pw) pw.value = '';
+}
+async function zhSignIn() {
+    const email    = document.getElementById('zhEmail').value.trim();
+    const password = document.getElementById('zhPassword').value;
+    const errEl    = document.getElementById('zhLoginErr');
+    const btn      = document.getElementById('zhLoginBtn');
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.access_token || !data.refresh_token) {
+            // No info leakage beyond "invalid credentials" - the Supabase error
+            // (wrong password, unknown user, unconfirmed email) is never shown.
+            errEl.textContent = 'Invalid credentials.';
+            return;
+        }
+        zhSaveSession(zhSessionFromTokenResponse(data, email));
+        zhUnlock();
+        startApp();
+    } catch (err) {
+        errEl.textContent = 'Sign-in failed — check your connection and try again.';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
+// Open a linked tool site (PRJ15 / PRJ27) already signed in. The token travels
+// in the URL FRAGMENT (never sent to a server / never in logs); the tool's
+// /handoff page verifies it server-side and sets its own session cookie.
+async function openTool(baseUrl) {
+    const win = window.open('about:blank', '_blank');   // opened synchronously so popup blockers allow it
+    if (win) { try { win.opener = null; } catch (e) {} }
+    try {
+        const token = await ensureFreshToken();          // never hand over a stale token
+        const url = `${baseUrl}/handoff#zh=${encodeURIComponent(token)}`;
+        if (win) win.location.href = url; else window.location.href = url;
+    } catch (e) {
+        if (win) win.close();
+        toast(e.message || 'Could not open the tool.', true);
+    }
 }
 
 function usingSupabase() {
@@ -3136,6 +3258,8 @@ function openSettings() {
     const source = localStorage.getItem(LS.source) || 'sheets';
     document.getElementById('sourceSheets').checked   = (source === 'sheets');
     document.getElementById('sourceSupabase').checked = (source === 'supabase');
+    const who = document.getElementById('zhSignedInAs');
+    if (who) { const ss = zhLoadSession(); who.textContent = ss && ss.email ? `Signed in as ${ss.email}` : 'Signed in'; }
     document.getElementById('modal').classList.add('open');
 }
 function closeSettings() { document.getElementById('modal').classList.remove('open'); }
@@ -3175,10 +3299,6 @@ function openEditAssets() {
     if (source !== 'supabase') {
         toast('Edit Assets requires Supabase mode — switch it on in Settings first.', true);
         return;
-    }
-    if (!authToken) {
-        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
-        if (saved) authToken = saved;
     }
     document.getElementById('eaModal').classList.add('open');
     ensureEurUsdRate();
@@ -3257,67 +3377,16 @@ function eaEditPreview(i) {
 
 function closeEditAssets() {
     document.getElementById('eaModal').classList.remove('open');
-    const err = document.getElementById('eaLoginErr'); if (err) err.textContent = '';
 }
 
 function updateEditAssetsView() {
-    const loginBox = document.getElementById('eaLoginBox');
-    const panel    = document.getElementById('eaPanel');
-    if (authToken) {
-        loginBox.style.display = 'none';
-        panel.style.display = 'block';
-        const email = sessionStorage.getItem(SS_EMAIL_KEY) || '';
-        document.getElementById('eaSignedInAs').textContent = email ? `Signed in as ${email}` : 'Signed in';
-        eaStatus('', false);
-        loadEditAssetsList();
-        loadPortfolios();
-        loadSalaryHistory();
-        loadFireCalculator();
-    } else {
-        loginBox.style.display = 'block';
-        panel.style.display = 'none';
-    }
-}
-
-async function loginEditAssets() {
-    const email    = document.getElementById('eaEmail').value.trim();
-    const password = document.getElementById('eaPassword').value;
-    const errEl    = document.getElementById('eaLoginErr');
-    const btn      = document.getElementById('eaLoginBtn');
-    errEl.textContent = '';
-    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
-    btn.disabled = true; btn.textContent = 'Signing in…';
-    try {
-        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-            method: 'POST',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.access_token) {
-            // No info leakage beyond "invalid credentials" — the Supabase error
-            // (wrong password, unknown user, unconfirmed email) is never shown.
-            errEl.textContent = 'Invalid credentials.';
-            return;
-        }
-        authToken = data.access_token;
-        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
-        sessionStorage.setItem(SS_EMAIL_KEY, email);
-        document.getElementById('eaPassword').value = '';
-        errEl.textContent = '';
-        updateEditAssetsView();
-    } catch (err) {
-        errEl.textContent = 'Sign-in failed — check your connection and try again.';
-    } finally {
-        btn.disabled = false; btn.textContent = 'Sign In';
-    }
-}
-
-function logoutEditAssets() {
-    authToken = null;
-    sessionStorage.removeItem(SS_TOKEN_KEY);
-    sessionStorage.removeItem(SS_EMAIL_KEY);
-    updateEditAssetsView();
+    const ss = zhLoadSession();
+    document.getElementById('eaSignedInAs').textContent = ss && ss.email ? `Signed in as ${ss.email}` : 'Signed in';
+    eaStatus('', false);
+    loadEditAssetsList();
+    loadPortfolios();
+    loadSalaryHistory();
+    loadFireCalculator();
 }
 
 function eaStatus(msg, isErr) {
@@ -4286,7 +4355,6 @@ async function saveCostBasis() {
     const f = costBasisFigures();
     if (f.totalCost <= 0) { set('Enter the cost side first.', true); return; }
     if (eurUsdRate === null) { set('Live EUR/USD rate not available yet — try again in a moment.', true); return; }
-    if (!authToken) { set('Sign in first (top of this modal) — writes are never allowed through the public anon key.', true); return; }
     if (f.loanBalance > f.loanAmount && f.loanAmount > 0) { set('Current loan balance is larger than the loan requested — check the figures.', true); return; }
     const inv = (dbData && dbData.invested) || {};
     const realEstateUsd = f.equityEur * eurUsdRate;
@@ -5003,69 +5071,18 @@ function openCashFlow() {
         toast('Cash Flow requires Supabase mode — switch it on in Settings first.', true);
         return;
     }
-    if (!authToken) {
-        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
-        if (saved) authToken = saved;
-    }
     document.getElementById('cfModal').classList.add('open');
     updateCashFlowView();
 }
 
 function closeCashFlow() {
     document.getElementById('cfModal').classList.remove('open');
-    const err = document.getElementById('cfLoginErr'); if (err) err.textContent = '';
 }
 
 function updateCashFlowView() {
-    const loginBox = document.getElementById('cfLoginBox');
-    const panel = document.getElementById('cfPanel');
-    if (authToken) {
-        loginBox.style.display = 'none';
-        panel.style.display = 'block';
-        cfStatus('', false);
-        switchCfTab(_cfActiveTab);
-        loadCashFlowAll();
-    } else {
-        loginBox.style.display = 'block';
-        panel.style.display = 'none';
-    }
-}
-
-async function loginCashFlow() {
-    const email = document.getElementById('cfEmail').value.trim();
-    const password = document.getElementById('cfPassword').value;
-    const errEl = document.getElementById('cfLoginErr');
-    const btn = document.getElementById('cfLoginBtn');
-    errEl.textContent = '';
-    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
-    btn.disabled = true; btn.textContent = 'Signing in…';
-    try {
-        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-            method: 'POST',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.access_token) {
-            errEl.textContent = 'Invalid credentials.';
-            return;
-        }
-        authToken = data.access_token;
-        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
-        sessionStorage.setItem(SS_EMAIL_KEY, email);
-        document.getElementById('cfPassword').value = '';
-        errEl.textContent = '';
-        updateCashFlowView();
-    } catch (err) {
-        errEl.textContent = 'Sign-in failed — check your connection and try again.';
-    } finally {
-        btn.disabled = false; btn.textContent = 'Sign In';
-    }
-}
-
-function logoutCashFlow() {
-    logoutEditAssets(); // shared session — same authToken/sessionStorage keys
-    updateCashFlowView();
+    cfStatus('', false);
+    switchCfTab(_cfActiveTab);
+    loadCashFlowAll();
 }
 
 function cfStatus(msg, isErr) {
@@ -6696,65 +6713,17 @@ function openLoanPayoff() {
         toast('Loan Payoff requires Supabase mode — switch it on in Settings first.', true);
         return;
     }
-    if (!authToken) {
-        const saved = sessionStorage.getItem(SS_TOKEN_KEY);
-        if (saved) authToken = saved;
-    }
     document.getElementById('lpModal').classList.add('open');
     updateLoanPayoffView();
 }
 
 function closeLoanPayoff() {
     document.getElementById('lpModal').classList.remove('open');
-    const err = document.getElementById('lpLoginErr'); if (err) err.textContent = '';
     clearInterval(lpTicker); lpTicker = null;
 }
 
 function updateLoanPayoffView() {
-    const loginBox = document.getElementById('lpLoginBox');
-    const panel = document.getElementById('lpPanel');
-    if (authToken) {
-        loginBox.style.display = 'none';
-        panel.style.display = 'block';
-        lpLoadAll();
-    } else {
-        loginBox.style.display = 'block';
-        panel.style.display = 'none';
-    }
-}
-
-async function loginLoanPayoff() {
-    const email = document.getElementById('lpEmail').value.trim();
-    const password = document.getElementById('lpPassword').value;
-    const errEl = document.getElementById('lpLoginErr');
-    const btn = document.getElementById('lpLoginBtn');
-    errEl.textContent = '';
-    if (!email || !password) { errEl.textContent = 'Enter email and password.'; return; }
-    btn.disabled = true; btn.textContent = 'Signing in…';
-    try {
-        const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-            method: 'POST',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.access_token) { errEl.textContent = 'Invalid credentials.'; return; }
-        authToken = data.access_token;
-        sessionStorage.setItem(SS_TOKEN_KEY, authToken);
-        sessionStorage.setItem(SS_EMAIL_KEY, email);
-        document.getElementById('lpPassword').value = '';
-        updateLoanPayoffView();
-    } catch (err) {
-        errEl.textContent = 'Sign-in failed — check your connection and try again.';
-    } finally {
-        btn.disabled = false; btn.textContent = 'Sign In';
-    }
-}
-
-function logoutLoanPayoff() {
-    logoutEditAssets(); // shared session
-    clearInterval(lpTicker); lpTicker = null;
-    updateLoanPayoffView();
+    lpLoadAll();
 }
 
 // ── Load: saved config, then live loan ──────────────────────────────────────
@@ -6776,7 +6745,6 @@ async function lpLoadAll() {
                 year: lpNum(x.year, 0, 40, 0) })) : [];
         }
     } catch (e) {
-        if (!authToken) { updateLoanPayoffView(); return; }
         fatal.textContent = 'Could not load your saved settings: ' + e.message;
         fatal.style.display = 'block';
     }
@@ -6994,7 +6962,6 @@ async function lpSave() {
         if (seq === lpState.saveSeq) lpSetSaveState('saved');
     } catch (e) {
         if (seq === lpState.saveSeq) lpSetSaveState('failed', e.message.replace(/^loan_sim_save failed: ?/, ''));
-        if (!authToken) updateLoanPayoffView();
     }
 }
 
@@ -7221,7 +7188,7 @@ function toast(msg, isErr) {
 // ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
-(function init() {
+function startApp() {
     const theme = localStorage.getItem(LS.theme) || 'zhodler';
     setTheme(theme);
     if (localStorage.getItem(LS.privacy) === '1') togglePrivacy();
@@ -7245,6 +7212,25 @@ function toast(msg, isErr) {
     // — a silently-stale rate moves every EUR asset and loan (audit W-05).
     ensureEurUsdRate();
     loadData();
+}
+
+// ── Boot: nothing but the gate exists until a valid session is confirmed ────
+(async function boot() {
+    // Theme first so the gate itself matches the user's chosen look.
+    try { setTheme(localStorage.getItem(LS.theme) || 'zhodler'); } catch (e) {}
+    ZH_LEGACY_KEYS.forEach(k => sessionStorage.removeItem(k));   // old per-tab token is obsolete
+    const msg = sessionStorage.getItem(ZH_GATE_MSG_KEY);
+    sessionStorage.removeItem(ZH_GATE_MSG_KEY);
+    if (!zhLoadSession()) { zhShowGate(msg); return; }
+    try {
+        await ensureFreshToken();        // refreshes if the access token is stale
+        zhUnlock();
+        startApp();
+    } catch (e) {
+        // Session already cleared + page reloaded if it was refused; a plain
+        // network failure keeps the session but cannot be verified -> gate.
+        zhShowGate(e.message);
+    }
 })();
 </script>
 </body>
