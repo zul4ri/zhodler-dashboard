@@ -623,14 +623,16 @@ details.dd tbody tr td:first-child{padding-left:26px;}
             <div class="whead"><span class="wtitle">Velocity &amp; Momentum</span>
                 <button class="info-btn" onclick="toggleInfo(this,'i-vel')">i</button></div>
             <div class="wbig" id="c-vel-annual">--</div>
+            <div class="wline" id="c-vel-sub">&nbsp;</div>
             <div class="wline" id="c-vel-momentum">&nbsp;</div>
             <div class="info-pop" id="i-vel">
-                <b>Net Worth Velocity — how fast your wealth is compounding right now.</b> It turns the year-to-date gain into an annual rate so this year can be compared fairly against any other.
-                <span class="formula">Annualized rate = YTD return &times; 12 &divide; months elapsed</span>
-                Momentum = YTD monthly pace minus all-time monthly pace.
-                <span class="formula">Projected end of year / 1 year = today's net worth + (this year's realised monthly pace &times; months remaining)</span>
-                <span class="formula">"This year's pace" includes one-off revaluations — the September 2026 FX rebase moved every euro asset and the mortgage in a single step.</span>
-                <span class="formula">Projected 5 years = the FIRE projection's median investable value at year 5, plus property, vehicles and cash minus debt, held flat</span>
+                <b>Velocity &amp; Momentum — how fast your net worth has been changing recently.</b>
+                <span class="formula"><b>The window:</b> the last 90 days, but never starting earlier than 1 August 2026. Before that the numbers were still being set up (accounts added, the house valued by hand), so counting them would show "growth" that was really just bookkeeping. Until a full 90 days of data exist, the window simply grows from 1 August.</span>
+                <span class="formula"><b>What the change includes:</b> it is the change in your <i>net worth</i>, so it mixes market moves with money you saved or deposited and with revaluations (house index, exchange rates, vehicle depreciation). There is no deposit ledger to separate them, so read it as "how much richer on paper", not "investment return".</span>
+                <span class="formula"><b>Pace:</b> the window change spread evenly per month (times 12 for the yearly figure). <b>Momentum</b> compares the last 30 days with the whole window: "Speeding up" or "Slowing" if the last 30 days differ by more than 10%, otherwise "Steady".</span>
+                <span class="formula"><b>Projected end of year / 1 year</b> = today's net worth + the window's monthly pace &times; months remaining. It is a straight line, not a forecast.</span>
+                <span class="formula"><b>Projected 5 years</b> = the FIRE projection's median investable value at year 5, plus property, vehicles and cash minus debt, held flat.</span>
+                <span class="formula" id="i-vel-legacy" style="display:none"><b>Old-method notice:</b> the newer recent-pace calculation is not available from the database yet, so this card is temporarily showing the old year-to-date figure. It counts from 1 January (a hand-typed starting value) and includes set-up week, so it overstates growth.</span>
             </div>
             <div style="margin-top:10px;">
                 <div class="substat"><span class="k">Projected end of year</span><span><span class="sensitive" id="c-proj-eoy">--</span> <span id="c-proj-eoy-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
@@ -1610,6 +1612,7 @@ let gridReady = false;   // redesign: static layout — no GridStack, just first
 let privacyOn = false, editMode = false, isLocked = false;
 let grid = null;
 let dbData = null;   // parsed dashboard_bootstrap() JSON, only populated when SOURCE=supabase
+let nwPace = null;   // parsed nw_pace() JSON (phase 48); null = function not available yet -> labelled legacy fallback
 let dbYearly = {};   // yearly() rows cached per scope: {total:[], crypto:[], tradfi:[], liquid:[]}
 let authToken = null; // current Supabase access_token (mirror of the stored session; kept fresh by ensureFreshToken)
 let _eaItems = [];    // Edit Assets: cache of manual_assets_list() rows for save/remove by index
@@ -1891,6 +1894,22 @@ function sv(id,val,colorCls){
 }
 
 
+// nw_pace() arrived with schema phase 48. If the page is published before that
+// database change (or the call fails) the Velocity card falls back to a labelled
+// legacy figure. A failure is remembered for the browser session so a refresh
+// does not repeat the failing request (and its network-log line).
+const NWPACE_MISSING_KEY = 'zh-nwpace-missing';
+async function fetchNwPace() {
+    try { if (sessionStorage.getItem(NWPACE_MISSING_KEY)) return null; } catch (e) {}
+    try {
+        const r = await rpc('nw_pace');
+        return (r && typeof r === 'object' && r.total) ? r : null;
+    } catch (e) {
+        try { sessionStorage.setItem(NWPACE_MISSING_KEY, '1'); } catch (e2) {}
+        return null;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA FETCH
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1907,16 +1926,18 @@ async function loadData() {
 
     let fetchErr = null;
     if (source === 'supabase') {
-        dbData = null; dbYearly = {};
+        dbData = null; dbYearly = {}; nwPace = null;
         try {
             // One bootstrap call + the yearly series per filter pill, in
             // parallel, so switching pills never needs a re-fetch.
             const SCOPES = ['total','crypto','tradfi','liquid'];
-            const [boot, ...yearlies] = await Promise.all([
+            const [boot, pace, ...yearlies] = await Promise.all([
                 rpc('dashboard_bootstrap'),
+                fetchNwPace(),
                 ...SCOPES.map(s => rpc('yearly', {p_scope: s}).catch(() => [])),
             ]);
             dbData = boot;
+            nwPace = pace;
             SCOPES.forEach((s, i) => { dbYearly[s] = Array.isArray(yearlies[i]) ? yearlies[i] : []; });
             // The shim: reshape the bootstrap into the sheet's rows[] layout so
             // the existing V()/N() widget logic keeps working untouched.
@@ -2228,6 +2249,18 @@ function getFilterMonthly() {
     if (activeFilter === 'liquid')  return N(36) + N(48);
     return N(10);
 }
+// Velocity card / projections / milestones: recent pace from nw_pace() (phase 48).
+// Returns the per-scope object, or null when unavailable (Sheets mode, or the
+// database function not applied yet). getFilterMonthly() stays the YTD figure.
+function getPace() {
+    if (!usingSupabase() || !nwPace) return null;
+    const p = nwPace[scopeForFilter(activeFilter)];
+    return (p && has(p.pace_month) && has(p.window_days) && num(p.window_days) > 0) ? p : null;
+}
+function getVelocityMonthly() {
+    const p = getPace();
+    return p ? num(p.pace_month) : getFilterMonthly();
+}
 function getFilterDaily() {
     if (usingSupabase()) { const g = dbGains(); return g ? num(g.ytd_abs) / dbElapsed().ytdDays : 0; }
     if (activeFilter === 'crypto')  return N(35);
@@ -2446,10 +2479,12 @@ function renderProjections() {
     }
 
     const nw = getFilterNW();
-    const pace = getFilterMonthly();               // ytd_abs / months elapsed
+    const pp = getPace();
+    const pace = getVelocityMonthly();             // nw_pace() window pace; legacy ytd_abs/months if unavailable
     const moLeft = Math.round((1 - N(1)) * 12);
-    put('c-proj-eoy', nw + pace * moLeft, "at this year's pace (incl. one-off revaluations)");
-    put('c-proj-1y',  nw + pace * 12,     "at this year's pace (incl. one-off revaluations)");
+    const paceLbl = pp ? `at the ${num(pp.window_days)}-day pace` : (usingSupabase() && nwPace ? '' : "at the old year-to-date pace (legacy)");
+    put('c-proj-eoy', nw + pace * moLeft, paceLbl);
+    put('c-proj-1y',  nw + pace * 12,     paceLbl);
 
     const p = _mainFireProjection;
     if (!p || !Array.isArray(p.p50s) || p.p50s.length < 6) {
@@ -2463,16 +2498,51 @@ function renderProjections() {
 
 function renderVelocity() {
     updateSectorHeaders();
+    const p = getPace();
+    const momEl = document.getElementById('c-vel-momentum');
+    const setMom = (html, cls) => {
+        if (!momEl) return;
+        momEl.innerHTML = html;
+        momEl.className = momEl.className.replace(/\b(pos|neg|warn)\b/g,'').trim();
+        if (cls) momEl.classList.add(cls);
+    };
+    const legacyNote = document.getElementById('i-vel-legacy');
+    if (p) {
+        // Supabase + nw_pace(): honest recent window, like-for-like momentum.
+        if (legacyNote) legacyNote.style.display = 'none';
+        const sgn = n => (n > 0 ? '+' : '') + fd(n);
+        const win = num(p.window_days), chg = num(p.change_abs), pm = num(p.pace_month);
+        const pct = has(p.change_pct) ? ` (${num(p.change_pct) >= 0 ? '+' : ''}${num(p.change_pct).toFixed(1)}%)` : '';
+        sv('c-vel-annual', sgn(chg), cc(chg));
+        gi('c-vel-sub', `in the last ${win} days${pct}<br><span class="sensitive">&asymp; ${fd(pm)}/month &middot; &asymp; ${fd(pm * 12)}/year at this pace</span>`);
+        if (has(p.last30_pace_month) && num(p.last30_days) > 0) {
+            const l30 = num(p.last30_pace_month), tol = 0.1 * Math.abs(pm);
+            const detail = ` &mdash; last ${num(p.last30_days)} days: <span class="sensitive">${sgn(num(p.last30_change))} (&asymp; ${fd(l30)}/month vs ${fd(pm)})</span>`;
+            if (l30 > pm + tol)      setMom('&#9650; Speeding up' + detail, 'pos');
+            else if (l30 < pm - tol) setMom('&#9660; Slowing' + detail, 'neg');
+            else                     setMom('&#9679; Steady' + detail, '');
+        } else {
+            setMom('&nbsp;', '');
+        }
+        return;
+    }
+    // nw_pace() loaded but has no figures for this view (e.g. the Cash chip).
+    if (usingSupabase() && nwPace) {
+        if (legacyNote) legacyNote.style.display = 'none';
+        sv('c-vel-annual', '—', '');
+        gi('c-vel-sub', 'not tracked for this view');
+        setMom('&nbsp;', '');
+        return;
+    }
+    // Fallback: Sheets mode (unchanged behaviour), or nw_pace() not available yet.
     const monthly  = getFilterMonthly();
     const annual   = monthly * 12;
     const momentum = monthly - getFilterAtMonthly();
+    const legacy = usingSupabase();   // Supabase without nw_pace(): say so on the card
+    if (legacyNote) legacyNote.style.display = legacy ? '' : 'none';
     sv('c-vel-annual', fd(annual)+'/yr', cc(annual));
-    const momEl = document.getElementById('c-vel-momentum');
-    if (momEl) {
-        momEl.innerHTML = momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating';
-        momEl.className = momEl.className.replace(/\b(pos|neg|warn)\b/g,'').trim();
-        const cls = cc(momentum); if(cls) momEl.classList.add(cls);
-    }
+    gi('c-vel-sub', legacy ? 'old method: since 1 Jan, includes set-up week &mdash; update pending' : '&nbsp;');
+    setMom(momentum >= 0 ? '&#9650; Accelerating' : '&#9660; Decelerating', cc(momentum));
 }
 
 function renderMilestone() {
@@ -2480,7 +2550,7 @@ function renderMilestone() {
     // (same basis as the FIRE projection) once the FIRE plan's investment
     // total has loaded; before that it falls back to net worth.
     const currentNW = _mainFireInvestmentTotal > 0 ? _mainFireInvestmentTotal : getFilterNW();
-    const monthlyGrowth = getFilterMonthly();
+    const monthlyGrowth = getVelocityMonthly();
     const milestones=[
         {name:'$50K', target:50000,  icon:'🎯'},
         {name:'$100K',target:100000, icon:'💯'},
