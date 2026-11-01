@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zhodler Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cpath fill='%23ABFF1A' d='M12 12H52V25L32 39H52V52H12V39L32 25H12Z'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <style id="zh-gate-css">
 /* SIGN-IN GATE. The app is hidden by default (before any script runs); it is
    only revealed when JS adds html.zh-unlocked after a valid session is
@@ -523,6 +525,30 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     .lp-chartbox{height:240px;}
     .lp-table th,.lp-table td{padding:6px 4px;font-size:12px;}
 }
+
+/* ── NET WORTH HISTORY (phase 50) ───────────────────────────────────────── */
+.nwh-ctrls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.nwh-pills{display:flex;gap:3px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px;}
+.nwh-pills button{background:none;border:0;color:var(--text2);font:inherit;font-size:12px;padding:5px 11px;border-radius:6px;cursor:pointer;}
+.nwh-pills button:hover{color:var(--text);}
+.nwh-pills button.on{background:rgba(255,255,255,.13);color:var(--text);font-weight:700;}
+.nwh-desc{color:var(--text2);font-size:12.5px;margin:0 0 10px;line-height:1.45;}
+.nwh-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px;}
+.nwh-kpi{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-width:0;}
+.nwh-kpi .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;}
+.nwh-kpi .v{font-size:16px;font-weight:700;margin-top:2px;}
+.nwh-kpi .d{font-size:11.5px;margin-top:1px;}
+.nwh-kpi .d .since{color:var(--text2);}
+.nwh-up{color:var(--accent);} .nwh-down{color:var(--red);}
+.nwh-box{position:relative;height:380px;}
+.nwh-note{color:var(--text2);font-size:11.5px;margin-top:8px;line-height:1.5;}
+.nwh-msg{color:var(--text2);font-size:13px;padding:34px 8px;text-align:center;line-height:1.5;}
+@media (max-width:640px){
+    .nwh-ctrls{width:100%;margin-left:0;flex-direction:column;}
+    .nwh-pills button{flex:1;padding:6px 4px;}
+    .nwh-box{height:300px;}
+    .nwh-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
     </style>
 </head>
 <body data-filter="portfolio">
@@ -555,6 +581,7 @@ details.dd tbody tr td:first-child{padding-left:26px;}
         <h4>Overview</h4>
         <a class="nav-item" href="#sec-overview"><span class="dot"></span>Net Worth</a>
         <a class="nav-item" href="#sec-velocity"><span class="dot"></span>Growth &amp; Velocity</a>
+        <a class="nav-item" id="nav-nwhistory" href="#sec-nwhistory" style="display:none"><span class="dot"></span>Net Worth History</a>
     </nav>
     <nav class="nav-group">
         <h4>Investments</h4>
@@ -654,6 +681,37 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 <b>Net worth vs total assets, year by year.</b> Net worth subtracts debt; total assets is the gross figure. The detail table below (Investments section) shows both side by side with the derived debt.
             </div>
         </div>
+    </div>
+</section>
+
+<!-- ══ NET WORTH HISTORY (phase 50: nw_history()) — hidden in Sheets mode ══ -->
+<section class="sec" id="sec-nwhistory" style="display:none">
+    <div class="wcard">
+        <div class="whead" style="flex-wrap:wrap;gap:10px;">
+            <span class="wtitle">Net Worth History</span>
+            <div class="nwh-ctrls">
+                <div class="nwh-pills" id="nwhScope" role="group" aria-label="Scope">
+                    <button type="button" data-s="all" class="on" aria-pressed="true">All</button>
+                    <button type="button" data-s="tradfi" aria-pressed="false">TradFi</button>
+                    <button type="button" data-s="crypto" aria-pressed="false">Crypto</button>
+                    <button type="button" data-s="liquid" aria-pressed="false">Liquid</button>
+                </div>
+                <div class="nwh-pills" id="nwhRange" role="group" aria-label="Range">
+                    <button type="button" data-d="1" aria-pressed="false">1M</button>
+                    <button type="button" data-d="3" aria-pressed="false">3M</button>
+                    <button type="button" data-d="6" aria-pressed="false">6M</button>
+                    <button type="button" data-d="12" aria-pressed="false">12M</button>
+                    <button type="button" data-d="0" class="on" aria-pressed="true">Total</button>
+                </div>
+            </div>
+        </div>
+        <div id="nwhBody">
+            <div class="nwh-desc" id="nwhDesc"></div>
+            <div class="nwh-kpis" id="nwhKpis"></div>
+            <div class="nwh-box sensitive"><canvas id="nwhCanvas" role="img" aria-label="Net worth history line chart"></canvas></div>
+            <div class="nwh-note">Click a legend item to hide or show a line. Daily figures from 25 Jul 2026. Gaps are days with no snapshot (line bridged).</div>
+        </div>
+        <div class="nwh-msg" id="nwhMsg" style="display:none"></div>
     </div>
 </section>
 
@@ -1911,6 +1969,154 @@ async function fetchNwPace() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NET WORTH HISTORY (schema phase 50: nw_history())
+// Same pattern as the Velocity card: if the database function is missing (or the
+// call fails) the card shows one quiet message and the failure is remembered for
+// the browser session, so a refresh does not repeat the failing request.
+// Sheets mode has no history table, so the card and its nav link stay hidden.
+// ─────────────────────────────────────────────────────────────────────────────
+const NWHIST_MISSING_KEY = 'zh-nwhist-missing';
+const NWH_FLOOR = '2026-07-25';   // first day after set-up week; nothing earlier is ever shown
+let nwHist = null;                 // {day -> {scope -> [net_worth, assets, debt]}}
+let nwHistDays = [];
+let nwHistState = 'idle';          // idle | loading | ready | missing
+let nwhChart = null, nwhScope = 'all', nwhRange = 0;
+const NWH = 0, NWA = 1, NWD = 2;
+const nwhV = (d, sc, i) => (nwHist[d] && nwHist[d][sc]) ? nwHist[d][sc][i] : null;
+const NWH_VIEWS = {
+    all: {desc: 'Everything you own and owe: house, vehicles, banks and crypto.', series: [
+        {label: 'Net worth',     f: d => nwhV(d,'total',NWH),  col: 'accent', w: 3},
+        {label: 'Total assets',  f: d => nwhV(d,'total',NWA),  col: 'text', w: 1.5, dash: [4,3]},
+        {label: 'TradFi assets', f: d => nwhV(d,'tradfi',NWA), col: '#60a5fa', w: 2},
+        {label: 'Crypto assets', f: d => nwhV(d,'crypto',NWA), col: '#ffcc00', w: 2},
+        {label: 'Total debt',    f: d => nwhV(d,'total',NWD),  col: 'red', w: 2, debt: true}]},
+    tradfi: {desc: 'House, vehicles, bank accounts and fund — and the mortgage, car loan and loan from Andreia.', series: [
+        {label: 'TradFi net worth', f: d => nwhV(d,'tradfi',NWH), col: 'accent', w: 3},
+        {label: 'TradFi assets',    f: d => nwhV(d,'tradfi',NWA), col: '#60a5fa', w: 2},
+        {label: 'TradFi debt',      f: d => nwhV(d,'tradfi',NWD), col: 'red', w: 2, debt: true}]},
+    crypto: {desc: 'BTC collateral, yield sleeves and wallet tokens — and the Aave loan.', series: [
+        {label: 'Crypto net worth', f: d => nwhV(d,'crypto',NWH), col: 'accent', w: 3},
+        {label: 'Crypto assets',    f: d => nwhV(d,'crypto',NWA), col: '#ffcc00', w: 2},
+        {label: 'Crypto debt',      f: d => nwhV(d,'crypto',NWD), col: 'red', w: 2, debt: true}]},
+    liquid: {desc: 'What you could turn into cash quickly: crypto, bank accounts and the CGD fund — and debts without a fixed schedule (Aave, loan from Andreia).', series: [
+        {label: 'Liquid net worth',        f: d => nwhV(d,'liquid',NWH), col: 'accent', w: 3},
+        {label: 'Liquid assets',           f: d => nwhV(d,'liquid',NWA), col: 'text', w: 1.5, dash: [4,3]},
+        {label: '… of which crypto',       f: d => nwhV(d,'crypto',NWA), col: '#ffcc00', w: 2},
+        {label: '… of which banks & fund', f: d => { const l = nwhV(d,'liquid',NWA), c = nwhV(d,'crypto',NWA); return (l == null || c == null) ? null : l - c; }, col: '#2dd4bf', w: 2},
+        {label: 'Liquid debt',             f: d => nwhV(d,'liquid',NWD), col: 'red', w: 2, debt: true}]},
+};
+async function fetchNwHistory() {
+    try { if (sessionStorage.getItem(NWHIST_MISSING_KEY)) return null; } catch (e) {}
+    try {
+        const r = await rpcAuth('nw_history');
+        return Array.isArray(r) ? r : null;
+    } catch (e) {
+        try { sessionStorage.setItem(NWHIST_MISSING_KEY, '1'); } catch (e2) {}
+        return null;
+    }
+}
+function nwhIndex(list) {
+    const idx = {};
+    list.forEach(r => {
+        const d = String(r.day).slice(0, 10);
+        if (d < NWH_FLOOR) return;
+        (idx[d] = idx[d] || {})[r.scope] = [Number(r.net_worth), Number(r.total_assets), Number(r.total_debt)];
+    });
+    return idx;
+}
+// "N calendar months back from the latest day", clamped to the target month's length (UTC, no timezone drift).
+function nwhCutoff(lastDay, months) {
+    const [y, m, d] = lastDay.split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1 - months, 1));
+    const dim = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    t.setUTCDate(Math.min(d, dim));
+    return t.toISOString().slice(0, 10);
+}
+const nwhFmt = x => (x < 0 ? '−$' : '$') + (Math.abs(x) >= 1000 ? (Math.abs(x) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(x)));
+const nwhFull = x => (x < 0 ? '−$' : '$') + Math.round(Math.abs(x)).toLocaleString('en-US');
+const nwhLbl = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+function nwhColor(c) {
+    const cs = getComputedStyle(document.body);
+    if (c === 'accent' || c === 'red' || c === 'text') return cs.getPropertyValue('--' + c).trim() || '#ABFF1A';
+    return c;
+}
+function nwhShowMsg(text) {
+    document.getElementById('nwhBody').style.display = 'none';
+    const m = document.getElementById('nwhMsg');
+    m.textContent = text; m.style.display = '';
+    document.querySelectorAll('#nwhScope, #nwhRange').forEach(el => el.style.display = 'none');
+    if (nwhChart) { nwhChart.destroy(); nwhChart = null; }
+}
+function drawNwHistory() {
+    document.getElementById('nwhMsg').style.display = 'none';
+    document.getElementById('nwhBody').style.display = '';
+    document.querySelectorAll('#nwhScope, #nwhRange').forEach(el => el.style.display = '');
+    const V = NWH_VIEWS[nwhScope];
+    let ds = nwHistDays;
+    if (nwhRange) { const cut = nwhCutoff(ds[ds.length - 1], nwhRange); ds = ds.filter(d => d >= cut); }
+    document.getElementById('nwhDesc').textContent = V.desc;
+    const series = V.series.map(S => ({S, color: nwhColor(S.col), data: ds.map(S.f)}));
+    document.getElementById('nwhKpis').innerHTML = series.map(({S, color, data}) => {
+        const idx = data.map((x, i) => x == null ? -1 : i).filter(i => i >= 0);
+        if (!idx.length) return '';
+        const a = data[idx[0]], b = data[idx[idx.length - 1]], ch = b - a;
+        const good = S.debt ? ch <= 0 : ch >= 0;
+        return `<div class="nwh-kpi"><div class="k" style="color:${color}">${S.label}</div>` +
+            `<div class="v sensitive">${nwhFmt(b)}</div>` +
+            `<div class="d sensitive ${good ? 'nwh-up' : 'nwh-down'}">${ch >= 0 ? '+' : ''}${nwhFmt(ch)} <span class="since">since ${nwhLbl(ds[idx[0]])}</span></div></div>`;
+    }).join('');
+    const cs = getComputedStyle(document.body);
+    const tick = cs.getPropertyValue('--text2').trim() || '#888';
+    if (nwhChart) nwhChart.destroy();
+    nwhChart = new Chart(document.getElementById('nwhCanvas'), {
+        type: 'line',
+        data: {labels: ds.map(nwhLbl), datasets: series.map(({S, color, data}) => ({
+            label: S.label, data, borderColor: color, backgroundColor: color, borderWidth: S.w,
+            borderDash: S.dash || [], pointRadius: 0, pointHoverRadius: 3, tension: 0.15, spanGaps: true}))},
+        options: {animation: false, responsive: true, maintainAspectRatio: false,
+            interaction: {mode: 'index', intersect: false},
+            plugins: {legend: {position: 'bottom', labels: {color: tick, boxWidth: 14, boxHeight: 2, font: {size: 11}}},
+                tooltip: {callbacks: {label: c => ` ${c.dataset.label}: ${nwhFull(c.parsed.y)}`}}},
+            scales: {x: {ticks: {color: tick, maxTicksLimit: 8, font: {size: 11}}, grid: {color: 'rgba(255,255,255,0.04)'}},
+                y: {beginAtZero: true, ticks: {color: tick, font: {size: 11}, callback: x => nwhFmt(x)}, grid: {color: 'rgba(255,255,255,0.06)'}}}}
+    });
+}
+function renderNwHistory(force) {
+    const sec = document.getElementById('sec-nwhistory'), nav = document.getElementById('nav-nwhistory');
+    if (!sec) return;
+    const on = usingSupabase();
+    sec.style.display = on ? '' : 'none';
+    if (nav) nav.style.display = on ? '' : 'none';
+    if (!on) return;
+    if (nwHistState === 'missing') { nwhShowMsg('History needs a one-time database update.'); return; }
+    if (nwHistState === 'idle') {
+        nwHistState = 'loading';
+        fetchNwHistory().then(list => {
+            if (!list) { nwHistState = 'missing'; nwhShowMsg('History needs a one-time database update.'); return; }
+            nwHist = nwhIndex(list); nwHistDays = Object.keys(nwHist).sort();
+            if (nwHistDays.length < 2) { nwHistState = 'missing'; nwhShowMsg('Not enough history yet.'); return; }
+            nwHistState = 'ready'; drawNwHistory();
+        });
+        return;
+    }
+    if (nwHistState === 'ready' && (force || !nwhChart)) drawNwHistory();
+}
+(function nwhWire() {
+    const wire = (id, key, set) => {
+        const box = document.getElementById(id);
+        if (!box) return;
+        box.addEventListener('click', e => {
+            const b = e.target.closest('button'); if (!b) return;
+            box.querySelectorAll('button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+            set(b.dataset[key]);
+            if (nwHistState === 'ready') drawNwHistory();
+        });
+    };
+    wire('nwhScope', 's', v => { nwhScope = v; });
+    wire('nwhRange', 'd', v => { nwhRange = +v; });
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DATA FETCH
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadData() {
@@ -1927,6 +2133,7 @@ async function loadData() {
     let fetchErr = null;
     if (source === 'supabase') {
         dbData = null; dbYearly = {}; nwPace = null;
+        if (nwHistState !== 'missing') nwHistState = 'idle';   // Refresh re-fetches history; a cached 'missing' stays missing
         try {
             // One bootstrap call + the yearly series per filter pill, in
             // parallel, so switching pills never needs a re-fetch.
@@ -2210,6 +2417,7 @@ function renderAll() {
     renderProjections(); renderVelocity(); renderMilestone();
     renderMonteCarlo(); renderAssets(); renderYearly();
     renderPrj27Bridge();   // auto crypto share needs the asset data — refresh after render
+    renderNwHistory();
 }
 
 function renderGlobal() {
@@ -3325,6 +3533,7 @@ function setTheme(t) {
     });
     localStorage.setItem(LS.theme, t);
     if (rows.length > 0) { renderAssets(); renderYearly(); renderMonteCarlo(); }
+    if (nwHistState === 'ready') drawNwHistory();   // line colours follow the theme
 }
 
 function openSettings() {
