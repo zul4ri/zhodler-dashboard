@@ -4,8 +4,8 @@
   "description": "Personal cryptocurrency portfolio tracker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b213c",
-  "theme_color": "#0ad5ec",
+  "background_color": "#000000",
+  "theme_color": "#ABFF1A",
   "orientation": "any",
   "icons": [
     {
