@@ -1,8 +1,9 @@
 {
   "name": "Zhodler 2026F Dashboard",
   "short_name": "Zhodler",
-  "description": "Personal cryptocurrency portfolio tracker",
-  "start_url": "/",
+  "description": "Personal wealth dashboard: net worth, crypto, debt and planning",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#ABFF1A",
