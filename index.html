@@ -59,22 +59,24 @@ html.zh-gate #zhGate{display:flex;position:fixed;inset:0;z-index:2000;align-item
     --accent:#00e5b0; --green:#00e5b0; --red:#ff6685; --yellow:#fde047;
     --glow:rgba(0,229,176,0.06);
 }
-/* Lime: shadcn/ui Neutral dark, lime as the only accent, pink losses,
-   shades of green for every other colour. Shapes + Geist font are scoped
-   to body.theme-lime further down ("LIME THEME — SHAPES"). */
+/* Lime: shadcn/ui Neutral dark. Lime = gains, pink = losses, violet = warnings,
+   greys = everything else; extra chart/category colours come from one
+   8-colour lime family. Shapes + Geist font are scoped to body.theme-lime
+   further down ("LIME THEME — SHAPES"). */
 .theme-lime {
     /* ── LIME PALETTE HOOKS (CSS side) ─────────────────────────────────────
        The ONE place for the lime theme's non-neutral colours in CSS. Chart
-       colours live in the JS twin, LIME_PALETTE. Values below are TEMPORARY
-       placeholders (plain lime / current yellow) until David approves the
-       colour tests — replace them here, nothing else needs to change. */
+       colours live in the JS twin, LIME_PALETTE. Approved 2026-11-14.
+       Series family, in order (alternates light/dark):
+       #ABFF1A #5E8F0A #F0FF4D #3FAE2A #E0FFA6 #A3B514 #7DEB3B #4F6E0C */
     --lime-cls-port: #ABFF1A;  /* asset class: whole portfolio            -> --f-port */
-    --lime-cls-liq:  #ABFF1A;  /* asset class: liquid (also Loan Payoff "Gross stables"/"Keep BTC") -> --f-liq  */
-    --lime-cls-cryp: #ABFF1A;  /* asset class: crypto (also Loan Payoff "Total"/"With sale plan")   -> --f-cryp */
-    --lime-cls-trad: #ABFF1A;  /* asset class: TradFi                     -> --f-trad */
-    --lime-warn:     #ffcc00;  /* warnings (stale badge, low-probability, import/loan warnings) -> --yellow */
-    --lime-soon:     #ffcc00;  /* milestone ETA under 2 years (yellow in the other themes) */
-    --lime-tag-loan: #ffcc00;  /* Cash Flow bills calendar "loan" source tag (yellow in the other themes) */
+    --lime-cls-liq:  #E0FFA6;  /* asset class: liquid (also Loan Payoff "Gross stables"/"Keep BTC") -> --f-liq  */
+    --lime-cls-cryp: #F0FF4D;  /* asset class: crypto (also Loan Payoff "Total"/"With sale plan")   -> --f-cryp */
+    --lime-cls-trad: #3FAE2A;  /* asset class: TradFi                     -> --f-trad */
+    --lime-warn:     #9D7BFF;  /* warnings only (stale badge, low-probability, import/loan warnings) -> --yellow */
+    --lime-warn-tint:rgba(157,123,255,.08); /* background tint behind a warning box */
+    --lime-soon:     #F0FF4D;  /* milestone ETA under 2 years (yellow in the other themes) */
+    --lime-tag-loan: #3FAE2A;  /* Cash Flow bills calendar "loan" source tag (yellow in the other themes) */
 
     /* Approved base: shadcn Neutral dark, lime accent, pink losses */
     --bg:#0a0a0a; --bg2:#0a0a0a; --card:#0a0a0a; --card2:#171717;
@@ -88,6 +90,8 @@ html.zh-gate #zhGate{display:flex;position:fixed;inset:0;z-index:2000;align-item
     --f-trad:var(--lime-cls-trad);
     --soon:  var(--lime-soon);
     --tag-loan:var(--lime-tag-loan);
+    --warn-tint:var(--lime-warn-tint);
+    accent-color:var(--accent);   /* native checkboxes/radios: lime, not browser blue */
 }
 html:has(body.theme-lime){background:#0a0a0a;}
 
@@ -1667,7 +1671,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
                     </div>
                     <div style="font-size:10px;color:var(--text2);margin-top:4px;">Auto-detected — many bank exports have several lines of account info before the real column headers. Change the row number above if it guessed wrong, or set it to 0 if the file has no header row at all.</div>
                     <div id="cfImportMappingCols" style="margin-top:8px;"></div>
-                    <div id="cfImportRoleWarning" style="display:none;color:var(--yellow);font-size:10px;margin-top:8px;background:rgba(255,204,0,0.06);border:1px solid var(--yellow);border-radius:3px;padding:6px 9px;"></div>
+                    <div id="cfImportRoleWarning" style="display:none;color:var(--yellow);font-size:10px;margin-top:8px;background:var(--warn-tint,rgba(255,204,0,0.06));border:1px solid var(--yellow);border-radius:3px;padding:6px 9px;"></div>
 
                     <div class="card-divider" style="margin:14px 0;"></div>
                     <div class="mrow-row">
@@ -1861,33 +1865,34 @@ let _chartFontDefault = null;   // Chart.js's own default font family, captured 
 // The ONE place for every chart colour in the Lime theme (CSS twin: the
 // --lime-* variables in .theme-lime). Used only while body has .theme-lime —
 // the other four themes keep their original hard-coded chart colours.
-// TEMPORARY: every series is plain lime until David approves the colour
-// tests. Net worth = lime and losses/debt/expenses = pink are already approved.
+// Approved 2026-11-14: lime = gains, pink = losses, violet = warnings, greys =
+// everything else; extra series use the 8-colour lime family below, in this
+// order so neighbouring slices/lines alternate light and dark.
+const LIME_SERIES = ['#ABFF1A','#5E8F0A','#F0FF4D','#3FAE2A','#E0FFA6','#A3B514','#7DEB3B','#4F6E0C'];
 const LIME_PALETTE = {
-    // Assets Distribution doughnut, one per slice, biggest holding first
-    slices: ['#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A',
-             '#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A'],
+    // Assets Distribution doughnut, biggest holding first (9th+ slices restart the family)
+    slices: LIME_SERIES.concat(LIME_SERIES.slice(0, 4)),
     sliceBorder: '#0a0a0a',     // gap between slices (page background)
-    // Yearly Performance bars
+    // Yearly Performance bars (as in the mockup)
     yearNetWorth:    '#ABFF1A',
-    yearTotalAssets: '#ABFF1A',
+    yearTotalAssets: '#404040', // neutral comparison series
     // FIRE projection (main card + FIRE Calculator): lines; bands reuse the same colour at low opacity
-    mcP90:    '#ABFF1A',
-    mcMedian: '#ABFF1A',
-    mcP10:    '#ABFF1A',
-    mcTarget: '#ABFF1A',        // FIRE number line
-    // Net Worth History extra lines (net worth = --accent and debt = --red come from CSS)
-    nwhTotalAssets: '#ABFF1A',  // also "Liquid assets"
-    nwhTradfi:      '#ABFF1A',
-    nwhCrypto:      '#ABFF1A',  // also "… of which crypto"
-    nwhBanksFund:   '#ABFF1A',  // "… of which banks & fund"
+    mcP90:    '#E0FFA6',        // optimistic line + P90-to-median band
+    mcMedian: '#ABFF1A',        // median line + median-to-P10 band
+    mcP10:    '#7DEB3B',        // pessimistic line (dashed)
+    mcTarget: '#a3a3a3',        // FIRE number reference line (neutral)
+    // Net Worth History extra lines (net worth = --accent lime, debt = --red pink)
+    nwhTotalAssets: '#a3a3a3',  // dashed comparison line, also "Liquid assets" (neutral)
+    nwhTradfi:      '#3FAE2A',  // = --f-trad
+    nwhCrypto:      '#F0FF4D',  // = --f-cryp, also "… of which crypto"
+    nwhBanksFund:   '#3FAE2A',  // "… of which banks & fund" (TradFi money, only shown in the Liquid view)
     // Cash Flow (Tools > Cash Flow)
-    cfIncome:  '#ABFF1A',
-    cfExpense: '#F71F8B',       // loss colour (approved)
-    cfNet:     '#ABFF1A',
+    cfIncome:  '#ABFF1A',       // gain colour
+    cfExpense: '#F71F8B',       // loss colour
+    cfNet:     '#E0FFA6',
     cfHeat:    '#F71F8B',       // spending-by-category heat map cells (loss colour)
     goalBehind:'#F71F8B',       // "behind" goal box tint (loss colour)
-    // Neutrals (final): chart axis text, legend text, grid lines
+    // Neutrals: chart axis text, legend text, grid lines
     tick:   '#a3a3a3',
     legend: '#a3a3a3',
     grid:   '#262626',
