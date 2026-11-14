@@ -22,6 +22,10 @@ html:not(.zh-unlocked) body > *:not(#zhGate){display:none !important;}
 html.zh-gate #zhGate{display:flex;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;background:var(--bg);padding:16px;}
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Geist + Geist Mono: only USED under body.theme-lime; browsers download the font files only when a rule applies them. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
     <style>
 /* ── THEMES ──────────────────────────────────────────────────────────────── */
 :root {
@@ -55,6 +59,37 @@ html.zh-gate #zhGate{display:flex;position:fixed;inset:0;z-index:2000;align-item
     --accent:#00e5b0; --green:#00e5b0; --red:#ff6685; --yellow:#fde047;
     --glow:rgba(0,229,176,0.06);
 }
+/* Lime: shadcn/ui Neutral dark, lime as the only accent, pink losses,
+   shades of green for every other colour. Shapes + Geist font are scoped
+   to body.theme-lime further down ("LIME THEME — SHAPES"). */
+.theme-lime {
+    /* ── LIME PALETTE HOOKS (CSS side) ─────────────────────────────────────
+       The ONE place for the lime theme's non-neutral colours in CSS. Chart
+       colours live in the JS twin, LIME_PALETTE. Values below are TEMPORARY
+       placeholders (plain lime / current yellow) until David approves the
+       colour tests — replace them here, nothing else needs to change. */
+    --lime-cls-port: #ABFF1A;  /* asset class: whole portfolio            -> --f-port */
+    --lime-cls-liq:  #ABFF1A;  /* asset class: liquid (also Loan Payoff "Gross stables"/"Keep BTC") -> --f-liq  */
+    --lime-cls-cryp: #ABFF1A;  /* asset class: crypto (also Loan Payoff "Total"/"With sale plan")   -> --f-cryp */
+    --lime-cls-trad: #ABFF1A;  /* asset class: TradFi                     -> --f-trad */
+    --lime-warn:     #ffcc00;  /* warnings (stale badge, low-probability, import/loan warnings) -> --yellow */
+    --lime-soon:     #ffcc00;  /* milestone ETA under 2 years (yellow in the other themes) */
+    --lime-tag-loan: #ffcc00;  /* Cash Flow bills calendar "loan" source tag (yellow in the other themes) */
+
+    /* Approved base: shadcn Neutral dark, lime accent, pink losses */
+    --bg:#0a0a0a; --bg2:#0a0a0a; --card:#0a0a0a; --card2:#171717;
+    --border:#262626; --text:#fafafa; --text2:#a3a3a3;
+    --accent:#ABFF1A; --green:#ABFF1A; --red:#F71F8B;
+    --glow:#262626;
+    --yellow:var(--lime-warn);
+    --f-port:var(--lime-cls-port);
+    --f-liq: var(--lime-cls-liq);
+    --f-cryp:var(--lime-cls-cryp);
+    --f-trad:var(--lime-cls-trad);
+    --soon:  var(--lime-soon);
+    --tag-loan:var(--lime-tag-loan);
+}
+html:has(body.theme-lime){background:#0a0a0a;}
 
 /* ── RESET ───────────────────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -118,6 +153,19 @@ body.privacy .sensitive{filter:blur(8px);pointer-events:none;user-select:none;}
 .tpill[data-t="cyan"]   {background:linear-gradient(135deg,#00d4ff,#2060ee);}
 .tpill[data-t="neon"]   {background:linear-gradient(135deg,#b060ff,#3adf80);}
 .tpill[data-t="cyber"]  {background:linear-gradient(135deg,#00e5b0,#20b0e0);}
+.tpill[data-t="lime"]   {background:linear-gradient(135deg,#ABFF1A 50%,#262626 50%);}
+/* Theme picker inside Settings: labelled swatch buttons (same .tpill hooks setTheme() uses) */
+.tpick{display:flex;flex-wrap:wrap;gap:8px;}
+.tpick .tpill{width:auto;height:auto;border-radius:999px;display:inline-flex;align-items:center;gap:7px;
+    padding:5px 12px 5px 6px;border:1px solid var(--border);background:transparent;color:var(--text2);
+    font-size:12.5px;font-weight:500;line-height:1.2;user-select:none;}
+.tpick .tpill::before{content:'';width:14px;height:14px;border-radius:50%;flex-shrink:0;background:var(--tsw);}
+.tpick .tpill:hover,.tpick .tpill.active{transform:none;border-color:var(--text);color:var(--text);}
+.tpick .tpill[data-t="zhodler"]{--tsw:linear-gradient(135deg,#00ff7f,#00c060);}
+.tpick .tpill[data-t="cyan"]   {--tsw:linear-gradient(135deg,#00d4ff,#2060ee);}
+.tpick .tpill[data-t="neon"]   {--tsw:linear-gradient(135deg,#b060ff,#3adf80);}
+.tpick .tpill[data-t="cyber"]  {--tsw:linear-gradient(135deg,#00e5b0,#20b0e0);}
+.tpick .tpill[data-t="lime"]   {--tsw:linear-gradient(135deg,#ABFF1A 50%,#262626 50%);}
 
 /* ── GRIDSTACK ───────────────────────────────────────────────────────────── */
 .grid-stack{background:transparent;}
@@ -564,6 +612,18 @@ details.dd tbody tr td:first-child{padding-left:26px;}
     .top-actions{margin-left:0;width:100%;}
     .top-actions .ibtn{flex:1;justify-content:center;padding:0 6px;min-width:0;}
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   LIME THEME — SHAPES (shadcn/ui style). Everything here is scoped to
+   body.theme-lime; the other four themes never match these selectors.
+   ═════════════════════════════════════════════════════════════════════════════ */
+body.theme-lime{
+    font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+body.theme-lime button,body.theme-lime input,body.theme-lime select,body.theme-lime textarea{font-family:inherit;}
+body.theme-lime .info-pop .formula{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Consolas,monospace;}
     </style>
 </head>
 <body data-filter="portfolio">
@@ -1048,6 +1108,17 @@ details.dd tbody tr td:first-child{padding-left:26px;}
                 </label>
             </div>
             <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-top:6px;">Supabase currently powers Net Worth, Total Debt, and DeFi Positions. Everything else keeps showing $0 until later phases.</div>
+        </div>
+        <div class="mrow">
+            <label class="mlabel" id="themePickLbl">Theme</label>
+            <div class="tpick" role="radiogroup" aria-labelledby="themePickLbl">
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('zhodler');}">Default</div>
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="cyan"    onclick="setTheme('cyan')"    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('cyan');}">Cyan</div>
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="neon"    onclick="setTheme('neon')"    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('neon');}">Neon</div>
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="cyber"   onclick="setTheme('cyber')"   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('cyber');}">Cyber</div>
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="lime"    onclick="setTheme('lime')"    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('lime');}">Lime</div>
+            </div>
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-top:6px;">Applies straight away and is remembered on this device.</div>
         </div>
         <div class="mrow">
             <label class="mlabel">Google Sheet URL or ID</label>
@@ -1660,6 +1731,7 @@ const LS = {
     privacy: 'zh-privacy',
     source:  'zh-source',      // 'sheets' (default) | 'supabase'
 };
+let _chartFontDefault = null;   // Chart.js's own default font family, captured on the first setTheme()
 
 // Supabase (Phase 1 backend). Anon key is read-only + RLS-locked — safe to
 // embed client-side. Writes require the service_role key, which lives only
@@ -3547,6 +3619,11 @@ function setTheme(t) {
         p.setAttribute('aria-checked', isActive ? 'true' : 'false');
     });
     localStorage.setItem(LS.theme, t);
+    // Chart.js text follows the theme font: Geist under Lime, Chart.js's own default otherwise.
+    if (typeof Chart !== 'undefined') {
+        if (_chartFontDefault === null) _chartFontDefault = Chart.defaults.font.family;
+        Chart.defaults.font.family = t === 'lime' ? "'Geist', ui-sans-serif, system-ui, sans-serif" : _chartFontDefault;
+    }
     if (rows.length > 0) { renderAssets(); renderYearly(); renderMonteCarlo(); }
     if (nwHistState === 'ready') drawNwHistory();   // line colours follow the theme
 }
