@@ -744,6 +744,18 @@ body.theme-lime select.minput{background:var(--bg);}
 body.theme-lime #toast{border-radius:8px;background:var(--bg);}
 body.theme-lime .tpick .tpill{border-radius:6px;}
 
+/* The FIRE card title shares its header row with a long caption: keep "FIRE Plan" on one line */
+body.theme-lime #monteFilter{white-space:nowrap;}
+
+/* Colour emoji (milestone icons, tool cards, Privacy button, modal titles) would
+   bring blue/orange/purple into the theme: render them as one-colour glyphs.
+   Same characters, only the paint changes. */
+body.theme-lime .ms-circle:not(.done){color:transparent;text-shadow:0 0 0 var(--text2);}
+body.theme-lime .ms-circle.next{text-shadow:0 0 0 var(--accent);}
+body.theme-lime #sec-tools .wtitle,
+body.theme-lime .ibtn,
+body.theme-lime .mtitle{color:transparent;text-shadow:0 0 0 var(--text);}
+
 /* Focus ring follows shadcn (ring offset) */
 body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}
 
@@ -1870,8 +1882,10 @@ let _chartFontDefault = null;   // Chart.js's own default font family, captured 
 // order so neighbouring slices/lines alternate light and dark.
 const LIME_SERIES = ['#ABFF1A','#5E8F0A','#F0FF4D','#3FAE2A','#E0FFA6','#A3B514','#7DEB3B','#4F6E0C'];
 const LIME_PALETTE = {
-    // Assets Distribution doughnut, biggest holding first (9th+ slices restart the family)
-    slices: LIME_SERIES.concat(LIME_SERIES.slice(0, 4)),
+    // Assets Distribution doughnut, biggest holding first. Slices 9-12 reuse the
+    // family in an order chosen so the last slice never matches its neighbours,
+    // including slice 1 where the ring closes.
+    slices: LIME_SERIES.concat(['#E0FFA6', '#5E8F0A', '#F0FF4D', '#3FAE2A']),
     sliceBorder: '#0a0a0a',     // gap between slices (page background)
     // Yearly Performance bars (as in the mockup)
     yearNetWorth:    '#ABFF1A',
