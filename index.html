@@ -1733,6 +1733,56 @@ const LS = {
 };
 let _chartFontDefault = null;   // Chart.js's own default font family, captured on the first setTheme()
 
+// ── LIME PALETTE HOOKS (JS side) ────────────────────────────────────────────
+// The ONE place for every chart colour in the Lime theme (CSS twin: the
+// --lime-* variables in .theme-lime). Used only while body has .theme-lime —
+// the other four themes keep their original hard-coded chart colours.
+// TEMPORARY: every series is plain lime until David approves the colour
+// tests. Net worth = lime and losses/debt/expenses = pink are already approved.
+const LIME_PALETTE = {
+    // Assets Distribution doughnut, one per slice, biggest holding first
+    slices: ['#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A',
+             '#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A','#ABFF1A'],
+    sliceBorder: '#0a0a0a',     // gap between slices (page background)
+    // Yearly Performance bars
+    yearNetWorth:    '#ABFF1A',
+    yearTotalAssets: '#ABFF1A',
+    // FIRE projection (main card + FIRE Calculator): lines; bands reuse the same colour at low opacity
+    mcP90:    '#ABFF1A',
+    mcMedian: '#ABFF1A',
+    mcP10:    '#ABFF1A',
+    mcTarget: '#ABFF1A',        // FIRE number line
+    // Net Worth History extra lines (net worth = --accent and debt = --red come from CSS)
+    nwhTotalAssets: '#ABFF1A',  // also "Liquid assets"
+    nwhTradfi:      '#ABFF1A',
+    nwhCrypto:      '#ABFF1A',  // also "… of which crypto"
+    nwhBanksFund:   '#ABFF1A',  // "… of which banks & fund"
+    // Cash Flow (Tools > Cash Flow)
+    cfIncome:  '#ABFF1A',
+    cfExpense: '#F71F8B',       // loss colour (approved)
+    cfNet:     '#ABFF1A',
+    cfHeat:    '#F71F8B',       // spending-by-category heat map cells (loss colour)
+    goalBehind:'#F71F8B',       // "behind" goal box tint (loss colour)
+    // Neutrals (final): chart axis text, legend text, grid lines
+    tick:   '#a3a3a3',
+    legend: '#a3a3a3',
+    grid:   '#262626',
+};
+function isLime() { return document.body.classList.contains('theme-lime'); }
+function limeA(hex, a) {
+    let h = String(hex).replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+// Lime-aware colour: `def` is the original colour (returned unchanged in every
+// other theme); under Lime returns LIME_PALETTE[key], optionally at opacity `a`.
+function lc(def, key, a) {
+    if (!isLime()) return def;
+    const c = LIME_PALETTE[key];
+    return a === undefined ? c : limeA(c, a);
+}
+
 // Supabase (Phase 1 backend). Anon key is read-only + RLS-locked — safe to
 // embed client-side. Writes require the service_role key, which lives only
 // on the VPS collector and is never shipped here.
@@ -2122,8 +2172,11 @@ function nwhCutoff(lastDay, months) {
 const nwhFmt = x => (x < 0 ? '−$' : '$') + (Math.abs(x) >= 1000 ? (Math.abs(x) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(x)));
 const nwhFull = x => (x < 0 ? '−$' : '$') + Math.round(Math.abs(x)).toLocaleString('en-US');
 const nwhLbl = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+// Lime theme: which LIME_PALETTE slot each Net Worth History series colour maps to.
+const NWH_LIME_KEY = {text: 'nwhTotalAssets', '#60a5fa': 'nwhTradfi', '#ffcc00': 'nwhCrypto', '#2dd4bf': 'nwhBanksFund'};
 function nwhColor(c) {
     const cs = getComputedStyle(document.body);
+    if (isLime() && NWH_LIME_KEY[c]) return LIME_PALETTE[NWH_LIME_KEY[c]];
     if (c === 'accent' || c === 'red' || c === 'text') return cs.getPropertyValue('--' + c).trim() || '#ABFF1A';
     return c;
 }
@@ -2164,8 +2217,8 @@ function drawNwHistory() {
             interaction: {mode: 'index', intersect: false},
             plugins: {legend: {position: 'bottom', labels: {color: tick, boxWidth: 14, boxHeight: 2, font: {size: 11}}},
                 tooltip: {callbacks: {label: c => ` ${c.dataset.label}: ${nwhFull(c.parsed.y)}`}}},
-            scales: {x: {ticks: {color: tick, maxTicksLimit: 8, font: {size: 11}}, grid: {color: 'rgba(255,255,255,0.04)'}},
-                y: {beginAtZero: true, ticks: {color: tick, font: {size: 11}, callback: x => nwhFmt(x)}, grid: {color: 'rgba(255,255,255,0.06)'}}}}
+            scales: {x: {ticks: {color: tick, maxTicksLimit: 8, font: {size: 11}}, grid: {color: lc('rgba(255,255,255,0.04)', 'grid')}},
+                y: {beginAtZero: true, ticks: {color: tick, font: {size: 11}, callback: x => nwhFmt(x)}, grid: {color: lc('rgba(255,255,255,0.06)', 'grid')}}}}
     });
 }
 function renderNwHistory(force) {
@@ -2879,7 +2932,7 @@ function renderMilestone() {
         const done=currentNW>=m.target;
         const months=(!done&&monthlyGrowth>0)?Math.ceil((m.target-currentNW)/monthlyGrowth):0;
         const eta=done?'':(months>0?months+'mo':'∞');
-        const etaColor=done?'var(--green)':(months>0&&months<24?'var(--yellow)':'var(--text2)');
+        const etaColor=done?'var(--green)':(months>0&&months<24?'var(--soon,var(--yellow))':'var(--text2)');
         return `<div class="ms-label"><div class="ms-name">${m.name}</div><div class="ms-eta" style="color:${etaColor}">${eta}</div></div>`;
     }).join(''));
     const next=nextIdx>=0?milestones[nextIdx]:null;
@@ -3346,22 +3399,22 @@ function renderMainFireSummary(projection, savedWhen) {
             data: {
                 labels: projection.yearLabels,
                 datasets: [
-                    { label: 'P90', data: projection.p90s, borderColor: 'rgba(124,111,239,.8)', backgroundColor: 'rgba(124,111,239,.12)', fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
-                    { label: 'Median', data: projection.p50s, borderColor: '#00c896', backgroundColor: 'rgba(0,200,150,.08)', fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
-                    { label: 'P10', data: projection.p10s, borderColor: 'rgba(255,77,109,.7)', backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
-                    { label: chartTargetLabel, data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
+                    { label: 'P90', data: projection.p90s, borderColor: lc('rgba(124,111,239,.8)', 'mcP90', .8), backgroundColor: lc('rgba(124,111,239,.12)', 'mcP90', .12), fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'Median', data: projection.p50s, borderColor: lc('#00c896', 'mcMedian'), backgroundColor: lc('rgba(0,200,150,.08)', 'mcMedian', .08), fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'P10', data: projection.p10s, borderColor: lc('rgba(255,77,109,.7)', 'mcP10', .7), backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
+                    { label: chartTargetLabel, data: targetLine, borderColor: lc('rgba(255,184,77,.6)', 'mcTarget', .6), backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
                 ],
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                    legend: { display: true, position: 'bottom', labels: { color: lc('#b0b7d0', 'legend'), font: { size: 11 }, boxWidth: 14, padding: 10 } },
                     tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw)}` } },
                 },
                 scales: {
-                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
-                    y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: 'rgba(255,255,255,.05)' } },
+                    x: { ticks: { color: lc('#7b82a0', 'tick'), font: { size: 10 } }, grid: { color: lc('rgba(255,255,255,.04)', 'grid') } },
+                    y: { ticks: { color: lc('#7b82a0', 'tick'), maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: lc('rgba(255,255,255,.05)', 'grid') } },
                 },
             },
         });
@@ -3468,14 +3521,14 @@ function renderAssets() {
     const checkbox = document.getElementById('distIncludeRE');
     if (checkbox) checkbox.checked = includeRE;
     if (titleEl) titleEl.textContent = includeRE ? 'Assets Distribution — all assets' : 'Assets Distribution — investable';
-    const COLORS=['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
+    const COLORS=isLime()?LIME_PALETTE.slices:['#7c6fef','#00d4ff','#b066ff','#00c896','#ffb84d','#ff4d6d','#7b82a0','#4a5070','#1c3a5e','#2d5a27','#5e3a1c','#5e1c3a'];
     if(charts.assets) charts.assets.destroy();
     const ctx=document.getElementById('assetsChart');
     if(ctx) {
         charts.assets=new Chart(ctx,{
             type:'doughnut',
-            data:{labels:shown.map(a=>`${a.name} (${a.plat})`),datasets:[{data:shown.map(a=>a.val),backgroundColor:COLORS,borderWidth:1,borderColor:'rgba(255,255,255,.05)'}]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7b82a0',font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
+            data:{labels:shown.map(a=>`${a.name} (${a.plat})`),datasets:[{data:shown.map(a=>a.val),backgroundColor:COLORS,borderWidth:isLime()?2:1,borderColor:lc('rgba(255,255,255,.05)','sliceBorder')}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:lc('#7b82a0','legend'),font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fd(ctx.raw)}`}}}}
         });
     }
     const row=a=>`<tr><td><b>${a.name}</b></td><td>${a.qty===null||a.qty===undefined?'—':fq(a.qty)}</td>`+
@@ -3552,12 +3605,12 @@ function renderYearly() {
         charts.year=new Chart(ctx,{
             type:'bar',
             data:{labels:years.map(y=>y.yr),datasets:[
-                {label:'Net Worth',data:years.map(y=>y.nw),backgroundColor:'#7c6fef',borderRadius:4},
-                {label:'Total Assets',data:years.map(y=>y.ta),backgroundColor:'rgba(0,212,255,.35)',borderColor:'#00d4ff',borderWidth:1,borderRadius:4}
+                {label:'Net Worth',data:years.map(y=>y.nw),backgroundColor:lc('#7c6fef','yearNetWorth'),borderRadius:4},
+                {label:'Total Assets',data:years.map(y=>y.ta),backgroundColor:lc('rgba(0,212,255,.35)','yearTotalAssets'),borderColor:lc('#00d4ff','yearTotalAssets'),borderWidth:isLime()?0:1,borderRadius:4}
             ]},
             options:{responsive:true,maintainAspectRatio:false,
-                plugins:{legend:{labels:{color:'#7b82a0',font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}},
-                scales:{x:{ticks:{color:'#7b82a0'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#7b82a0',callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'rgba(255,255,255,.05)'}}}
+                plugins:{legend:{labels:{color:lc('#7b82a0','legend'),font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fd(ctx.raw)}`}}},
+                scales:{x:{ticks:{color:lc('#7b82a0','tick')},grid:{color:lc('rgba(255,255,255,.05)','grid')}},y:{ticks:{color:lc('#7b82a0','tick'),callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:lc('rgba(255,255,255,.05)','grid')}}}
             }
         });
     }
@@ -5200,22 +5253,22 @@ function renderFireOutputs() {
             data: {
                 labels: yearLabels,
                 datasets: [
-                    { label: 'P90', data: p90s, borderColor: 'rgba(124,111,239,.8)', backgroundColor: 'rgba(124,111,239,.12)', fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
-                    { label: 'Median', data: p50s, borderColor: '#00c896', backgroundColor: 'rgba(0,200,150,.08)', fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
-                    { label: 'P10', data: p10s, borderColor: 'rgba(255,77,109,.7)', backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
-                    { label: 'FIRE Number', data: targetLine, borderColor: 'rgba(255,184,77,.6)', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
+                    { label: 'P90', data: p90s, borderColor: lc('rgba(124,111,239,.8)', 'mcP90', .8), backgroundColor: lc('rgba(124,111,239,.12)', 'mcP90', .12), fill: '+1', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'Median', data: p50s, borderColor: lc('#00c896', 'mcMedian'), backgroundColor: lc('rgba(0,200,150,.08)', 'mcMedian', .08), fill: '+1', borderWidth: 2.5, pointRadius: 0, tension: 0.4 },
+                    { label: 'P10', data: p10s, borderColor: lc('rgba(255,77,109,.7)', 'mcP10', .7), backgroundColor: 'transparent', fill: false, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
+                    { label: 'FIRE Number', data: targetLine, borderColor: lc('rgba(255,184,77,.6)', 'mcTarget', .6), backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [6, 4], pointRadius: 0 },
                 ],
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                    legend: { display: true, position: 'bottom', labels: { color: lc('#b0b7d0', 'legend'), font: { size: 11 }, boxWidth: 14, padding: 10 } },
                     tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw)}` } },
                 },
                 scales: {
-                    x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
-                    y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: 'rgba(255,255,255,.05)' } },
+                    x: { ticks: { color: lc('#7b82a0', 'tick'), font: { size: 10 } }, grid: { color: lc('rgba(255,255,255,.04)', 'grid') } },
+                    y: { ticks: { color: lc('#7b82a0', 'tick'), maxTicksLimit: 5, callback: v => v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(0) + 'k' : '$' + v }, grid: { color: lc('rgba(255,255,255,.05)', 'grid') } },
                 },
             },
         });
@@ -6501,7 +6554,7 @@ async function loadCfBills() {
 }
 
 const CF_BILLS_SOURCE_BADGE = { recurring: 'RECURRING', loan: 'LOAN', transaction: 'LOGGED' };
-const CF_BILLS_SOURCE_COLOR = { recurring: 'var(--accent)', loan: 'var(--yellow)', transaction: 'var(--text2)' };
+const CF_BILLS_SOURCE_COLOR = { recurring: 'var(--accent)', loan: 'var(--tag-loan,var(--yellow))', transaction: 'var(--text2)' };
 
 function renderCfBills() {
     const wrap = document.getElementById('cfBillsList');
@@ -6590,7 +6643,7 @@ function buildCfGoalCard(g) {
 
     let projectionHtml = '';
     if (g.pace_status === 'behind') {
-        projectionHtml = `<div style="margin-top:8px;background:rgba(255,77,109,.08);border:1px solid var(--red);border-radius:3px;padding:8px 10px;font-size:11px;">
+        projectionHtml = `<div style="margin-top:8px;background:${lc('rgba(255,77,109,.08)', 'goalBehind', .08)};border:1px solid var(--red);border-radius:3px;padding:8px 10px;font-size:11px;">
             Increase to <b>${eur(g.required_monthly)}/mo</b> (+${eur(g.suggested_monthly_increase)}/mo) to reach this goal by ${escapeHtml(g.target_date)}.
         </div>`;
     } else if (g.pace_status === 'on_track') {
@@ -6784,21 +6837,21 @@ function renderCfAnalyticsChart() {
         data: {
             labels,
             datasets: [
-                { type: 'bar', label: 'Income', data: income, backgroundColor: 'rgba(0,200,150,.55)', borderRadius: 2, order: 2 },
-                { type: 'bar', label: 'Expense', data: expense, backgroundColor: 'rgba(255,77,109,.55)', borderRadius: 2, order: 2 },
-                { type: 'line', label: 'Net', data: net, borderColor: '#ffb84d', backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2, order: 1 },
+                { type: 'bar', label: 'Income', data: income, backgroundColor: lc('rgba(0,200,150,.55)', 'cfIncome', .6), borderRadius: 2, order: 2 },
+                { type: 'bar', label: 'Expense', data: expense, backgroundColor: lc('rgba(255,77,109,.55)', 'cfExpense', .6), borderRadius: 2, order: 2 },
+                { type: 'line', label: 'Net', data: net, borderColor: lc('#ffb84d', 'cfNet'), backgroundColor: 'transparent', borderWidth: 2, tension: 0.3, pointRadius: 2, order: 1 },
             ],
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: true, position: 'bottom', labels: { color: '#b0b7d0', font: { size: 11 }, boxWidth: 14, padding: 10 } },
+                legend: { display: true, position: 'bottom', labels: { color: lc('#b0b7d0', 'legend'), font: { size: 11 }, boxWidth: 14, padding: 10 } },
                 tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fd(c.raw).replace('$', '€')}` } },
             },
             scales: {
-                x: { ticks: { color: '#7b82a0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
-                y: { ticks: { color: '#7b82a0', maxTicksLimit: 5, callback: v => '€' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) }, grid: { color: 'rgba(255,255,255,.05)' } },
+                x: { ticks: { color: lc('#7b82a0', 'tick'), font: { size: 10 } }, grid: { color: lc('rgba(255,255,255,.04)', 'grid') } },
+                y: { ticks: { color: lc('#7b82a0', 'tick'), maxTicksLimit: 5, callback: v => '€' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) }, grid: { color: lc('rgba(255,255,255,.05)', 'grid') } },
             },
         },
     });
@@ -6843,7 +6896,7 @@ function renderCfAnalyticsHeatmap() {
         const cellsHtml = months.map(m => {
             const val = cellMap[`${name}|${m}`] || 0;
             const intensity = maxVal > 0 ? val / maxVal : 0;
-            const bg = intensity > 0 ? `rgba(255,120,80,${(0.08 + intensity * 0.55).toFixed(2)})` : 'transparent';
+            const bg = intensity > 0 ? (isLime() ? limeA(LIME_PALETTE.cfHeat, (0.08 + intensity * 0.55).toFixed(2)) : `rgba(255,120,80,${(0.08 + intensity * 0.55).toFixed(2)})`) : 'transparent';
             return `<td style="background:${bg};text-align:right;">${val > 0 ? fd(val).replace('$', '€') : '—'}</td>`;
         }).join('');
         return `<tr><td style="white-space:nowrap;">${escapeHtml(name)}</td>${cellsHtml}</tr>`;
