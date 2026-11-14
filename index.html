@@ -766,7 +766,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
 }
     </style>
 </head>
-<body data-filter="portfolio">
+<body data-filter="portfolio" class="theme-lime">
 
 <!-- ═══ SIGN-IN GATE: the single front door. Nothing else renders until unlocked. ═══ -->
 <div id="zhGate">
@@ -1252,7 +1252,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <div class="mrow">
             <label class="mlabel" id="themePickLbl">Theme</label>
             <div class="tpick" role="radiogroup" aria-labelledby="themePickLbl">
-                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('zhodler');}">Default</div>
+                <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="zhodler" onclick="setTheme('zhodler')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('zhodler');}">Original</div>
                 <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="cyan"    onclick="setTheme('cyan')"    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('cyan');}">Cyan</div>
                 <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="neon"    onclick="setTheme('neon')"    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('neon');}">Neon</div>
                 <div class="tpill" role="radio" aria-checked="false" tabindex="0" data-t="cyber"   onclick="setTheme('cyber')"   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTheme('cyber');}">Cyber</div>
@@ -1866,7 +1866,7 @@ const DEFAULT_SHEET = '19FOCRgYHY94QN3Jf7NaeMpGsEbQUdu9bKboYvy4fVpk';
 const LS = {
     sheet:   'zh-sheet-id',
     layout:  'zh-layout-v10',  // bumped: full card-header/card-body structure
-    theme:   'zh-theme',
+    theme:   'zh-theme-v2',  // bumped 2026-11-14: Lime became the default, everyone starts on it once
     locked:  'zh-locked',
     privacy: 'zh-privacy',
     source:  'zh-source',      // 'sheets' (default) | 'supabase'
@@ -7760,7 +7760,7 @@ function toast(msg, isErr) {
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
 function startApp() {
-    const theme = localStorage.getItem(LS.theme) || 'zhodler';
+    const theme = localStorage.getItem(LS.theme) || 'lime';
     setTheme(theme);
     if (localStorage.getItem(LS.privacy) === '1') togglePrivacy();
     const fr = document.getElementById('fireRuns');
@@ -7788,7 +7788,7 @@ function startApp() {
 // ── Boot: nothing but the gate exists until a valid session is confirmed ────
 (async function boot() {
     // Theme first so the gate itself matches the user's chosen look.
-    try { setTheme(localStorage.getItem(LS.theme) || 'zhodler'); } catch (e) {}
+    try { setTheme(localStorage.getItem(LS.theme) || 'lime'); } catch (e) {}
     ZH_LEGACY_KEYS.forEach(k => sessionStorage.removeItem(k));   // old per-tab token is obsolete
     const msg = sessionStorage.getItem(ZH_GATE_MSG_KEY);
     sessionStorage.removeItem(ZH_GATE_MSG_KEY);
