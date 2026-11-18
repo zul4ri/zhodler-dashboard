@@ -95,6 +95,11 @@ td small{color:var(--text2);display:block;font-size:12px;}
     .pool .pname,.pool .x{grid-column:auto;grid-row:auto;}
     .pool.phead .c-name,.pool.phead .c-x{display:block;}
 }
+.pool .pend{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--text2);font-size:12px;margin-top:-2px;}
+.pool .pend .pg{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.pool .pend input[type=number]{width:62px;padding:4px 6px;}
+.pool .lnk{border:0;background:transparent;color:var(--text2);font-size:12px;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.pool .lnk:hover{color:var(--text);}
 .psum{color:var(--text2);font-size:13px;margin-top:8px;}
 .psum b{color:var(--text);font-weight:500;}
 .btn[disabled]{opacity:.5;cursor:default;}
@@ -350,11 +355,18 @@ function applyScenario(a0, plan, sc) {
         if (L.sell.how === 'pct') a.events.push({ month: m, type: 'sellBtc', pct: Number(L.sell.pct) || 0, to: 'loan' });
         else a.events.push({ month: m, type: 'sellBtcRepay' });
     }
-    if (L.realloc) a.pools = reallocView(L.realloc).map(x => ({ name: x.name, amount: x.amount, rate: Number(x.rate) || 0, basis: x.basis, newPct: Number(x.newPct) || 0 }));
+    if (L.realloc) a.pools = reallocView(L.realloc).map(x => {
+        const o = { name: x.name, amount: x.amount, rate: Number(x.rate) || 0, basis: x.basis, newPct: Number(x.newPct) || 0 };
+        if (x.forMonths >= 1) { o.forMonths = x.forMonths; o.thenRate = Number(x.thenRate) || 0; }   // a rate that ends
+        return o;
+    });
     if (L.yields) {
         const pts = (Number(L.yields.sleevePts) || 0) / 100;
         a.sleeveYield = Math.max(0, a.sleeveYield + pts);
-        if (a.pools) a.pools.forEach(x => { if (x.rate > 0) x.rate = Math.max(0, x.rate + pts); });   // the same shift on every pool that earns something
+        if (a.pools) a.pools.forEach(x => {                // the same shift on every pool rate that earns something
+            if (x.rate > 0) x.rate = Math.max(0, x.rate + pts);
+            if (x.thenRate > 0) x.thenRate = Math.max(0, x.thenRate + pts);
+        });
         a.borrowRate = Math.max(0, a.borrowRate + (Number(L.yields.borrowPts) || 0) / 100);
     }
     if (L.oneoff) a.events.push({ month: Math.max(1, Math.round(Number(L.oneoff.month) || 1)), type: 'cash', amount: Number(L.oneoff.amount) || 0 });
@@ -539,9 +551,11 @@ function reallocSummary(sc, a0, note) {
     const alloc = P.reduce((t, x) => t + x.amount, 0), left = Math.max(0, tot - alloc);
     const blend = tot > 0 ? P.reduce((t, x) => t + x.amount * E.poolApr(x), 0) / tot : 0;
     const share = Math.round(P.reduce((t, x) => t + (Number(x.newPct) || 0), 0) * 10) / 10, idle = Math.round((100 - share) * 10) / 10;
+    const ends = P.filter(x => x.forMonths >= 1);
     return `Allocated <b class="sensitive">${fmtFull(alloc)}</b> of <span class="sensitive">${fmtFull(tot)}</span>` +
         (Math.round(disp(left)) >= 1 ? ` &middot; <span class="warnc"><span class="sensitive">${fmtFull(left)}</span> not allocated, earning 0%</span>` : '') +
-        `<br>Earning <b>${pct(blend, 2)}</b> a year overall (starting line: ${pct(a0.sleeveYield, 2)})` +
+        `<br>Earning <b>${pct(blend, 2)}</b> a year overall${ends.length ? ' today' : ''} (starting line: ${pct(a0.sleeveYield, 2)})` +
+        (ends.length ? `<br>Rates that end: ${ends.map(x => `${esc(x.name || 'unnamed')} after ${x.forMonths} ${x.forMonths === 1 ? 'month' : 'months'}, then ${+((Number(x.thenRate) || 0) * 100).toFixed(2)}%`).join(' &middot; ')}` : '') +
         `<br>New money: <b>${share}%</b> assigned` + (idle > 0 ? ` &middot; <span class="warnc">${idle}% left idle at 0%</span>` : '') +
         (note ? `<br><span class="warnc">${note}</span>` : '');
 }
@@ -554,12 +568,18 @@ function reallocHtml(sc, a0) {
         `<input type="number" min="0" max="200" step="0.1" value="${+((Number(x.rate) || 0) * 100).toFixed(2)}" aria-label="Rate, percent a year" ${ev(i, 'rate')}>` +
         `<select aria-label="APR or APY" ${ev(i, 'basis')}><option value="apr"${x.basis === 'apy' ? '' : ' selected'}>APR</option><option value="apy"${x.basis === 'apy' ? ' selected' : ''}>APY</option></select>` +
         `<input type="number" min="0" max="100" step="1" value="${+(Number(x.newPct) || 0).toFixed(1)}" aria-label="Share of new money, percent" ${ev(i, 'newPct')}>` +
-        `<button class="x" type="button" title="Remove this pool" onclick="removePool('${id}',${i})">&times;</button></div>`).join('');
+        `<button class="x" type="button" title="Remove this pool" onclick="removePool('${id}',${i})">&times;</button>` +
+        (x.forMonths >= 1
+            ? `<div class="pend"><span class="pg">This rate lasts<input type="number" min="1" max="600" step="1" value="${x.forMonths}" aria-label="Months this rate lasts" ${ev(i, 'forMonths')}>months,</span>` +
+              `<span class="pg">then<input type="number" min="0" max="200" step="0.1" value="${+((Number(x.thenRate) || 0) * 100).toFixed(2)}" aria-label="Rate afterwards, percent a year" ${ev(i, 'thenRate')}>` +
+              `<span id="${id}-pb-${i}">% ${x.basis === 'apy' ? 'APY' : 'APR'}</span></span><button class="lnk" type="button" onclick="togglePoolEnd('${id}',${i},false)">Remove the end</button></div>`
+            : `<div class="pend"><button class="lnk" type="button" onclick="togglePoolEnd('${id}',${i},true)">+ This rate ends after a while</button></div>`) +
+        `</div>`).join('');
     return `<div class="pools"><div class="pool phead"><span class="c-name">Pool or vault</span><span>Amount (${sym()})</span><span class="c-rate">Rate a year (%)</span><span>New money (%)</span><span class="c-x"></span></div>${rows}</div>` +
         `<div class="lc"><button class="btn small" type="button" onclick="addPool('${id}')"${P.length >= MAX_POOLS ? ' disabled' : ''}>+ Add a pool or vault</button></div>` +
         `<div class="psum" id="${id}-realloc-sum">${reallocSummary(sc, a0)}</div>` +
         `<div class="help">Amounts are today's money, moved between pools. "New money" is how the amount you invest each month is shared out. APY already includes compounding; APR is the plain rate, added monthly.</div>` +
-        `<div class="help">Each rate is assumed to hold for the whole projection, and the lab cannot see risk, so a higher rate always looks better here. Each pool also grows on its own, so the higher-rate pools become a bigger share as the years pass. That is why this line rises above the starting line even before you change anything: the starting line uses one average rate throughout.</div>` +
+        `<div class="help">Each rate is assumed to hold for the whole projection unless you give it an end, which suits fixed terms such as Pendle's: the money stays in that pool and earns the later rate. The lab cannot see risk, so a higher rate always looks better here. Each pool also grows on its own, so the higher-rate pools become a bigger share as the years pass. That is why this line rises above the starting line even before you change anything: the starting line uses one average rate throughout.</div>` +
         `<div class="lc"><button class="btn small" type="button" title="Saves the rates of the pools you hold today, so the starting line and the dashboard use them. Amounts are not saved: they always come from your accounts." onclick="savePoolRates('${id}')">Save these rates as my starting rates</button><span class="sub" id="${id}-realloc-msg"></span></div>`;
 }
 function setPool(id, i, field, el) {
@@ -568,8 +588,10 @@ function setPool(id, i, field, el) {
     const x = r.L.pools[i]; if (!x) return;
     let note = '';
     if (field === 'name') x.name = String(el.value).slice(0, 40);
-    else if (field === 'basis') x.basis = el.value === 'apy' ? 'apy' : 'apr';
+    else if (field === 'basis') { x.basis = el.value === 'apy' ? 'apy' : 'apr'; const lab = $(id + '-pb-' + i); if (lab) lab.textContent = '% ' + x.basis.toUpperCase(); }
     else if (field === 'rate') { x.rate = Math.min(200, Math.max(0, Number(el.value) || 0)) / 100; el.value = +(x.rate * 100).toFixed(2); }
+    else if (field === 'thenRate') { x.thenRate = Math.min(200, Math.max(0, Number(el.value) || 0)) / 100; el.value = +(x.thenRate * 100).toFixed(2); }
+    else if (field === 'forMonths') { x.forMonths = Math.min(600, Math.max(1, Math.round(Number(el.value) || 1))); el.value = x.forMonths; }
     else if (field === 'amount') {
         // Never more than is held: what the other pools use is taken off first.
         const room = Math.max(0, state0.sleeves - r.L.pools.reduce((t, y, k) => t + (k === i ? 0 : y.amount), 0));
@@ -592,6 +614,16 @@ function addPool(id) {
     const r = reallocOf(id); if (!r || (r.L.pools || []).length >= MAX_POOLS) return;
     reallocRebase(r.L);
     r.L.pools.push({ name: 'New pool', amount: 0, rate: 0, basis: 'apr', newPct: 0 });
+    renderScenarios(); refresh(); saveLabState();
+}
+// A rate that ends: "for N months, then X%". Switching it on changes nothing
+// until a figure is typed (12 months, then the same rate).
+function togglePoolEnd(id, i, on) {
+    const r = reallocOf(id); if (!r) return;
+    reallocRebase(r.L);
+    const x = r.L.pools[i]; if (!x) return;
+    if (on) { x.forMonths = 12; x.thenRate = Number(x.rate) || 0; }
+    else { delete x.forMonths; delete x.thenRate; }
     renderScenarios(); refresh(); saveLabState();
 }
 function removePool(id, i) {

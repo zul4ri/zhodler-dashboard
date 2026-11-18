@@ -102,6 +102,8 @@ E.touchOdds = function (dropFrac, months, vol, growth) {
  *       separate pools, each growing at its own rate (basis 'apr' = plain rate, added monthly;
  *       'apy' = the yearly result with compounding already in it). newPct = that pool's share
  *       of the money invested each month. When given, it replaces sleeveYield.
+ *       A rate that ends: forMonths (the rate holds for that many months) and thenRate (the
+ *       rate afterwards, same basis). Without forMonths the rate holds for the whole run.
  * events:
  *   {type:'cash', amount}            one-off money in (+) or out (-) of the stablecoin positions
  *   {type:'sellBtcRepay', fraction}  sell just enough BTC to repay that share of the Aave loan (default all)
@@ -124,11 +126,15 @@ E.simulate = function (state, a) {
     // earning nothing. The same goes for shares of new money above / below 100%.
     let pools = null;
     if (Array.isArray(a.pools)) {
-        pools = a.pools.map(p => ({ name: String(p.name || ''), idle: false, bal: Math.max(0, num(p.amount)), f: E.poolMonthlyFactor(p), share: Math.max(0, num(p.newPct)) / 100 }));
+        pools = a.pools.map(p => {
+            const until = Math.round(num(p.forMonths)), ends = until >= 1;
+            return { name: String(p.name || ''), idle: false, bal: Math.max(0, num(p.amount)), f: E.poolMonthlyFactor(p), share: Math.max(0, num(p.newPct)) / 100,
+                     until: ends ? until : Infinity, f2: ends ? E.poolMonthlyFactor({ rate: p.thenRate, basis: p.basis }) : 1 };
+        });
         const asked = pools.reduce((t, p) => t + p.bal, 0), shares = pools.reduce((t, p) => t + p.share, 0);
         if (asked > sleeves) pools.forEach(p => { p.bal *= sleeves / asked; });
         if (shares > 1) pools.forEach(p => { p.share /= shares; });
-        pools.push({ name: '', idle: true, bal: Math.max(0, sleeves - asked), f: 1, share: Math.max(0, 1 - shares) });
+        pools.push({ name: '', idle: true, bal: Math.max(0, sleeves - asked), f: 1, share: Math.max(0, 1 - shares), until: Infinity, f2: 1 });
     }
     const poolSum = () => pools.reduce((t, p) => t + p.bal, 0);
     const fg = Math.pow(1 + num(a.fundReturn), 1 / 12), hg = Math.pow(1 + num(a.houseGrowth), 1 / 12), vd = Math.pow(1 - num(a.vehicleDep), 1 / 12);
@@ -161,7 +167,7 @@ E.simulate = function (state, a) {
     for (let m = 1; m <= H; m++) {
         const p = E.btcPriceAt(state, a, m);
         // 1. rates and wear
-        if (pools) { pools.forEach(p => { p.bal *= p.f; }); sleeves = poolSum(); } else sleeves *= 1 + sy;
+        if (pools) { pools.forEach(p => { p.bal *= m <= p.until ? p.f : p.f2; }); sleeves = poolSum(); } else sleeves *= 1 + sy;
         fund *= fg; debt *= 1 + br; house *= hg; veh *= vd;
         // 2. bank loans follow their schedule; a finished loan frees its payment
         let freedNow = 0;                              // payments that end THIS month are free from next month on
