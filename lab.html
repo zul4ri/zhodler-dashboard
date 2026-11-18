@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0a">
+<title>Scenario Lab</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Cpath fill='%23ABFF1A' d='M18 18h28v7L28 39h18v7H18v-7l18-14H18z'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Raise ?v= here AND in index.html whenever engine.js changes. -->
+<script src="engine.js?v=1"></script>
+<style>
+:root{
+    --bg:#0a0a0a; --card:#0a0a0a; --card2:#171717; --border:#262626; --text:#fafafa; --text2:#a3a3a3;
+    --accent:#ABFF1A; --red:#F71F8B; --warn:#9D7BFF; --warn-tint:rgba(157,123,255,.08);
+    --s1:#F0FF4D; --s2:#3FAE2A; --s3:#E0FFA6;
+    accent-color:var(--accent); color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+html,body{background:var(--bg);}
+body{color:var(--text);font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100vh;}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit;}
+a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;
+    background:rgba(10,10,10,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.brand{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--accent);}
+.top .sp{flex:1;}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px;display:grid;gap:14px;}
+.card{border:1px solid var(--border);border-radius:12px;padding:18px 20px;background:var(--card);min-width:0;}
+h2{font-size:16px;font-weight:600;letter-spacing:-.01em;}
+.sub{color:var(--text2);font-size:13px;}
+.muted{color:var(--text2);}
+.btn{border:1px solid var(--border);background:var(--card2);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap;}
+.btn:hover{background:#262626;}
+.btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.06);}
+.btn.ghost{background:transparent;}
+.btn.small{padding:4px 9px;font-size:12.5px;}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:9px;padding:3px;background:var(--card2);gap:2px;flex-wrap:wrap;}
+.seg button{border:0;background:transparent;border-radius:6px;padding:6px 12px;cursor:pointer;color:var(--text2);font-weight:500;}
+.seg button.on{background:#fafafa;color:#0a0a0a;}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px;}
+.kpi{border:1px solid var(--border);border-radius:10px;padding:11px 13px;background:var(--card2);min-width:0;}
+.kpi .k{color:var(--text2);font-size:12.5px;}
+.kpi .v{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:2px;}
+.kpi .d{color:var(--text2);font-size:12.5px;margin-top:2px;}
+.neg{color:var(--red);} .pos{color:var(--accent);} .warnc{color:var(--warn);}
+.warnbox{border:1px solid var(--warn);background:var(--warn-tint);border-radius:10px;padding:10px 13px;font-size:13.5px;margin-top:12px;}
+.answer{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:12px;}
+.answer .box{border:1px solid var(--border);border-radius:10px;padding:13px 15px;min-width:0;}
+.answer .box .k{color:var(--text2);font-size:13px;}
+.answer .box .v{font-size:24px;font-weight:600;letter-spacing:-.02em;margin:3px 0 2px;}
+.answer .box .d{color:var(--text2);font-size:12.5px;}
+.chartbox{position:relative;height:340px;margin-top:12px;}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tw{overflow-x:auto;margin-top:12px;}
+table{border-collapse:collapse;width:100%;font-size:13.5px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+th{color:var(--text2);font-weight:500;font-size:12.5px;white-space:nowrap;}
+td.n,th.n{text-align:right;white-space:nowrap;}
+td small{color:var(--text2);display:block;font-size:12px;}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline;}
+.tag{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:11.5px;color:var(--text2);white-space:nowrap;}
+.tag.live{border-color:#3FAE2A;color:#7DEB3B;} .tag.typed{border-color:#525252;} .tag.assume{border-color:var(--warn);color:var(--warn);}
+.scn{border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:0;}
+.scn-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.scn-head input.name{flex:1;min-width:150px;background:transparent;border:1px solid transparent;border-radius:6px;padding:4px 6px;font-weight:600;font-size:15px;}
+.scn-head input.name:hover,.scn-head input.name:focus{border-color:var(--border);}
+.lever{border-top:1px solid var(--border);margin-top:10px;padding-top:10px;}
+.lever .lt{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+.lever .lt b{font-weight:500;}
+.lever .lc{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.lever .lc label{color:var(--text2);font-size:13px;}
+.lever .help{color:var(--text2);font-size:12.5px;margin-top:4px;}
+input[type=number],select{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;width:110px;}
+select{width:auto;max-width:100%;}
+input[type=range]{flex:1;min-width:140px;}
+.x{border:0;background:transparent;color:var(--text2);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:6px;}
+.x:hover{background:#262626;color:var(--text);}
+.scgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:12px;}
+details{margin-top:10px;} summary{cursor:pointer;color:var(--text2);font-size:13.5px;} summary:hover{color:var(--text);}
+.gate{max-width:520px;margin:80px auto;text-align:center;padding:0 20px;}
+.note{color:var(--text2);font-size:12.5px;margin-top:8px;}
+.sensitive{transition:filter .15s;}
+body.privacy .sensitive{filter:blur(8px);}
+@media (max-width:640px){ .top{padding:10px 12px;} .wrap{padding:12px 10px 50px;} .card{padding:14px;} .chartbox{height:280px;} .answer .box .v{font-size:21px;} }
+</style>
+</head>
+<body>
+<div class="top">
+    <span class="brand">Scenario Lab</span>
+    <a href="index.html" class="sub">&larr; Dashboard</a>
+    <span class="sp"></span>
+    <div class="seg" id="modeSeg" role="group" aria-label="Starting assumption">
+        <button type="button" data-m="flat" title="BTC and the house stay at today's value">If nothing changes</button>
+        <button type="button" data-m="past" title="BTC and the house keep growing at their past rate">Past growth continues</button>
+    </div>
+    <button class="btn" id="ccyBtn" type="button" title="Show amounts in dollars or euros">$ USD</button>
+    <button class="btn" id="privBtn" type="button" title="Blur the amounts">&#128065;</button>
+</div>
+
+<div id="gate" class="gate" style="display:none">
+    <h2 style="font-size:20px;margin-bottom:8px;">Sign in on the dashboard first</h2>
+    <p class="muted" id="gateMsg">The Scenario Lab uses the same sign-in as the dashboard.</p>
+    <p style="margin-top:16px;"><a class="btn primary" href="index.html">Open the dashboard</a></p>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+
+    <section class="card" id="standCard">
+        <div class="row"><h2>Where you stand today</h2><span class="sub" id="asOf"></span></div>
+        <div class="kpis" id="standKpis"></div>
+        <div id="liqBox"></div>
+    </section>
+
+    <section class="card">
+        <div class="row"><h2 id="ansTitle">Where this leads</h2><span class="sub" id="ansSub"></span></div>
+        <div class="answer" id="answer"></div>
+        <div class="row" style="margin-top:16px;">
+            <div class="seg" id="seriesSeg" role="group" aria-label="What the chart shows">
+                <button type="button" data-s="pot" class="on">Investable pot</button>
+                <button type="button" data-s="netWorth">Net worth</button>
+            </div>
+            <div class="seg" id="horizonSeg" role="group" aria-label="Years shown">
+                <button type="button" data-h="10">10 yrs</button>
+                <button type="button" data-h="20" class="on">20 yrs</button>
+                <button type="button" data-h="30">30 yrs</button>
+                <button type="button" data-h="40">40 yrs</button>
+            </div>
+            <span class="sub" id="chartNote"></span>
+        </div>
+        <div class="chartbox"><canvas id="chart" role="img" aria-label="Projection chart"></canvas></div>
+        <div class="tw"><table id="results"></table></div>
+        <div class="note" id="resultsNote"></div>
+    </section>
+
+    <section class="card">
+        <div class="row"><h2>Try a change</h2><span class="sub">Each scenario starts from the line above and changes only what you add to it. Up to three.</span>
+            <span style="flex:1"></span><button class="btn primary" id="addScn" type="button">+ New scenario</button></div>
+        <div class="scgrid" id="scenarios"></div>
+        <div class="note" id="saveNote"></div>
+    </section>
+
+    <section class="card">
+        <div class="row"><h2>Your starting line</h2><span class="sub">The three figures you control. Everything else is read from your accounts.</span></div>
+        <div class="lever" style="border-top:0;margin-top:4px;">
+            <div class="lc"><label for="bInvest" style="min-width:250px;">Into investments each month</label><input type="number" id="bInvest" min="0" step="50"><span class="muted" id="bInvestCcy"></span></div>
+            <div class="lc"><label for="bLoan" style="min-width:250px;">To repay the Aave loan each month</label><input type="number" id="bLoan" min="0" step="50"><span class="muted" id="bLoanCcy"></span></div>
+            <div class="lc"><label for="bYield" style="min-width:250px;">Yield on stablecoin positions (% a year)</label><input type="number" id="bYield" min="0" max="50" step="0.1"><span class="muted" id="bYieldSrc"></span></div>
+            <div class="row" style="margin-top:10px;"><button class="btn" id="bSave" type="button">Save as my starting line</button><button class="btn ghost" id="bReset" type="button">Reset to saved</button><span class="sub" id="bMsg"></span></div>
+        </div>
+        <details>
+            <summary>What every figure is based on</summary>
+            <div class="tw"><table id="inputs"></table></div>
+        </details>
+    </section>
+</div>
+
+<script>
+'use strict';
+// ── Connection (same public project + sign-in as the dashboard) ────────────────
+const SUPABASE_URL = 'https://lvyyewyaatuiwawxjtmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXlld3lhYXR1aXdhd3hqdG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTcwNjQsImV4cCI6MjA5OTUzMzA2NH0._HoBCWSOemshCeKSG-qbTv39fu23AnFGz3C_K__eg4A';
+const ZH_SESSION_KEY = 'zh-session';
+const EUR_USD_FALLBACK = 1.10;
+const E = window.ZhEngine;
+
+function loadSession() {
+    try { const s = JSON.parse(localStorage.getItem(ZH_SESSION_KEY)); if (s && s.access_token && s.refresh_token && s.signed_in_until > Date.now()) return s; } catch (e) {}
+    return null;
+}
+let _refreshing = null;
+async function freshToken(stale) {
+    const ss = loadSession();
+    if (!ss) throw new Error('not-signed-in');
+    if (ss.expires_at - Date.now() > 60000 && ss.access_token !== stale) return ss.access_token;
+    if (_refreshing) return _refreshing;
+    _refreshing = (async () => {
+        try {
+            const cur = loadSession();
+            if (!cur) throw new Error('not-signed-in');
+            if (cur.expires_at - Date.now() > 60000 && cur.access_token !== stale) return cur.access_token;
+            const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+                method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: cur.refresh_token }) });
+            const d = await resp.json().catch(() => ({}));
+            if (!resp.ok || !d.access_token || !d.refresh_token) throw new Error(resp.status >= 400 && resp.status < 500 ? 'not-signed-in' : 'Could not renew your sign-in — try again.');
+            const next = { access_token: d.access_token, refresh_token: d.refresh_token,
+                expires_at: d.expires_at ? d.expires_at * 1000 : Date.now() + (d.expires_in || 3600) * 1000,
+                signed_in_until: cur.signed_in_until, email: cur.email || '' };
+            localStorage.setItem(ZH_SESSION_KEY, JSON.stringify(next));   // same shape the dashboard stores
+            return next.access_token;
+        } finally { _refreshing = null; }
+    })();
+    return _refreshing;
+}
+async function rpc(name, args) {
+    const call = t => fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) });
+    let t = await freshToken(), r = await call(t);
+    if (r.status === 401) { t = await freshToken(t); r = await call(t); if (r.status === 401) throw new Error('not-signed-in'); }
+    if (!r.ok) { let m = ''; try { const j = await r.json(); m = j.message || ''; } catch (e) {} const err = new Error(`${name} failed${m ? ': ' + m : ' (HTTP ' + r.status + ')'}`); err.status = r.status; throw err; }
+    const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+}
+
+// ── Live Aave read (public Arbitrum nodes; same calls as the dashboard's Loan Payoff) ──
+const ARB_RPCS = ['https://arbitrum-one.publicnode.com', 'https://arb1.arbitrum.io/rpc', 'https://1rpc.io/arb'];
+const AAVE_POOL = '0x794a61358D6845594F94dc1DB02A252b5b4814aD', ARB_USDC = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+async function ethCall(to, data) {
+    let last = null;
+    for (const url of ARB_RPCS) {
+        const ctl = new AbortController(), tid = setTimeout(() => ctl.abort(), 8000);
+        try {
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+                body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] }) });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const j = await r.json();
+            if (j.error || typeof j.result !== 'string' || j.result.length < 66) throw new Error('empty result');
+            return j.result;
+        } catch (e) { last = e; } finally { clearTimeout(tid); }
+    }
+    throw last || new Error('rpc failed');
+}
+const words = hex => { const h = hex.slice(2), o = []; for (let i = 0; i + 64 <= h.length; i += 64) o.push(BigInt('0x' + h.slice(i, i + 64))); return o; };
+const pad = a => a.toLowerCase().replace('0x', '').padStart(64, '0');
+async function fetchAave(wallet) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(wallet || '')) throw new Error('no wallet');
+    const [acct, reserve] = await Promise.all([ethCall(AAVE_POOL, '0xbf92857c' + pad(wallet)), ethCall(AAVE_POOL, '0x35ea6a75' + pad(ARB_USDC))]);
+    const a = words(acct), r = words(reserve);
+    if (a.length < 6 || r.length < 5) throw new Error('unexpected Aave response');
+    return { collateralUsd: Number(a[0]) / 1e8, debtUsd: Number(a[1]) / 1e8, liqThreshold: Number(a[3]) / 10000, borrowApr: Number(r[4]) / 1e27 };
+}
+
+// ── State ──────────────────────────────────────────────────────────────────────
+const LAB_KEY = 'zh-lab-v1';
+const SCN_COLORS = ['#F0FF4D', '#3FAE2A', '#E0FFA6'];
+let src = null, state0 = null, plan0 = null, fx = EUR_USD_FALLBACK, fxLive = false;
+let ccy = 'USD', mode = 'flat', series = 'pot', horizonYears = 20;
+let base = { invest: null, loan: null, yieldPct: null };      // null = use the saved/default figure
+let saved = { invest: 0, loan: 0, yieldPct: null };           // what is saved (database or this browser)
+let scenarios = [];
+let dbState = 'unknown';                                      // 'db' | 'local' — where scenarios are kept
+let chart = null;
+try { if (localStorage.getItem('zh-ccy') === 'EUR') ccy = 'EUR'; } catch (e) {}
+
+const sym = () => ccy === 'EUR' ? '€' : '$';
+const disp = usd => ccy === 'EUR' ? usd / fx : usd;
+const fromDisp = v => ccy === 'EUR' ? v * fx : v;
+function fmt(usd) { const v = disp(usd), a = Math.abs(v); const s = a >= 1e6 ? (a / 1e6).toFixed(2) + 'M' : a >= 1e3 ? (a / 1e3).toFixed(1) + 'k' : a.toFixed(0); return (v < 0 ? '-' : '') + sym() + s; }
+function fmtFull(usd) { const v = disp(usd); return (v < 0 ? '-' : '') + sym() + Math.round(Math.abs(v)).toLocaleString('en-US'); }
+const pct = (x, d) => (x * 100).toFixed(d === undefined ? 1 : d) + '%';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = id => document.getElementById(id);
+function monthLabel(m) { const d = new Date(); d.setMonth(d.getMonth() + m); return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }); }
+function ageAt(plan, m) { return plan.curAge > 0 ? plan.curAge + m / 12 : null; }
+function when(plan, m) {
+    if (m === null || m === undefined) return 'not within 40 years';
+    if (m === 0) return 'already';
+    const a = ageAt(plan, m);
+    return a !== null ? `age ${a.toFixed(a % 1 === 0 ? 0 : 1)} <small>${monthLabel(m)}</small>` : monthLabel(m);
+}
+function whenPlain(plan, m) { if (m === null || m === undefined) return 'not within 40 years'; const a = ageAt(plan, m); return a !== null ? 'age ' + Math.round(a) : monthLabel(m); }
+
+// ── Persistence: database when phase 52 is applied, otherwise this browser ────
+async function loadLabState() {
+    let st = null;
+    try { st = await rpc('lab_state_get'); dbState = 'db'; }
+    catch (e) { if (e.message === 'not-signed-in') throw e; dbState = 'local'; try { st = JSON.parse(localStorage.getItem(LAB_KEY)); } catch (e2) { st = null; } }
+    st = st && typeof st === 'object' ? st : {};
+    scenarios = Array.isArray(st.scenarios) ? st.scenarios.slice(0, 3) : [];
+    saved.yieldPct = (st.yieldPct === null || st.yieldPct === undefined) ? null : Number(st.yieldPct);
+    if (st.mode === 'past' || st.mode === 'flat') mode = st.mode;
+}
+let _saveTimer = null;
+function saveLabState() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(async () => {
+        const doc = { version: 1, scenarios, yieldPct: saved.yieldPct, mode };
+        try { localStorage.setItem(LAB_KEY, JSON.stringify(doc)); } catch (e) {}
+        if (dbState === 'db') { try { await rpc('lab_state_save', { p_state: doc }); } catch (e) { $('saveNote').textContent = 'Could not save to the database: ' + e.message; return; } }
+        $('saveNote').textContent = dbState === 'db' ? 'Scenarios are saved to your account (same on phone and PC).'
+            : 'Scenarios are saved in this browser only. A one-time database update (phase 52) makes them follow you to other devices.';
+    }, 400);
+}
+
+// ── Building one projection ───────────────────────────────────────────────────
+function baselineAssumptions() {
+    const a = E.defaultAssumptions(src, state0, mode);
+    const inv = base.invest !== null ? base.invest : saved.invest, ln = base.loan !== null ? base.loan : saved.loan;
+    const y = base.yieldPct !== null ? base.yieldPct : saved.yieldPct;
+    a.newMoneyInvest = inv; a.newMoneyLoan = ln;
+    if (y !== null && y !== undefined && !isNaN(y)) a.sleeveYield = y / 100;
+    return a;
+}
+// A scenario = the baseline plus only the levers the owner added.
+function applyScenario(a0, plan, sc) {
+    const a = Object.assign({}, a0, { events: [] }), p = Object.assign({}, plan), L = sc.levers || {};
+    if (L.saving) { const tot0 = a.newMoneyInvest + a.newMoneyLoan, share = tot0 > 0 ? a.newMoneyLoan / tot0 : 0; a.newMoneyLoan = L.saving.total * share; a.newMoneyInvest = L.saving.total * (1 - share); }
+    if (L.split) { const tot = a.newMoneyInvest + a.newMoneyLoan; a.newMoneyLoan = tot * L.split.toLoanPct / 100; a.newMoneyInvest = tot - a.newMoneyLoan; }
+    if (L.btc) {
+        a.btcShockPct = 0; a.btcGrowth = 0;
+        if (L.btc.preset === 'crash') a.btcShockPct = -50;
+        else if (L.btc.preset === 'rise') a.btcShockPct = 50;
+        else if (L.btc.preset === 'past') { const g = E.btcPastGrowth(src.bootstrap); a.btcGrowth = g ? g.rate : 0; }
+        else if (L.btc.preset === 'custom') a.btcGrowth = (Number(L.btc.pctPerYear) || 0) / 100;
+    }
+    if (L.sell) {
+        const m = Math.max(1, Math.round(Number(L.sell.month) || 1));
+        if (L.sell.how === 'pct') a.events.push({ month: m, type: 'sellBtc', pct: Number(L.sell.pct) || 0, to: 'loan' });
+        else a.events.push({ month: m, type: 'sellBtcRepay' });
+    }
+    if (L.yields) { a.sleeveYield = Math.max(0, a.sleeveYield + (Number(L.yields.sleevePts) || 0) / 100); a.borrowRate = Math.max(0, a.borrowRate + (Number(L.yields.borrowPts) || 0) / 100); }
+    if (L.oneoff) a.events.push({ month: Math.max(1, Math.round(Number(L.oneoff.month) || 1)), type: 'cash', amount: Number(L.oneoff.amount) || 0 });
+    if (L.retire) {
+        if (Number(L.retire.age) > p.curAge) { p.retAge = Number(L.retire.age); p.retMonth = Math.round((p.retAge - p.curAge) * 12); }
+        if (Number(L.retire.spend) > 0) { p.expense = Number(L.retire.spend); p.fireNumber = p.swr > 0 ? p.expense / (p.swr / 100) : p.fireNumber; }
+    }
+    return { a, plan: p };
+}
+function runAll() {
+    const a0 = baselineAssumptions();
+    const out = [{ id: 'base', name: mode === 'past' ? 'Past growth continues' : 'If nothing changes', color: '#ABFF1A', a: a0, plan: plan0, pr: E.project(state0, a0, plan0) }];
+    scenarios.forEach((sc, i) => { const { a, plan } = applyScenario(a0, plan0, sc); out.push({ id: sc.id, name: sc.name || ('Scenario ' + (i + 1)), color: SCN_COLORS[i % 3], a, plan, pr: E.project(state0, a, plan) }); });
+    return out;
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function renderStand() {
+    const s = state0, pot = s.btcQty * s.btcPrice + s.sleeves + s.fund - s.aaveDebt;
+    const tl = s.loans.reduce((t, l) => t + l.balance, 0) + s.otherDebt;
+    const nw = pot + s.cash + s.house + s.vehicles - tl;
+    const k = (label, val, sub, cls) => `<div class="kpi"><div class="k">${label}</div><div class="v sensitive ${cls || ''}">${val}</div><div class="d">${sub || ''}</div></div>`;
+    $('standKpis').innerHTML =
+        k('Investable pot', fmt(pot), 'BTC + stablecoin positions + fund, minus the Aave loan') +
+        k('Net worth', fmt(nw), 'pot + house, vehicles and bank, minus the other loans') +
+        k('BTC', fmt(s.btcQty * s.btcPrice), `${s.btcQty.toFixed(4)} BTC at $${Math.round(s.btcPrice).toLocaleString('en-US')}`) +
+        k('Stablecoin positions', fmt(s.sleeves), `earning about ${pct(baselineAssumptions().sleeveYield)} a year`) +
+        k('Aave loan', fmt(-s.aaveDebt), `costing ${pct(baselineAssumptions().borrowRate)} a year`, 'neg') +
+        k('Bank loans', fmt(-tl), s.loans.map(l => esc(l.label) + ' ' + l.monthsLeft + ' mo').join(' · '), 'neg');
+    const liq = E.liquidationPrice(s);
+    if (liq) {
+        const drop = liq / s.btcPrice - 1;
+        const a = baselineAssumptions();
+        const odds = E.touchOdds(drop, 12, a.btcVol, a.btcGrowth), in10 = Math.round(odds * 10);
+        const oddsTxt = in10 >= 10 ? 'close to certain' : in10 <= 0 ? 'under 1 in 10' : `about ${in10} in 10`;
+        const cls = odds >= 0.2 ? 'warnbox' : 'note';
+        $('liqBox').innerHTML = `<div class="${cls}"><b>The Aave loan is closed by force if BTC falls to $${Math.round(liq).toLocaleString('en-US')}</b> ` +
+            `(${pct(drop, 0)} from today). BTC would be sold to repay it, with a ${pct(E.AAVE_LIQ_PENALTY, 0)} penalty. ` +
+            `With BTC's usual swings (${pct(E.BTC_VOL, 0)} a year), a fall of that size at some point in the next 12 months is <b>${oddsTxt}</b>. ` +
+            `Every repayment lowers that price; clearing the loan removes it.</div>`;
+    } else $('liqBox').innerHTML = '';
+    $('asOf').textContent = 'figures from your accounts, refreshed ' + new Date((src.bootstrap.scopes.total || {}).captured_at || Date.now()).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderAnswer(runs) {
+    const b = runs[0], pr = b.pr, plan = b.plan, need = E.solveSaving(state0, b.a, plan), g = E.solveBtcGrowth(state0, b.a, plan);
+    const forced = pr.low.liqMonth !== null ? ` (loan closed by force, ${monthLabel(pr.low.liqMonth)})` : '';
+    const fireMs = [pr.fire.low, pr.fire.mid, pr.fire.high];
+    const early = fireMs.filter(x => x !== null).length ? Math.min(...fireMs.filter(x => x !== null)) : null;
+    const box = (k, v, d) => `<div class="box"><div class="k">${k}</div><div class="v sensitive">${v}</div><div class="d">${d}</div></div>`;
+    $('ansTitle').textContent = mode === 'past' ? 'Where this leads if the past repeats' : 'Where this leads if nothing changes';
+    $('ansSub').textContent = mode === 'past'
+        ? `BTC keeps growing ${pct(b.a.btcGrowth, 0)} a year (its rate since Aug 2023) and the house ${pct(b.a.houseGrowth, 1)} a year. An optimistic reading.`
+        : 'BTC and the house stay at today’s value. Loans follow their schedule, new money and today’s rates continue.';
+    $('answer').innerHTML =
+        box(`Investable pot at ${plan.retAge || 'retirement'}`, fmt(pr.atRet.mid), `if BTC does badly: ${fmt(pr.atRet.low)}${forced}<br>if BTC does well: ${fmt(pr.atRet.high)}<br>your target then: ${fmt(pr.atRet.target)}`) +
+        box('You reach your target', whenPlain(plan, pr.fire.mid), early !== null && early !== pr.fire.mid ? `earliest of the three cases: ${whenPlain(plan, early)}` : `target: ${fmt(plan.fireNumber)} a year-${new Date().getFullYear()} money, rising ${pct(plan.inflation)} a year`) +
+        box(`To reach it by ${plan.retAge || 'then'} you would need`, need === null ? `more than ${fmt(100000)}/mo` : `${fmt(need)}/mo`, `of new money (today: ${fmt(b.a.newMoneyInvest + b.a.newMoneyLoan)}/mo)` + (g !== null ? `<br>or BTC growing ${pct(g, 0)} a year` : '')) +
+        box('Aave loan repaid', pr.mid.aaveClearMonth === null ? 'not within 40 years' : whenPlain(plan, pr.mid.aaveClearMonth), pr.mid.aaveClearMonth ? monthLabel(pr.mid.aaveClearMonth) + ` at ${fmt(b.a.newMoneyLoan)}/mo` : (b.a.newMoneyLoan > 0 ? '' : 'nothing is being repaid, so it grows with interest'));
+}
+
+function renderChart(runs) {
+    const H = horizonYears * 12, b = runs[0];
+    const labels = [], idx = [];
+    for (let m = 0; m <= H; m += 3) { idx.push(m); labels.push(m); }
+    const pick = arr => idx.map(m => disp(arr[m]));
+    const ds = [];
+    ds.push({ label: 'BTC does well (1 in 10)', data: pick(b.pr.high[series]), borderColor: 'rgba(171,255,26,.45)', borderWidth: 1.2, borderDash: [5, 4], pointRadius: 0, fill: false });
+    ds.push({ label: b.name, data: pick(b.pr.mid[series]), borderColor: '#ABFF1A', borderWidth: 2.6, pointRadius: 0, fill: false });
+    ds.push({ label: 'BTC does badly (1 in 10)', data: pick(b.pr.low[series]), borderColor: 'rgba(247,31,139,.75)', borderWidth: 1.2, borderDash: [5, 4], pointRadius: 0, fill: false });
+    runs.slice(1).forEach(r => ds.push({ label: r.name, data: pick(r.pr.mid[series]), borderColor: r.color, borderWidth: 2.2, pointRadius: 0, fill: false }));
+    if (series === 'pot' && b.plan.fireNumber > 0) ds.push({ label: 'Your target (rising with prices)', data: idx.map(m => disp(b.pr.target(m))), borderColor: '#9D7BFF', borderWidth: 1.2, borderDash: [2, 4], pointRadius: 0, fill: false });
+    // Keep a runaway good case from flattening everything else: cap the axis at 1.6x the tallest solid line or the target.
+    const solidMax = Math.max(...ds.filter(d => !(d.borderDash && d.label.startsWith('BTC does well'))).flatMap(d => d.data));
+    const yMax = solidMax > 0 ? solidMax * 1.25 : undefined;
+    const tick = '#a3a3a3', grid = 'rgba(255,255,255,.06)';
+    if (chart) chart.destroy();
+    chart = new Chart($('chart'), { type: 'line', data: { labels, datasets: ds },
+        options: { animation: false, responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'bottom', labels: { color: tick, boxWidth: 16, boxHeight: 2, font: { size: 11.5 } } },
+                tooltip: { callbacks: { title: it => { const m = it[0].parsed.x !== undefined ? labels[it[0].dataIndex] : 0; const a = ageAt(b.plan, m); return monthLabel(m) + (a !== null ? ' · age ' + a.toFixed(1) : ''); },
+                                        label: c => ` ${c.dataset.label}: ${sym()}${Math.round(c.parsed.y).toLocaleString('en-US')}` } } },
+            scales: { x: { ticks: { color: tick, maxTicksLimit: 11, font: { size: 11 }, callback: (v, i) => { const m = labels[i]; if (m % 12) return ''; const a = ageAt(b.plan, m); return a !== null ? Math.round(a) : (new Date().getFullYear() + m / 12); } },
+                           title: { display: true, text: b.plan.curAge > 0 ? 'your age' : 'year', color: tick, font: { size: 11 } }, grid: { color: grid } },
+                      y: { max: yMax, beginAtZero: true, ticks: { color: tick, font: { size: 11 }, callback: v => sym() + (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : Math.abs(v) >= 1e3 ? (v / 1e3).toFixed(0) + 'k' : v) }, grid: { color: grid } } } } });
+    const off = Math.max(...pick(b.pr.high[series])) > (yMax || Infinity);
+    $('chartNote').textContent = off ? 'The "does well" line runs off the top of the chart; its values are in the table.' : '';
+}
+
+function renderResults(runs) {
+    const plan = runs[0].plan, y5 = 60;
+    const head = `<tr><th></th><th class="n">Pot in 5 years</th><th class="n">Pot at ${plan.retAge || 'retirement'}</th><th class="n">Net worth at ${plan.retAge || 'retirement'}</th><th>You reach your target</th><th>Aave loan repaid</th><th>Loan closed by force?</th></tr>`;
+    const rows = runs.map(r => {
+        const pr = r.pr, rm = pr.retMonth;
+        const lo = (a, c) => `<small>badly ${fmt(a)} &middot; well ${fmt(c)}</small>`;
+        const bad = pr.mid.liqMonth !== null ? `<span class="neg">yes, on this path: ${monthLabel(pr.mid.liqMonth)}</span>`
+            : pr.low.liqMonth !== null ? `only if BTC does badly<small>${monthLabel(pr.low.liqMonth)}</small>`
+            : (pr.low.aaveClearMonth === 0 ? 'no loan' : 'no, even if BTC does badly');
+        const retNote = r.plan.retAge !== plan.retAge ? `<small>at ${r.plan.retAge}</small>` : '';
+        return `<tr><td><span class="dot" style="background:${r.color}"></span><b>${esc(r.name)}</b></td>` +
+            `<td class="n sensitive">${fmt(pr.mid.pot[y5])}${lo(pr.low.pot[y5], pr.high.pot[y5])}</td>` +
+            `<td class="n sensitive">${fmt(pr.atRet.mid)}${lo(pr.atRet.low, pr.atRet.high)}${retNote}</td>` +
+            `<td class="n sensitive">${fmt(pr.mid.netWorth[rm])}${lo(pr.low.netWorth[rm], pr.high.netWorth[rm])}</td>` +
+            `<td>${when(r.plan, pr.fire.mid)}</td>` +
+            `<td>${pr.mid.aaveClearMonth === null ? 'not within 40 years' : pr.mid.aaveClearMonth === 0 ? 'no loan' : when(r.plan, pr.mid.aaveClearMonth)}</td>` +
+            `<td>${bad}</td></tr>`;
+    }).join('');
+    $('results').innerHTML = head + rows;
+    $('resultsNote').innerHTML = 'Large figure: BTC follows the path named in that row. Small figures: the same row if BTC does badly or well (the 1-in-10 outcomes on either side, sized from ' + E.BTC_VOL_SOURCE + '). ' +
+        'A forced close costs most of the BTC, but it also ends the loan, its interest and its repayments, and that money is invested instead. That is why "badly" can end up close to the main figure when BTC is assumed flat: a flat BTC with a loan against it slowly loses to the loan\u2019s interest.';
+}
+
+const LEVERS = {
+    saving: { title: 'Save more or less', init: a => ({ total: Math.round(a.newMoneyInvest + a.newMoneyLoan) }) },
+    btc:    { title: 'BTC price', init: () => ({ preset: 'crash', pctPerYear: 10 }) },
+    split:  { title: 'Split new money: loan vs investing', init: a => { const t = a.newMoneyInvest + a.newMoneyLoan; return { toLoanPct: t > 0 ? Math.round(a.newMoneyLoan / t * 100) : 0 }; } },
+    sell:   { title: 'Sell BTC to pay down the loan', init: () => ({ how: 'clear', pct: 25, month: 1 }) },
+    yields: { title: 'Rates change', init: () => ({ sleevePts: -2, borrowPts: 0 }) },
+    oneoff: { title: 'A one-off amount', init: () => ({ amount: 5000, month: 6 }) },
+    retire: { title: 'Stop work at a different age, or spend differently', init: (a, p) => ({ age: p.retAge, spend: p.expense }) },
+};
+function leverHtml(sc, key, a0) {
+    const v = sc.levers[key], id = `${sc.id}-${key}`, set = (f, ex) => `onchange="setLever('${sc.id}','${key}','${f}',${ex || 'this.value'})"`;
+    let body = '';
+    if (key === 'saving') {
+        const max = Math.max(5000, Math.round(disp(v.total) * 2 / 500) * 500);
+        body = `<div class="lc"><input type="range" min="0" max="${max}" step="50" value="${Math.round(disp(v.total))}" oninput="this.nextElementSibling.textContent='${sym()}'+Number(this.value).toLocaleString('en-US')+'/mo'" ${set('total', 'fromDisp(Number(this.value))')}><b>${sym()}${Math.round(disp(v.total)).toLocaleString('en-US')}/mo</b></div>` +
+            `<div class="help">Total new money each month (starting line: ${fmt(a0.newMoneyInvest + a0.newMoneyLoan)}). The split between the loan and investing stays as it is.</div>`;
+    } else if (key === 'btc') {
+        const g = E.btcPastGrowth(src.bootstrap);
+        const o = (val, txt) => `<option value="${val}"${v.preset === val ? ' selected' : ''}>${txt}</option>`;
+        body = `<div class="lc"><select ${set('preset')}>${o('crash', 'Falls 50% over a year, then stays')}${o('flat', 'Stays at today’s price')}${o('rise', 'Rises 50% over a year, then stays')}${o('past', `Keeps its past rate (${g ? pct(g.rate, 0) : '?'} a year)`)}${o('custom', 'My own figure…')}</select>` +
+            (v.preset === 'custom' ? `<input type="number" step="1" min="-90" max="300" value="${v.pctPerYear}" ${set('pctPerYear', 'Number(this.value)')}><label>% a year</label>` : '') + `</div>`;
+    } else if (key === 'split') {
+        body = `<div class="lc"><input type="range" min="0" max="100" step="5" value="${v.toLoanPct}" oninput="this.nextElementSibling.textContent=this.value+'% to the loan'" ${set('toLoanPct', 'Number(this.value)')}><b>${v.toLoanPct}% to the loan</b></div>` +
+            `<div class="help">The rest goes into the stablecoin positions. Once the loan is repaid, all of it is invested.</div>`;
+    } else if (key === 'sell') {
+        const o = (val, txt) => `<option value="${val}"${v.how === val ? ' selected' : ''}>${txt}</option>`;
+        body = `<div class="lc"><select ${set('how')}>${o('clear', 'Just enough to clear the loan')}${o('pct', 'A share of my BTC')}</select>` +
+            (v.how === 'pct' ? `<input type="number" min="1" max="100" step="1" value="${v.pct}" ${set('pct', 'Number(this.value)')}><label>% of my BTC</label>` : '') +
+            `<label>in</label><input type="number" min="1" max="480" step="1" value="${v.month}" ${set('month', 'Number(this.value)')} style="width:80px"><label>months from now</label></div>` +
+            `<div class="help">Sold at that month's price on the scenario's BTC path. Proceeds repay the loan; anything left over is invested.</div>`;
+    } else if (key === 'yields') {
+        body = `<div class="lc"><label>Yield on stablecoin positions</label><input type="number" step="0.5" min="-20" max="20" value="${v.sleevePts}" ${set('sleevePts', 'Number(this.value)')}><label>points (now ${pct(a0.sleeveYield)})</label></div>` +
+            `<div class="lc"><label>Aave borrow rate</label><input type="number" step="0.5" min="-20" max="30" value="${v.borrowPts}" ${set('borrowPts', 'Number(this.value)')}><label>points (now ${pct(a0.borrowRate)})</label></div>`;
+    } else if (key === 'oneoff') {
+        body = `<div class="lc"><input type="number" step="500" value="${Math.round(disp(v.amount))}" ${set('amount', 'fromDisp(Number(this.value))')}><label>${sym()} in</label><input type="number" min="1" max="480" step="1" value="${v.month}" ${set('month', 'Number(this.value)')} style="width:80px"><label>months from now</label></div>` +
+            `<div class="help">A positive figure is money coming in (a bonus); a negative one is a big expense paid out of the stablecoin positions.</div>`;
+    } else if (key === 'retire') {
+        body = `<div class="lc"><label>Stop work at</label><input type="number" min="${Math.ceil(plan0.curAge) + 1}" max="90" step="1" value="${v.age}" ${set('age', 'Number(this.value)')} style="width:80px">` +
+            `<label>and spend</label><input type="number" min="0" step="1000" value="${Math.round(disp(v.spend))}" ${set('spend', 'fromDisp(Number(this.value))')}><label>${sym()} a year</label></div>` +
+            `<div class="help">The target is yearly spending divided by ${plan0.swr}% (your withdrawal rate).</div>`;
+    }
+    return `<div class="lever" id="${id}"><div class="lt"><b>${LEVERS[key].title}</b><button class="x" title="Remove this change" onclick="removeLever('${sc.id}','${key}')">&times;</button></div>${body}</div>`;
+}
+function renderScenarios() {
+    const a0 = baselineAssumptions();
+    $('scenarios').innerHTML = scenarios.length ? scenarios.map((sc, i) => {
+        const have = Object.keys(sc.levers || {}), free = Object.keys(LEVERS).filter(k => !have.includes(k));
+        return `<div class="scn"><div class="scn-head"><span class="dot" style="background:${SCN_COLORS[i % 3]}"></span>` +
+            `<input class="name" value="${esc(sc.name || '')}" aria-label="Scenario name" onchange="renameScn('${sc.id}',this.value)">` +
+            `<button class="x" title="Delete this scenario" onclick="deleteScn('${sc.id}')">&times;</button></div>` +
+            have.map(k => leverHtml(sc, k, a0)).join('') +
+            (free.length ? `<div class="lever"><select onchange="if(this.value){addLever('${sc.id}',this.value);}" aria-label="Add a change"><option value="">+ Add a change…</option>${free.map(k => `<option value="${k}">${LEVERS[k].title}</option>`).join('')}</select></div>` : '') +
+            (have.length ? '' : `<div class="help" style="margin-top:8px;color:var(--text2);font-size:12.5px;">No changes yet, so this line sits exactly on the starting line.</div>`) + `</div>`;
+    }).join('') : `<div class="muted" style="padding:6px 2px;">No scenarios yet. Press <b>+ New scenario</b> and add one change, for example "BTC falls 50%" or "Sell BTC to clear the loan".</div>`;
+    $('addScn').disabled = scenarios.length >= 3;
+    $('addScn').style.opacity = scenarios.length >= 3 ? .5 : 1;
+}
+function addScenario() { if (scenarios.length >= 3) return; scenarios.push({ id: 's' + Date.now().toString(36), name: 'Scenario ' + (scenarios.length + 1), levers: {} }); renderScenarios(); refresh(); saveLabState(); }
+function deleteScn(id) { scenarios = scenarios.filter(s => s.id !== id); renderScenarios(); refresh(); saveLabState(); }
+function renameScn(id, name) { const s = scenarios.find(x => x.id === id); if (s) { s.name = String(name).slice(0, 60); s.named = !!s.name.trim(); if (!s.named) touchName(s); renderScenarios(); refresh(); saveLabState(); } }
+// A scenario names itself from its changes until the owner types a name.
+function autoName(sc) {
+    const L = sc.levers || {}, parts = [];
+    if (L.saving) parts.push(`Save ${fmt(L.saving.total)}/mo`);
+    if (L.btc) { const g = E.btcPastGrowth(src.bootstrap);
+        parts.push({ crash: 'BTC falls 50%', flat: 'BTC stays flat', rise: 'BTC rises 50%', past: `BTC +${g ? Math.round(g.rate * 100) : '?'}% a year` }[L.btc.preset] || `BTC ${L.btc.pctPerYear >= 0 ? '+' : ''}${L.btc.pctPerYear}% a year`); }
+    if (L.split) parts.push(`${L.split.toLoanPct}% to the loan`);
+    if (L.sell) parts.push(L.sell.how === 'pct' ? `Sell ${L.sell.pct}% of BTC` : 'Sell BTC to clear the loan');
+    if (L.yields) parts.push('Rates change');
+    if (L.oneoff) parts.push(`${L.oneoff.amount >= 0 ? 'One-off +' : 'One-off '}${fmt(L.oneoff.amount)}`);
+    if (L.retire) parts.push(`Stop at ${L.retire.age}`);
+    return parts.length ? parts.join(' + ').slice(0, 60) : null;
+}
+function touchName(s) { if (s.named) return; const n = autoName(s); if (n) s.name = n; }
+function addLever(id, key) { const s = scenarios.find(x => x.id === id); if (!s || !LEVERS[key]) return; s.levers[key] = LEVERS[key].init(baselineAssumptions(), plan0); touchName(s); renderScenarios(); refresh(); saveLabState(); }
+function removeLever(id, key) { const s = scenarios.find(x => x.id === id); if (!s) return; delete s.levers[key]; touchName(s); renderScenarios(); refresh(); saveLabState(); }
+function setLever(id, key, field, value) { const s = scenarios.find(x => x.id === id); if (!s || !s.levers[key]) return; s.levers[key][field] = value; const was = s.name; touchName(s); if (field === 'preset' || field === 'how' || s.name !== was) renderScenarios(); refresh(); saveLabState(); }
+
+function renderInputs() {
+    const s = state0, a = baselineAssumptions(), sy = E.sleeveYield(s, src.loanSim), g = E.btcPastGrowth(src.bootstrap);
+    const tag = (t, c) => `<span class="tag ${c}">${t}</span>`;
+    const r = (what, val, where, t) => `<tr><td>${what}</td><td class="n sensitive">${val}</td><td>${t} ${where}</td></tr>`;
+    const typedWhen = src.loanSim && src.loanSim.updated_at ? new Date(src.loanSim.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    let h = '<tr><th>Figure</th><th class="n">Value</th><th>Where it comes from</th></tr>';
+    h += r('BTC held', s.btcQty.toFixed(6), 'your wallet', tag('Live', 'live'));
+    h += r('BTC price', '$' + Math.round(s.btcPrice).toLocaleString('en-US'), 'market price at the last refresh', tag('Live', 'live'));
+    h += r('BTC path', mode === 'past' ? pct(a.btcGrowth, 1) + ' a year' : 'flat', mode === 'past' && g ? `its own rate since ${g.since} ($${Math.round(g.from).toLocaleString('en-US')} then)` : 'held at today’s price', tag(mode === 'past' ? 'Measured' : 'Assumption', mode === 'past' ? 'live' : 'assume'));
+    h += r('How much BTC swings', pct(E.BTC_VOL, 0) + ' a year', E.BTC_VOL_SOURCE + '; sets the "does badly / does well" lines', tag('Measured', 'live'));
+    h += r('Aave loan', fmtFull(s.aaveDebt), 'your wallet', tag('Live', 'live'));
+    h += r('Aave borrow rate', pct(a.borrowRate, 2), a.borrowRateLive ? 'read from Aave just now' : 'Aave could not be reached; 5% used', tag(a.borrowRateLive ? 'Live' : 'Assumption', a.borrowRateLive ? 'live' : 'assume'));
+    h += r('Loan closed by force when the loan reaches', pct(s.aaveLT, 0) + ' of the BTC value', 'Aave’s rule for WBTC; penalty ' + pct(E.AAVE_LIQ_PENALTY, 0), tag(src.aave ? 'Live' : 'Assumption', src.aave ? 'live' : 'assume'));
+    h += r('Stablecoin positions', fmtFull(s.sleeves), sy.parts.filter(p => p.value >= 50).map(p => `${esc(p.protocol)} ${fmt(p.value)} at ${p.apr.toFixed(2)}%`).join(' · '), tag('Live', 'live'));
+    h += r('Yield on those positions', pct(a.sleeveYield, 2), (base.yieldPct !== null || saved.yieldPct !== null) ? 'your own figure (below)' : `weighted from the rates you typed${typedWhen ? ' on ' + typedWhen : ''}; idle balances count as 0%`, tag('You typed', 'typed'));
+    h += r('New money each month', fmt(a.newMoneyInvest) + ' + ' + fmt(a.newMoneyLoan), 'into investments + to the Aave loan (your starting line)', tag('You typed', 'typed'));
+    s.loans.forEach(l => { h += r(esc(l.label), fmtFull(l.balance), `${fmt(l.payment)}/mo for ${l.monthsLeft} more months; rate ${pct(l.rate, 2)} (${l.rateSource === 'typed' ? 'typed' : 'worked out from the payment'})`, tag('You typed', 'typed')); });
+    if (s.otherDebt > 0) h += r('Loans with no schedule', fmtFull(s.otherDebt), 'held as they are (no interest, no repayments)', tag('You typed', 'typed'));
+    h += r('House', fmtFull(s.house), mode === 'past' ? E.HOUSE_PAST_SOURCE : 'held at today’s value', tag(mode === 'past' ? 'Measured' : 'Assumption', mode === 'past' ? 'live' : 'assume'));
+    h += r('Vehicles', fmtFull(s.vehicles), `lose ${pct(a.vehicleDep, 0)} a year`, tag('Assumption', 'assume'));
+    h += r('Bank and fund', fmtFull(s.cash + s.fund), 'held as they are', tag('You typed', 'typed'));
+    h += r('Your target', fmtFull(plan0.fireNumber), `${fmtFull(plan0.expense)} a year ÷ ${plan0.swr}%, rising ${pct(plan0.inflation)} a year; ages ${plan0.curAge} to ${plan0.retAge} (your FIRE plan)`, tag('You typed', 'typed'));
+    h += r('Exchange rate', '1 EUR = ' + fx.toFixed(4) + ' USD', fxLive ? 'ECB rate, held at today’s level for the whole projection' : 'could not be loaded; an approximate rate is used', tag(fxLive ? 'Live' : 'Assumption', fxLive ? 'live' : 'assume'));
+    $('inputs').innerHTML = h;
+}
+function renderBaseInputs() {
+    const a = baselineAssumptions();
+    $('bInvest').value = Math.round(disp(a.newMoneyInvest)); $('bLoan').value = Math.round(disp(a.newMoneyLoan)); $('bYield').value = (a.sleeveYield * 100).toFixed(2);
+    $('bInvestCcy').textContent = sym(); $('bLoanCcy').textContent = sym();
+    const sy = E.sleeveYield(state0, src.loanSim);
+    $('bYieldSrc').textContent = (base.yieldPct !== null || saved.yieldPct !== null) ? `your own figure (from your typed platform rates it would be ${pct(sy.rate, 2)})` : 'from the platform rates you typed';
+}
+function refresh() {
+    const runs = runAll();
+    renderStand(); renderAnswer(runs); renderChart(runs); renderResults(runs); renderInputs();
+}
+function refreshAll() { renderBaseInputs(); renderScenarios(); refresh(); }
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+function wireSeg(id, attr, set) {
+    $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+        $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[attr]); });
+}
+function setSeg(id, attr, val) { $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset[attr] === String(val))); }
+wireSeg('modeSeg', 'm', v => { mode = v; refreshAll(); saveLabState(); });
+wireSeg('seriesSeg', 's', v => { series = v; refresh(); });
+wireSeg('horizonSeg', 'h', v => { horizonYears = Number(v); refresh(); });
+$('ccyBtn').addEventListener('click', () => { ccy = ccy === 'EUR' ? 'USD' : 'EUR'; try { localStorage.setItem('zh-ccy', ccy); } catch (e) {} $('ccyBtn').textContent = ccy === 'EUR' ? '€ EUR' : '$ USD'; refreshAll(); });
+$('privBtn').addEventListener('click', () => document.body.classList.toggle('privacy'));
+$('addScn').addEventListener('click', addScenario);
+['bInvest', 'bLoan', 'bYield'].forEach(id => $(id).addEventListener('change', () => {
+    base.invest = Math.max(0, fromDisp(Number($('bInvest').value) || 0)); base.loan = Math.max(0, fromDisp(Number($('bLoan').value) || 0));
+    const y = Number($('bYield').value); base.yieldPct = isNaN(y) ? null : y;
+    $('bMsg').textContent = 'Not saved yet.'; renderScenarios(); refresh();
+}));
+$('bReset').addEventListener('click', () => { base = { invest: null, loan: null, yieldPct: null }; $('bMsg').textContent = ''; refreshAll(); });
+$('bSave').addEventListener('click', async () => {
+    const a = baselineAssumptions(), sy = E.sleeveYield(state0, src.loanSim);
+    $('bMsg').textContent = 'Saving…';
+    try {
+        // New money lives where the dashboard already keeps it (the contribution plan).
+        const contributions = [];
+        if (a.newMoneyInvest > 0) contributions.push({ amount: Math.round(a.newMoneyInvest * 100) / 100, frequency: 'monthly', target: 'vaults' });
+        if (a.newMoneyLoan > 0) contributions.push({ amount: Math.round(a.newMoneyLoan * 100) / 100, frequency: 'monthly', target: 'loan' });
+        await rpc('loan_sim_save', { p_platforms: (src.loanSim && src.loanSim.platforms) || [], p_contributions: contributions, p_sales: (src.loanSim && src.loanSim.sales) || [] });
+        if (src.loanSim) src.loanSim.contributions = contributions;
+        saved.invest = a.newMoneyInvest; saved.loan = a.newMoneyLoan;
+        saved.yieldPct = Math.abs(a.sleeveYield - sy.rate) < 0.00005 ? null : Math.round(a.sleeveYield * 10000) / 100;
+        base = { invest: null, loan: null, yieldPct: null };
+        saveLabState();
+        $('bMsg').textContent = 'Saved. The dashboard uses the same figures.';
+        refreshAll();
+    } catch (e) { $('bMsg').textContent = 'Could not save: ' + e.message; }
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+function showGate(msg) { $('app').style.display = 'none'; $('gate').style.display = ''; if (msg) $('gateMsg').textContent = msg; }
+(async function boot() {
+    $('ccyBtn').textContent = ccy === 'EUR' ? '€ EUR' : '$ USD';
+    if (!loadSession()) { showGate(); return; }
+    try {
+        const [bootstrap, manualAssets, loanDetails, loanSim, firePlan] = await Promise.all([
+            rpc('dashboard_bootstrap'), rpc('manual_assets_list'), rpc('loan_details_list').catch(() => []),
+            rpc('loan_sim_get').catch(() => null), rpc('fire_plan_get')]);
+        await loadLabState();
+        try { const r = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD'); const d = await r.json(); if (d && d.rates && d.rates.USD > 0) { fx = d.rates.USD; fxLive = true; } } catch (e) {}
+        let aave = null;
+        try { if (loanSim && loanSim.wallet) aave = await fetchAave(loanSim.wallet); } catch (e) { aave = null; }
+        src = { bootstrap, manualAssets, loanDetails, loanSim, eurUsd: fx, aave };
+        state0 = E.buildState(src);
+        plan0 = E.planFrom(firePlan);
+        if (!(plan0.fireNumber > 0)) { showGate('Set up your FIRE plan on the dashboard first (yearly spending and withdrawal rate).'); return; }
+        const nm = E.newMoney(loanSim); saved.invest = nm.invest; saved.loan = nm.loan;
+        setSeg('modeSeg', 'm', mode);
+        $('app').style.display = '';
+        refreshAll(); saveLabState();
+    } catch (e) {
+        if (e.message === 'not-signed-in') showGate('Your sign-in has ended. Sign in on the dashboard, then come back.');
+        else showGate('Could not load your data: ' + e.message);
+    }
+})();
+</script>
+</body>
+</html>
