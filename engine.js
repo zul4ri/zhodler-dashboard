@@ -19,7 +19,7 @@
 (function (root) {
 'use strict';
 const E = {};
-E.VERSION = 1;
+E.VERSION = 2;
 
 // ── Measured constants (each says where it comes from) ──────────────────────
 // Annualised size of BTC's daily moves, Binance BTC/USDT daily closes,
@@ -97,7 +97,11 @@ E.touchOdds = function (dropFrac, months, vol, growth) {
  *   btcGrowth, btcShockPct, btcShockMonths, btcZ, btcVol,
  *   sleeveYield, borrowRate, fundReturn, houseGrowth, vehicleDep,
  *   newMoneyInvest, newMoneyLoan (USD per month), freedToInvest (default true),
- *   events[{month, type, ...}], horizonMonths
+ *   events[{month, type, ...}], horizonMonths,
+ *   pools[{name, amount, rate, basis, newPct}]   optional. The stablecoin positions held as
+ *       separate pools, each growing at its own rate (basis 'apr' = plain rate, added monthly;
+ *       'apy' = the yearly result with compounding already in it). newPct = that pool's share
+ *       of the money invested each month. When given, it replaces sleeveYield.
  * events:
  *   {type:'cash', amount}            one-off money in (+) or out (-) of the stablecoin positions
  *   {type:'sellBtcRepay', fraction}  sell just enough BTC to repay that share of the Aave loan (default all)
@@ -115,6 +119,18 @@ E.simulate = function (state, a) {
         r: ((l.rate !== undefined && l.rate !== null) ? num(l.rate) : E.impliedRate(num(l.balance), num(l.payment), num(l.monthsLeft))) / 12,
     }));
     const sy = num(a.sleeveYield) / 12, br = num(a.borrowRate) / 12;
+    // Pools are fitted to what is really held: amounts above it are scaled down
+    // (money is never invented) and whatever is left over sits in a last pool
+    // earning nothing. The same goes for shares of new money above / below 100%.
+    let pools = null;
+    if (Array.isArray(a.pools)) {
+        pools = a.pools.map(p => ({ name: String(p.name || ''), idle: false, bal: Math.max(0, num(p.amount)), f: E.poolMonthlyFactor(p), share: Math.max(0, num(p.newPct)) / 100 }));
+        const asked = pools.reduce((t, p) => t + p.bal, 0), shares = pools.reduce((t, p) => t + p.share, 0);
+        if (asked > sleeves) pools.forEach(p => { p.bal *= sleeves / asked; });
+        if (shares > 1) pools.forEach(p => { p.share /= shares; });
+        pools.push({ name: '', idle: true, bal: Math.max(0, sleeves - asked), f: 1, share: Math.max(0, 1 - shares) });
+    }
+    const poolSum = () => pools.reduce((t, p) => t + p.bal, 0);
     const fg = Math.pow(1 + num(a.fundReturn), 1 / 12), hg = Math.pow(1 + num(a.houseGrowth), 1 / 12), vd = Math.pow(1 - num(a.vehicleDep), 1 / 12);
     const events = a.events || [];
     let freed = 0;
@@ -128,12 +144,25 @@ E.simulate = function (state, a) {
         out.aaveDebt.push(debt); out.tradfiDebt.push(tl + other);
         out.pot.push(pot); out.netWorth.push(pot + cash + house + veh - tl - other);
     };
+    // Money into (+) or out of (-) the positions. In: split by each pool's share
+    // of new money. Out: taken from every pool in proportion to its size.
+    const move = x => {
+        if (!pools) { sleeves += x; return; }
+        if (x >= 0) pools.forEach(p => { p.bal += x * p.share; });
+        else {
+            const have = poolSum(), k = have > 0 ? Math.min(1, -x / have) : 0;
+            pools.forEach(p => { p.bal *= 1 - k; });
+            if (-x > have) out.shortfall += -x - have;
+        }
+        sleeves = poolSum();
+    };
     const cleared = m => { if (debt < 0.005) { debt = 0; if (out.aaveClearMonth === null) { out.aaveClearMonth = m; out.events.push({ month: m, type: 'aaveCleared' }); } } };
     snap(0);
     for (let m = 1; m <= H; m++) {
         const p = E.btcPriceAt(state, a, m);
         // 1. rates and wear
-        sleeves *= 1 + sy; fund *= fg; debt *= 1 + br; house *= hg; veh *= vd;
+        if (pools) { pools.forEach(p => { p.bal *= p.f; }); sleeves = poolSum(); } else sleeves *= 1 + sy;
+        fund *= fg; debt *= 1 + br; house *= hg; veh *= vd;
         // 2. bank loans follow their schedule; a finished loan frees its payment
         let freedNow = 0;                              // payments that end THIS month are free from next month on
         loans.forEach(l => {
@@ -152,11 +181,11 @@ E.simulate = function (state, a) {
         const toLoan = num(a.newMoneyLoan);
         if (debt > 0 && toLoan > 0) { const pay = Math.min(debt, toLoan); debt -= pay; invest += toLoan - pay; }
         else invest += toLoan;
-        sleeves += invest;
+        move(invest);
         // 4. one-off events
         events.forEach(ev => {
             if (ev.month !== m) return;
-            if (ev.type === 'cash') sleeves += num(ev.amount);
+            if (ev.type === 'cash') move(num(ev.amount));
             else if (ev.type === 'sellBtcRepay') {
                 const q = Math.min(qty, debt * (ev.fraction === undefined ? 1 : num(ev.fraction)) / p);
                 qty -= q; debt -= q * p;
@@ -164,10 +193,10 @@ E.simulate = function (state, a) {
                 const q = Math.min(qty, qty * num(ev.pct) / 100);
                 let cashIn = q * p; qty -= q;
                 if (ev.to === 'loan') { const pay = Math.min(debt, cashIn); debt -= pay; cashIn -= pay; }
-                sleeves += cashIn;
+                move(cashIn);
             } else if (ev.type === 'sleevesRepay') {
                 const pay = Math.max(0, Math.min(debt, sleeves, ev.amount === undefined ? Infinity : num(ev.amount)));
-                sleeves -= pay; debt -= pay;
+                move(-pay); debt -= pay;
             }
             out.events.push({ month: m, type: ev.type });
         });
@@ -186,6 +215,7 @@ E.simulate = function (state, a) {
         snap(m);
     }
     out.loans = loans.map(l => ({ label: l.label, rate: l.r * 12 }));
+    out.pools = pools ? pools.map(p => ({ name: p.name, idle: p.idle, balance: p.bal })) : null;   // balances at the end
     return out;
 };
 
@@ -294,12 +324,45 @@ E.buildState = function (src) {
     return st;
 };
 
+// One name per platform, so a typed "Morpho Clearstar" meets the position "Morpho".
+E.platformFamily = function (n) {
+    const s = String(n || '').toLowerCase();
+    return s.includes('pendle') ? 'pendle' : s.includes('morpho') ? 'morpho' : s.includes('aave') ? 'aave' : s.includes('hyperliquid') ? 'hyperliquid' : s;
+};
+
+// A pool's rate as a monthly growth factor, and as a plain yearly rate (APR).
+E.poolMonthlyFactor = function (p) {
+    const r = Math.max(-0.99, num(p && p.rate));
+    return (p && p.basis === 'apy') ? Math.pow(1 + r, 1 / 12) : 1 + r / 12;
+};
+E.poolApr = function (p) { return (E.poolMonthlyFactor(p) - 1) * 12; };
+
+// Today's positions as pools: one per platform, at the rate typed for it. New
+// money is shared out in the same proportions (whole percentages adding to 100).
+// Balances under $100 or 1% of the total are gathered into one line.
+E.defaultPools = function (state, loanSim) {
+    const parts = E.sleeveYield(state, loanSim).parts, total = parts.reduce((t, p) => t + p.value, 0);
+    const floor = Math.max(100, total * 0.01), pools = [];
+    let small = 0, smallW = 0;
+    parts.forEach(p => {
+        if (p.value >= floor) pools.push({ name: p.protocol === 'wallet' ? 'Wallet (idle)' : p.protocol, src: p.protocol, amount: p.value, rate: p.apr / 100, basis: 'apr' });
+        else { small += p.value; smallW += p.value * p.apr; }
+    });
+    if (small >= 1) pools.push({ name: 'Wallet and small balances', amount: small, rate: smallW / small / 100, basis: 'apr' });
+    const sum = pools.reduce((t, p) => t + p.amount, 0);
+    let left = 100;
+    pools.forEach(p => { p.exact = sum > 0 ? p.amount / sum * 100 : 0; p.newPct = Math.floor(p.exact); left -= p.newPct; });
+    pools.slice().sort((x, y) => (y.exact - y.newPct) - (x.exact - x.newPct)).forEach(p => { if (left > 0 && sum > 0) { p.newPct += 1; left -= 1; } });
+    pools.forEach(p => { delete p.exact; });
+    return pools;
+};
+
 // Yield on the stablecoin positions, weighted by where the money sits today.
 // loanSim.platforms carries the rates the owner typed in Loan Payoff; a
 // position whose platform has no typed rate counts as 0%.
 E.sleeveYield = function (state, loanSim) {
     const plats = (loanSim && Array.isArray(loanSim.platforms)) ? loanSim.platforms : [];
-    const fam = n => { const s = String(n || '').toLowerCase(); return s.includes('pendle') ? 'pendle' : s.includes('morpho') ? 'morpho' : s.includes('aave') ? 'aave' : s.includes('hyperliquid') ? 'hyperliquid' : s; };
+    const fam = E.platformFamily;
     const byFam = {};
     plats.forEach(p => { const f = fam(p.name), v = num(p.value), a = num(p.apr); if (!byFam[f]) byFam[f] = { v: 0, va: 0 }; byFam[f].v += v; byFam[f].va += v * a; });
     let total = 0, weighted = 0; const parts = [];

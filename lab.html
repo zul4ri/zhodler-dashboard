@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <!-- Raise ?v= here AND in index.html whenever engine.js changes. -->
-<script src="engine.js?v=1"></script>
+<script src="engine.js?v=2"></script>
 <style>
 :root{
     --bg:#0a0a0a; --card:#0a0a0a; --card2:#171717; --border:#262626; --text:#fafafa; --text2:#a3a3a3;
@@ -79,6 +79,25 @@ td small{color:var(--text2);display:block;font-size:12px;}
 .lever .lc{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;}
 .lever .lc label{color:var(--text2);font-size:13px;}
 .lever .help{color:var(--text2);font-size:12.5px;margin-top:4px;}
+.scn{container-type:inline-size;}
+.pools{display:grid;gap:8px;margin-top:8px;}
+.pool{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.9fr) 64px minmax(0,.75fr);gap:6px;align-items:center;}
+.pool input[type=number],.pool input[type=text]{width:100%;min-width:0;padding:6px 7px;}
+.pool input[type=text]{background:var(--card2);border:1px solid var(--border);border-radius:7px;font-weight:500;}
+.pool select{padding:6px 4px;width:100%;}
+.pool .pname{grid-column:1/4;grid-row:1;}
+.pool .x{grid-column:4;grid-row:1;justify-self:end;}
+.pool.phead{color:var(--text2);font-size:12px;align-items:end;}
+.pool.phead .c-name,.pool.phead .c-x{display:none;}
+.pool.phead .c-rate{grid-column:span 2;}
+@container (min-width:600px){
+    .pool{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,.8fr) 64px minmax(0,.7fr) 28px;}
+    .pool .pname,.pool .x{grid-column:auto;grid-row:auto;}
+    .pool.phead .c-name,.pool.phead .c-x{display:block;}
+}
+.psum{color:var(--text2);font-size:13px;margin-top:8px;}
+.psum b{color:var(--text);font-weight:500;}
+.btn[disabled]{opacity:.5;cursor:default;}
 input[type=number],select{background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;width:110px;}
 select{width:auto;max-width:100%;}
 input[type=range]{flex:1;min-width:140px;}
@@ -331,7 +350,13 @@ function applyScenario(a0, plan, sc) {
         if (L.sell.how === 'pct') a.events.push({ month: m, type: 'sellBtc', pct: Number(L.sell.pct) || 0, to: 'loan' });
         else a.events.push({ month: m, type: 'sellBtcRepay' });
     }
-    if (L.yields) { a.sleeveYield = Math.max(0, a.sleeveYield + (Number(L.yields.sleevePts) || 0) / 100); a.borrowRate = Math.max(0, a.borrowRate + (Number(L.yields.borrowPts) || 0) / 100); }
+    if (L.realloc) a.pools = reallocView(L.realloc).map(x => ({ name: x.name, amount: x.amount, rate: Number(x.rate) || 0, basis: x.basis, newPct: Number(x.newPct) || 0 }));
+    if (L.yields) {
+        const pts = (Number(L.yields.sleevePts) || 0) / 100;
+        a.sleeveYield = Math.max(0, a.sleeveYield + pts);
+        if (a.pools) a.pools.forEach(x => { if (x.rate > 0) x.rate = Math.max(0, x.rate + pts); });   // the same shift on every pool that earns something
+        a.borrowRate = Math.max(0, a.borrowRate + (Number(L.yields.borrowPts) || 0) / 100);
+    }
     if (L.oneoff) a.events.push({ month: Math.max(1, Math.round(Number(L.oneoff.month) || 1)), type: 'cash', amount: Number(L.oneoff.amount) || 0 });
     if (L.retire) {
         if (Number(L.retire.age) > p.curAge) { p.retAge = Number(L.retire.age); p.retMonth = Math.round((p.retAge - p.curAge) * 12); }
@@ -455,6 +480,7 @@ const LEVERS = {
     saving: { title: 'Save more or less', init: a => ({ total: Math.round(a.newMoneyInvest + a.newMoneyLoan) }) },
     btc:    { title: 'BTC price', init: () => ({ preset: 'crash', pctPerYear: 10 }) },
     split:  { title: 'Split new money: loan vs investing', init: a => { const t = a.newMoneyInvest + a.newMoneyLoan; return { toLoanPct: t > 0 ? Math.round(a.newMoneyLoan / t * 100) : 0 }; } },
+    realloc: { title: 'Reallocate the stablecoin positions', init: () => ({ total: state0.sleeves, pools: E.defaultPools(state0, src.loanSim) }) },
     sell:   { title: 'Sell BTC to pay down the loan', init: () => ({ how: 'clear', pct: 25, month: 1 }) },
     yields: { title: 'Rates change', init: () => ({ sleevePts: -2, borrowPts: 0 }) },
     oneoff: { title: 'A one-off amount', init: () => ({ amount: 5000, month: 6 }) },
@@ -475,6 +501,8 @@ function leverHtml(sc, key, a0) {
     } else if (key === 'split') {
         body = `<div class="lc"><input type="range" min="0" max="100" step="5" value="${v.toLoanPct}" oninput="this.nextElementSibling.textContent=this.value+'% to the loan'" ${set('toLoanPct', 'Number(this.value)')}><b>${v.toLoanPct}% to the loan</b></div>` +
             `<div class="help">The rest goes into the stablecoin positions. Once the loan is repaid, all of it is invested.</div>`;
+    } else if (key === 'realloc') {
+        body = reallocHtml(sc, a0);
     } else if (key === 'sell') {
         const o = (val, txt) => `<option value="${val}"${v.how === val ? ' selected' : ''}>${txt}</option>`;
         body = `<div class="lc"><select ${set('how')}>${o('clear', 'Just enough to clear the loan')}${o('pct', 'A share of my BTC')}</select>` +
@@ -495,6 +523,122 @@ function leverHtml(sc, key, a0) {
     }
     return `<div class="lever" id="${id}"><div class="lt"><b>${LEVERS[key].title}</b><button class="x" title="Remove this change" onclick="removeLever('${sc.id}','${key}')">&times;</button></div>${body}</div>`;
 }
+// ── Reallocate the stablecoin positions ──────────────────────────────────────
+// A scenario keeps its pools together with the positions total they were typed
+// against. If the real total has moved since, every amount moves with it, so the
+// mix the owner chose is kept and the table still adds up.
+const MAX_POOLS = 8;
+function reallocView(L) {
+    const k = L && L.total > 0 ? state0.sleeves / L.total : 1;
+    return ((L && L.pools) || []).map(x => Object.assign({}, x, { amount: Math.max(0, Number(x.amount) || 0) * k }));
+}
+function reallocOf(id) { const sc = scenarios.find(x => x.id === id); return sc && sc.levers && sc.levers.realloc ? { sc, L: sc.levers.realloc } : null; }
+function reallocRebase(L) { L.pools = reallocView(L); L.total = state0.sleeves; }
+function reallocSummary(sc, a0, note) {
+    const P = reallocView(sc.levers.realloc), tot = state0.sleeves;
+    const alloc = P.reduce((t, x) => t + x.amount, 0), left = Math.max(0, tot - alloc);
+    const blend = tot > 0 ? P.reduce((t, x) => t + x.amount * E.poolApr(x), 0) / tot : 0;
+    const share = Math.round(P.reduce((t, x) => t + (Number(x.newPct) || 0), 0) * 10) / 10, idle = Math.round((100 - share) * 10) / 10;
+    return `Allocated <b class="sensitive">${fmtFull(alloc)}</b> of <span class="sensitive">${fmtFull(tot)}</span>` +
+        (Math.round(disp(left)) >= 1 ? ` &middot; <span class="warnc"><span class="sensitive">${fmtFull(left)}</span> not allocated, earning 0%</span>` : '') +
+        `<br>Earning <b>${pct(blend, 2)}</b> a year overall (starting line: ${pct(a0.sleeveYield, 2)})` +
+        `<br>New money: <b>${share}%</b> assigned` + (idle > 0 ? ` &middot; <span class="warnc">${idle}% left idle at 0%</span>` : '') +
+        (note ? `<br><span class="warnc">${note}</span>` : '');
+}
+function reallocHtml(sc, a0) {
+    const P = reallocView(sc.levers.realloc), id = sc.id;
+    const ev = (i, f) => `onchange="setPool('${id}',${i},'${f}',this)"`;
+    const rows = P.map((x, i) => `<div class="pool">` +
+        `<input type="text" class="pname" maxlength="40" value="${esc(x.name || '')}" aria-label="Pool or vault name" ${ev(i, 'name')}>` +
+        `<input type="number" class="sensitive" min="0" step="100" value="${Math.round(disp(x.amount))}" aria-label="Amount" ${ev(i, 'amount')}>` +
+        `<input type="number" min="0" max="200" step="0.1" value="${+((Number(x.rate) || 0) * 100).toFixed(2)}" aria-label="Rate, percent a year" ${ev(i, 'rate')}>` +
+        `<select aria-label="APR or APY" ${ev(i, 'basis')}><option value="apr"${x.basis === 'apy' ? '' : ' selected'}>APR</option><option value="apy"${x.basis === 'apy' ? ' selected' : ''}>APY</option></select>` +
+        `<input type="number" min="0" max="100" step="1" value="${+(Number(x.newPct) || 0).toFixed(1)}" aria-label="Share of new money, percent" ${ev(i, 'newPct')}>` +
+        `<button class="x" type="button" title="Remove this pool" onclick="removePool('${id}',${i})">&times;</button></div>`).join('');
+    return `<div class="pools"><div class="pool phead"><span class="c-name">Pool or vault</span><span>Amount (${sym()})</span><span class="c-rate">Rate a year (%)</span><span>New money (%)</span><span class="c-x"></span></div>${rows}</div>` +
+        `<div class="lc"><button class="btn small" type="button" onclick="addPool('${id}')"${P.length >= MAX_POOLS ? ' disabled' : ''}>+ Add a pool or vault</button></div>` +
+        `<div class="psum" id="${id}-realloc-sum">${reallocSummary(sc, a0)}</div>` +
+        `<div class="help">Amounts are today's money, moved between pools. "New money" is how the amount you invest each month is shared out. APY already includes compounding; APR is the plain rate, added monthly.</div>` +
+        `<div class="help">Each rate is assumed to hold for the whole projection, and the lab cannot see risk, so a higher rate always looks better here. Each pool also grows on its own, so the higher-rate pools become a bigger share as the years pass. That is why this line rises above the starting line even before you change anything: the starting line uses one average rate throughout.</div>` +
+        `<div class="lc"><button class="btn small" type="button" title="Saves the rates of the pools you hold today, so the starting line and the dashboard use them. Amounts are not saved: they always come from your accounts." onclick="savePoolRates('${id}')">Save these rates as my starting rates</button><span class="sub" id="${id}-realloc-msg"></span></div>`;
+}
+function setPool(id, i, field, el) {
+    const r = reallocOf(id); if (!r) return;
+    reallocRebase(r.L);
+    const x = r.L.pools[i]; if (!x) return;
+    let note = '';
+    if (field === 'name') x.name = String(el.value).slice(0, 40);
+    else if (field === 'basis') x.basis = el.value === 'apy' ? 'apy' : 'apr';
+    else if (field === 'rate') { x.rate = Math.min(200, Math.max(0, Number(el.value) || 0)) / 100; el.value = +(x.rate * 100).toFixed(2); }
+    else if (field === 'amount') {
+        // Never more than is held: what the other pools use is taken off first.
+        const room = Math.max(0, state0.sleeves - r.L.pools.reduce((t, y, k) => t + (k === i ? 0 : y.amount), 0));
+        let v = Math.max(0, fromDisp(Number(el.value) || 0));
+        if (Math.round(disp(v)) >= Math.round(disp(room))) {
+            if (Math.round(disp(v)) > Math.round(disp(room))) note = 'Capped at what you hold. To bring in outside money, add "A one-off amount".';
+            v = room;
+        }
+        x.amount = v; el.value = Math.round(disp(v));
+    } else if (field === 'newPct') {
+        const room = Math.max(0, 100 - r.L.pools.reduce((t, y, k) => t + (k === i ? 0 : (Number(y.newPct) || 0)), 0));
+        let v = Math.max(0, Number(el.value) || 0);
+        if (v > room) { v = room; note = 'New money cannot add up to more than 100%.'; }
+        x.newPct = Math.round(v * 10) / 10; el.value = x.newPct;
+    }
+    const box = $(id + '-realloc-sum'); if (box) box.innerHTML = reallocSummary(r.sc, baselineAssumptions(), note);
+    refresh(); saveLabState();
+}
+function addPool(id) {
+    const r = reallocOf(id); if (!r || (r.L.pools || []).length >= MAX_POOLS) return;
+    reallocRebase(r.L);
+    r.L.pools.push({ name: 'New pool', amount: 0, rate: 0, basis: 'apr', newPct: 0 });
+    renderScenarios(); refresh(); saveLabState();
+}
+function removePool(id, i) {
+    const r = reallocOf(id); if (!r) return;
+    reallocRebase(r.L);
+    r.L.pools.splice(i, 1);                 // its money becomes "not allocated" until it is given to another pool
+    renderScenarios(); refresh(); saveLabState();
+}
+// Keeps the rates typed here as the owner's current rates (the same record the
+// dashboard reads). Only pools that are positions held today are saved, and only
+// while the row still carries that platform's name; amounts are never saved.
+async function savePoolRates(id) {
+    const r = reallocOf(id); if (!r) return;
+    const msg = $(id + '-realloc-msg'), fam = E.platformFamily;
+    const parts = E.sleeveYield(state0, src.loanSim).parts;
+    const plats = JSON.parse(JSON.stringify((src.loanSim && src.loanSim.platforms) || []));
+    const done = [], skipped = [];
+    reallocView(r.L).forEach(row => {
+        const part = row.src ? parts.find(y => y.protocol === row.src) : null;
+        if (!part || fam(row.name) !== fam(row.src)) { if (Number(row.rate) > 0) skipped.push(row.name || 'unnamed'); return; }
+        const apr = Math.round(E.poolApr(row) * 10000) / 100, hits = plats.filter(y => fam(y.name) === fam(row.src));
+        if (hits.length) {
+            hits.forEach(y => { y.apr = apr; });
+            if (!(hits.reduce((t, y) => t + (Number(y.value) || 0), 0) > 0)) hits[0].value = Math.round(part.value * 100) / 100;
+        } else if (apr > 0) plats.push({ name: String(row.src).slice(0, 60), value: Math.round(part.value * 100) / 100, apr });
+        else return;                               // idle money with no rate on record: nothing to keep
+        done.push(row.basis === 'apy' ? `${row.name} ${+(row.rate * 100).toFixed(2)}% APY (kept as ${apr.toFixed(2)}% APR)` : `${row.name} ${apr.toFixed(2)}%`);
+    });
+    if (!done.length) { msg.textContent = 'Nothing to save: none of these pools is a position you hold today.'; return; }
+    msg.textContent = 'Saving…';
+    try {
+        let contributions = src.loanSim && src.loanSim.contributions;
+        if (!Array.isArray(contributions)) {
+            contributions = [];
+            if (saved.invest > 0) contributions.push({ amount: Math.round(saved.invest * 100) / 100, frequency: 'monthly', target: 'vaults' });
+            if (saved.loan > 0) contributions.push({ amount: Math.round(saved.loan * 100) / 100, frequency: 'monthly', target: 'loan' });
+        }
+        await rpc('loan_sim_save', { p_platforms: plats, p_contributions: contributions, p_sales: (src.loanSim && src.loanSim.sales) || [] });
+        src.loanSim = Object.assign({}, src.loanSim || {}, { platforms: plats, contributions, updated_at: new Date().toISOString() });
+        saved.yieldPct = null; base.yieldPct = null;          // the starting line now follows the saved rates
+        saveLabState(); refreshAll();
+        const m2 = $(id + '-realloc-msg');
+        if (m2) m2.textContent = `Saved: ${done.join(', ')}. Your starting line now earns ${pct(baselineAssumptions().sleeveYield, 2)} a year.` +
+            (skipped.length ? ` Not saved, because you do not hold them today: ${skipped.join(', ')}.` : '');
+    } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+}
+
 function renderScenarios() {
     const a0 = baselineAssumptions();
     $('scenarios').innerHTML = scenarios.length ? scenarios.map((sc, i) => {
@@ -519,6 +663,7 @@ function autoName(sc) {
     if (L.btc) { const g = E.btcPastGrowth(src.bootstrap);
         parts.push({ crash: 'BTC falls 50%', flat: 'BTC stays flat', rise: 'BTC rises 50%', past: `BTC +${g ? Math.round(g.rate * 100) : '?'}% a year` }[L.btc.preset] || `BTC ${L.btc.pctPerYear >= 0 ? '+' : ''}${L.btc.pctPerYear}% a year`); }
     if (L.split) parts.push(`${L.split.toLoanPct}% to the loan`);
+    if (L.realloc) parts.push('Reallocate positions');
     if (L.sell) parts.push(L.sell.how === 'pct' ? `Sell ${L.sell.pct}% of BTC` : 'Sell BTC to clear the loan');
     if (L.yields) parts.push('Rates change');
     if (L.oneoff) parts.push(`${L.oneoff.amount >= 0 ? 'One-off +' : 'One-off '}${fmt(L.oneoff.amount)}`);
