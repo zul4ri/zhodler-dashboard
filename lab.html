@@ -333,10 +333,17 @@ function saveLabState() {
 function baselineAssumptions() {
     const a = E.defaultAssumptions(src, state0, mode);
     const inv = base.invest !== null ? base.invest : saved.invest, ln = base.loan !== null ? base.loan : saved.loan;
-    const y = base.yieldPct !== null ? base.yieldPct : saved.yieldPct;
     a.newMoneyInvest = inv; a.newMoneyLoan = ln;
-    if (y !== null && y !== undefined && !isNaN(y)) a.sleeveYield = y / 100;
+    const own = ownYield();
+    if (own !== null) E.useSingleYield(a, own);
     return a;
+}
+// A yield figure of the owner's own (as a decimal) replaces the per-platform rates.
+// The figure shown in the box (the average, to two decimals) does not count as one.
+function ownYield() {
+    const y = base.yieldPct !== null ? base.yieldPct : saved.yieldPct;
+    if (y === null || y === undefined || isNaN(y)) return null;
+    return Math.abs(y / 100 - E.sleeveYield(state0, src.loanSim).rate) >= 0.00005 ? y / 100 : null;
 }
 // A scenario = the baseline plus only the levers the owner added.
 function applyScenario(a0, plan, sc) {
@@ -523,7 +530,8 @@ function leverHtml(sc, key, a0) {
             `<div class="help">Sold at that month's price on the scenario's BTC path. Proceeds repay the loan; anything left over is invested.</div>`;
     } else if (key === 'yields') {
         body = `<div class="lc"><label>Yield on stablecoin positions</label><input type="number" step="0.5" min="-20" max="20" value="${v.sleevePts}" ${set('sleevePts', 'Number(this.value)')}><label>points (now ${pct(a0.sleeveYield)})</label></div>` +
-            `<div class="lc"><label>Aave borrow rate</label><input type="number" step="0.5" min="-20" max="30" value="${v.borrowPts}" ${set('borrowPts', 'Number(this.value)')}><label>points (now ${pct(a0.borrowRate)})</label></div>`;
+            `<div class="lc"><label>Aave borrow rate</label><input type="number" step="0.5" min="-20" max="30" value="${v.borrowPts}" ${set('borrowPts', 'Number(this.value)')}><label>points (now ${pct(a0.borrowRate)})</label></div>` +
+            (a0.pools || (sc.levers || {}).realloc ? `<div class="help">The yield change is added to every platform that earns something. Idle balances stay at 0%.</div>` : '');
     } else if (key === 'oneoff') {
         body = `<div class="lc"><input type="number" step="500" value="${Math.round(disp(v.amount))}" ${set('amount', 'fromDisp(Number(this.value))')}><label>${sym()} in</label><input type="number" min="1" max="480" step="1" value="${v.month}" ${set('month', 'Number(this.value)')} style="width:80px"><label>months from now</label></div>` +
             `<div class="help">A positive figure is money coming in (a bonus); a negative one is a big expense paid out of the stablecoin positions.</div>`;
@@ -579,7 +587,7 @@ function reallocHtml(sc, a0) {
         `<div class="lc"><button class="btn small" type="button" onclick="addPool('${id}')"${P.length >= MAX_POOLS ? ' disabled' : ''}>+ Add a pool or vault</button></div>` +
         `<div class="psum" id="${id}-realloc-sum">${reallocSummary(sc, a0)}</div>` +
         `<div class="help">Amounts are today's money, moved between pools. "New money" is how the amount you invest each month is shared out. APY already includes compounding; APR is the plain rate, added monthly.</div>` +
-        `<div class="help">Each rate is assumed to hold for the whole projection unless you give it an end, which suits fixed terms such as Pendle's: the money stays in that pool and earns the later rate. The lab cannot see risk, so a higher rate always looks better here. Each pool also grows on its own, so the higher-rate pools become a bigger share as the years pass. That is why this line rises above the starting line even before you change anything: the starting line uses one average rate throughout.</div>` +
+        `<div class="help">Each rate is assumed to hold for the whole projection unless you give it an end, which suits fixed terms such as Pendle's: the money stays in that pool and earns the later rate. The lab cannot see risk, so a higher rate always looks better here. Each pool also grows on its own, so the higher-rate pools become a bigger share as the years pass. ${a0.pools ? 'The starting line works the same way, so a reallocation you have not edited sits exactly on it.' : 'Your starting line uses your own single yield figure instead, so this line differs from it even before you change anything.'}</div>` +
         `<div class="lc"><button class="btn small" type="button" title="Saves the rates of the pools you hold today, so the starting line and the dashboard use them. Amounts are not saved: they always come from your accounts." onclick="savePoolRates('${id}')">Save these rates as my starting rates</button><span class="sub" id="${id}-realloc-msg"></span></div>`;
 }
 function setPool(id, i, field, el) {
@@ -721,7 +729,7 @@ function renderInputs() {
     h += r('Aave borrow rate', pct(a.borrowRate, 2), a.borrowRateLive ? 'read from Aave just now' : 'Aave could not be reached; 5% used', tag(a.borrowRateLive ? 'Live' : 'Assumption', a.borrowRateLive ? 'live' : 'assume'));
     h += r('Loan closed by force when the loan reaches', pct(s.aaveLT, 0) + ' of the BTC value', 'Aave’s rule for WBTC; penalty ' + pct(E.AAVE_LIQ_PENALTY, 0), tag(src.aave ? 'Live' : 'Assumption', src.aave ? 'live' : 'assume'));
     h += r('Stablecoin positions', fmtFull(s.sleeves), sy.parts.filter(p => p.value >= 50).map(p => `${esc(p.protocol)} ${fmt(p.value)} at ${p.apr.toFixed(2)}%`).join(' · '), tag('Live', 'live'));
-    h += r('Yield on those positions', pct(a.sleeveYield, 2), (base.yieldPct !== null || saved.yieldPct !== null) ? 'your own figure (below)' : `weighted from the rates you typed${typedWhen ? ' on ' + typedWhen : ''}; idle balances count as 0%`, tag('You typed', 'typed'));
+    h += r('Yield on those positions', pct(a.sleeveYield, 2), ownYield() !== null ? 'your own figure (below), used for all the positions' : `today's average, weighted from the rates you typed${typedWhen ? ' on ' + typedWhen : ''}; idle balances count as 0%. Each platform then grows at its own rate`, tag('You typed', 'typed'));
     h += r('New money each month', fmt(a.newMoneyInvest) + ' + ' + fmt(a.newMoneyLoan), 'into investments + to the Aave loan (your starting line)', tag('You typed', 'typed'));
     s.loans.forEach(l => { h += r(esc(l.label), fmtFull(l.balance), `${fmt(l.payment)}/mo for ${l.monthsLeft} more months; rate ${pct(l.rate, 2)} (${l.rateSource === 'typed' ? 'typed' : 'worked out from the payment'})`, tag('You typed', 'typed')); });
     if (s.otherDebt > 0) h += r('Loans with no schedule', fmtFull(s.otherDebt), 'held as they are (no interest, no repayments)', tag('You typed', 'typed'));
@@ -737,7 +745,7 @@ function renderBaseInputs() {
     $('bInvest').value = Math.round(disp(a.newMoneyInvest)); $('bLoan').value = Math.round(disp(a.newMoneyLoan)); $('bYield').value = (a.sleeveYield * 100).toFixed(2);
     $('bInvestCcy').textContent = sym(); $('bLoanCcy').textContent = sym();
     const sy = E.sleeveYield(state0, src.loanSim);
-    $('bYieldSrc').textContent = (base.yieldPct !== null || saved.yieldPct !== null) ? `your own figure (from your typed platform rates it would be ${pct(sy.rate, 2)})` : 'from the platform rates you typed';
+    $('bYieldSrc').textContent = ownYield() !== null ? `your own figure, used for all the positions (from your typed platform rates it would be ${pct(sy.rate, 2)})` : 'the average of the platform rates you typed; each platform grows at its own rate';
     const p = curPlan();
     $('pSpend').value = p.expense > 0 ? Math.round(disp(p.expense)) : ''; $('pSwr').value = p.swr > 0 ? p.swr : '';
     $('pAge').value = p.curAge > 0 ? p.curAge : ''; $('pRet').value = p.retAge > 0 ? p.retAge : ''; $('pInfl').value = (p.inflation * 100).toFixed(1);

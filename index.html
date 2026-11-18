@@ -3201,7 +3201,7 @@ async function loadRunRate(plan, loanDetails, assets) {
 }
 function rrAssumptions() {
     const a = ZhEngine.defaultAssumptions(_rr.src, _rr.state, rrMode);
-    if (_rr.yieldPct !== null) a.sleeveYield = _rr.yieldPct / 100;
+    if (_rr.yieldPct !== null) ZhEngine.useSingleYield(a, _rr.yieldPct / 100);   // the owner's own single figure replaces the per-platform rates
     return a;
 }
 function rrProject() {

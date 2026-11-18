@@ -404,11 +404,13 @@ E.btcPastGrowth = function (bootstrap) {
 
 /* defaultAssumptions(src, state, mode)
  * mode 'flat' = "if nothing changes" (BTC and house held where they are)
- * mode 'past' = "past growth continues" (BTC and house keep their historical rate) */
+ * mode 'past' = "past growth continues" (BTC and house keep their historical rate)
+ * The stablecoin positions run as pools, one per platform (see defaultPools). */
 E.defaultAssumptions = function (src, state, mode) {
     const sy = E.sleeveYield(state, src.loanSim), nm = E.newMoney(src.loanSim);
     const past = mode === 'past', bg = E.btcPastGrowth(src.bootstrap);
-    return {
+    const pools = E.defaultPools(state, src.loanSim);
+    const a = {
         mode: past ? 'past' : 'flat',
         btcGrowth: past && bg ? bg.rate : 0,
         btcShockPct: 0, btcShockMonths: 12, btcVol: E.BTC_VOL,
@@ -421,7 +423,12 @@ E.defaultAssumptions = function (src, state, mode) {
         newMoneyInvest: nm.invest, newMoneyLoan: nm.loan,
         freedToInvest: true, events: [], horizonMonths: 480,
     };
+    // Each platform grows at its own rate (sleeveYield stays as today's average, for display).
+    if (pools.length) a.pools = pools;
+    return a;
 };
+// One yield figure for all the positions instead of a rate per platform.
+E.useSingleYield = function (a, rate) { a.sleeveYield = num(rate); delete a.pools; return a; };
 
 // FIRE plan row (fire_plan_get) -> the engine's plan object.
 E.planFrom = function (firePlan) {
