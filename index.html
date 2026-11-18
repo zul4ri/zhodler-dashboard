@@ -977,7 +977,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <div class="wbig"><span id="c-btc-holdings">--</span> <span class="unit">BTC @ <span id="c-btc-price">--</span></span></div>
         <div class="info-pop" id="i-btc">
             <b>Bitcoin module.</b> Holdings and spot price come from the BTC trackers.
-            <span class="formula"><b>Your average buy price</b> is worked out from your recorded purchases and sales (each buy at the BTC price that day; a sale leaves the average unchanged). Entries marked "estimate" are periods where the exact purchase dates are not on record yet, priced at that period's average.</span>
+            <span class="formula"><b>Your average buy price</b> is worked out from your recorded purchases and sales (each buy at the BTC price that day; a sale leaves the average unchanged). Entries marked "estimate" are periods the blockchain cannot show, priced at that period's average. BTC that built up inside liquidity positions has no single purchase date; it is dated and priced on the day it reached your loan.</span>
             <span class="formula"><b>Your return on the BTC you hold</b> = what it is worth now minus what you paid for the BTC you still have. It is a paper result: nothing is gained or lost until you sell. What your past sales gained or lost is given separately in the note under the figures. In the euro view the amount is converted at today's rate.</span>
             <span class="formula"><b>BTC price, year to date</b> is the market's move since 1 January, not your own result.</span>
         </div>
@@ -2686,7 +2686,8 @@ function renderBtc() {
         const salesTxt = sales ? ` Your ${sales} sale${sales === 1 ? '' : 's'} so far ${realised >= 0 ? 'gained' : 'lost'} <span class="sensitive">${fm(Math.abs(realised))}</span> against the average at the time.` : '';
         const upd = btcBasis.as_of ? new Date(btcBasis.as_of + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
         gi('c-btc-note', `From ${Number(btcBasis.lot_count) || 0} recorded buys and sales` + (upd ? `, last one ${upd}` : '') + '. ' +
-            (estPct > 0 ? `About ${estPct.toFixed(0)}% of the cost comes from periods where only the yearly totals are known, priced at that period's average BTC price &mdash; treat the figures as estimates (average price roughly &plusmn;$5k).` : 'All entries are from on-chain records.') + salesTxt);
+            (estPct > 0 ? `About ${estPct.toFixed(0)}% of the cost comes from periods the blockchain cannot show (yearly totals, priced at that period's average), so treat the figures as estimates.` : 'All entries are from on-chain records.') +
+            ' On-chain entries are priced on the day the BTC reached your loan or wallet.' + salesTxt);
     } else {
         gi('c-btc-since-lbl', 'BTC price since tracking began (Aug 2023) &mdash; not your return');
         sv('c-btc-since', fp(cs), cc(cs));
