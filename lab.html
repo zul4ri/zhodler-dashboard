@@ -120,7 +120,7 @@ body.privacy .sensitive{filter:blur(8px);}
         <div id="liqBox"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="secAnswer">
         <div class="row"><h2 id="ansTitle">Where this leads</h2><span class="sub" id="ansSub"></span></div>
         <div class="answer" id="answer"></div>
         <div class="row" style="margin-top:16px;">
@@ -141,7 +141,7 @@ body.privacy .sensitive{filter:blur(8px);}
         <div class="note" id="resultsNote"></div>
     </section>
 
-    <section class="card">
+    <section class="card" id="secScenarios">
         <div class="row"><h2>Try a change</h2><span class="sub">Each scenario starts from the line above and changes only what you add to it. Up to three.</span>
             <span style="flex:1"></span><button class="btn primary" id="addScn" type="button">+ New scenario</button></div>
         <div class="scgrid" id="scenarios"></div>
@@ -149,11 +149,17 @@ body.privacy .sensitive{filter:blur(8px);}
     </section>
 
     <section class="card">
-        <div class="row"><h2>Your starting line</h2><span class="sub">The three figures you control. Everything else is read from your accounts.</span></div>
+        <div class="row"><h2>Your starting line</h2><span class="sub">The figures you control. Everything else is read from your accounts.</span></div>
+        <div class="warnbox" id="needPlan" style="display:none">Set your target below (yearly spending, withdrawal rate and ages), then press <b>Save as my starting line</b>. The projection appears as soon as there is a target.</div>
         <div class="lever" style="border-top:0;margin-top:4px;">
             <div class="lc"><label for="bInvest" style="min-width:250px;">Into investments each month</label><input type="number" id="bInvest" min="0" step="50"><span class="muted" id="bInvestCcy"></span></div>
             <div class="lc"><label for="bLoan" style="min-width:250px;">To repay the Aave loan each month</label><input type="number" id="bLoan" min="0" step="50"><span class="muted" id="bLoanCcy"></span></div>
             <div class="lc"><label for="bYield" style="min-width:250px;">Yield on stablecoin positions (% a year)</label><input type="number" id="bYield" min="0" max="50" step="0.1"><span class="muted" id="bYieldSrc"></span></div>
+            <div class="sub" style="margin:14px 0 2px;">Your target</div>
+            <div class="lc"><label for="pSpend" style="min-width:250px;">Yearly spending once you stop work</label><input type="number" id="pSpend" min="0" step="1000"><span class="muted" id="pSpendCcy"></span></div>
+            <div class="lc"><label for="pSwr" style="min-width:250px;">Withdrawal rate (% of the pot a year)</label><input type="number" id="pSwr" min="0.5" max="20" step="0.1"><span class="muted" id="pTargetTxt"></span></div>
+            <div class="lc"><label for="pAge" style="min-width:250px;">Your age now</label><input type="number" id="pAge" min="18" max="100" step="1" style="width:80px"><label for="pRet">stop work at</label><input type="number" id="pRet" min="19" max="100" step="1" style="width:80px"></div>
+            <div class="lc"><label for="pInfl" style="min-width:250px;">Prices rise (% a year)</label><input type="number" id="pInfl" min="0" max="20" step="0.1"><span class="muted">the target rises with them</span></div>
             <div class="row" style="margin-top:10px;"><button class="btn" id="bSave" type="button">Save as my starting line</button><button class="btn ghost" id="bReset" type="button">Reset to saved</button><span class="sub" id="bMsg"></span></div>
         </div>
         <details>
@@ -244,6 +250,7 @@ const SCN_COLORS = ['#F0FF4D', '#3FAE2A', '#E0FFA6'];
 let src = null, state0 = null, plan0 = null, fx = EUR_USD_FALLBACK, fxLive = false;
 let ccy = 'USD', mode = 'flat', series = 'pot', horizonYears = 20;
 let base = { invest: null, loan: null, yieldPct: null };      // null = use the saved/default figure
+let basePlan = null;                                          // unsaved edits to the target; null = the saved plan
 let saved = { invest: 0, loan: 0, yieldPct: null };           // what is saved (database or this browser)
 let scenarios = [];
 let dbState = 'unknown';                                      // 'db' | 'local' — where scenarios are kept
@@ -270,9 +277,17 @@ function whenPlain(plan, m) { if (m === null || m === undefined) return 'not wit
 
 // ── Persistence: database when phase 52 is applied, otherwise this browser ────
 async function loadLabState() {
-    let st = null;
-    try { st = await rpc('lab_state_get'); dbState = 'db'; }
-    catch (e) { if (e.message === 'not-signed-in') throw e; dbState = 'local'; try { st = JSON.parse(localStorage.getItem(LAB_KEY)); } catch (e2) { st = null; } }
+    let st = null, local = null;
+    try { local = JSON.parse(localStorage.getItem(LAB_KEY)); } catch (e) { local = null; }
+    try {
+        st = await rpc('lab_state_get'); dbState = 'db';
+        // First visit after scenarios moved to the account: carry over what this
+        // browser had saved, instead of replacing it with an empty list.
+        const dbEmpty = !st || !Array.isArray(st.scenarios) || !st.scenarios.length;
+        if (dbEmpty && local && Array.isArray(local.scenarios) && local.scenarios.length) {
+            st = Object.assign({}, local, st || {}, { scenarios: local.scenarios });
+        }
+    } catch (e) { if (e.message === 'not-signed-in') throw e; dbState = 'local'; st = local; }
     st = st && typeof st === 'object' ? st : {};
     scenarios = Array.isArray(st.scenarios) ? st.scenarios.slice(0, 3) : [];
     saved.yieldPct = (st.yieldPct === null || st.yieldPct === undefined) ? null : Number(st.yieldPct);
@@ -324,8 +339,17 @@ function applyScenario(a0, plan, sc) {
     }
     return { a, plan: p };
 }
+// The target in use: the saved plan, or the unsaved edits typed below.
+function curPlan() {
+    if (!basePlan) return plan0;
+    const p = Object.assign({}, plan0, basePlan);
+    p.fireNumber = (p.expense > 0 && p.swr > 0) ? p.expense / (p.swr / 100) : 0;
+    p.retMonth = (p.retAge > p.curAge) ? Math.round((p.retAge - p.curAge) * 12) : 0;
+    return p;
+}
+const planReady = p => p.fireNumber > 0 && p.retMonth > 0;
 function runAll() {
-    const a0 = baselineAssumptions();
+    const a0 = baselineAssumptions(), plan0 = curPlan();
     const out = [{ id: 'base', name: mode === 'past' ? 'Past growth continues' : 'If nothing changes', color: '#ABFF1A', a: a0, plan: plan0, pr: E.project(state0, a0, plan0) }];
     scenarios.forEach((sc, i) => { const { a, plan } = applyScenario(a0, plan0, sc); out.push({ id: sc.id, name: sc.name || ('Scenario ' + (i + 1)), color: SCN_COLORS[i % 3], a, plan, pr: E.project(state0, a, plan) }); });
     return out;
@@ -464,6 +488,7 @@ function leverHtml(sc, key, a0) {
         body = `<div class="lc"><input type="number" step="500" value="${Math.round(disp(v.amount))}" ${set('amount', 'fromDisp(Number(this.value))')}><label>${sym()} in</label><input type="number" min="1" max="480" step="1" value="${v.month}" ${set('month', 'Number(this.value)')} style="width:80px"><label>months from now</label></div>` +
             `<div class="help">A positive figure is money coming in (a bonus); a negative one is a big expense paid out of the stablecoin positions.</div>`;
     } else if (key === 'retire') {
+        const plan0 = curPlan();
         body = `<div class="lc"><label>Stop work at</label><input type="number" min="${Math.ceil(plan0.curAge) + 1}" max="90" step="1" value="${v.age}" ${set('age', 'Number(this.value)')} style="width:80px">` +
             `<label>and spend</label><input type="number" min="0" step="1000" value="${Math.round(disp(v.spend))}" ${set('spend', 'fromDisp(Number(this.value))')}><label>${sym()} a year</label></div>` +
             `<div class="help">The target is yearly spending divided by ${plan0.swr}% (your withdrawal rate).</div>`;
@@ -501,12 +526,12 @@ function autoName(sc) {
     return parts.length ? parts.join(' + ').slice(0, 60) : null;
 }
 function touchName(s) { if (s.named) return; const n = autoName(s); if (n) s.name = n; }
-function addLever(id, key) { const s = scenarios.find(x => x.id === id); if (!s || !LEVERS[key]) return; s.levers[key] = LEVERS[key].init(baselineAssumptions(), plan0); touchName(s); renderScenarios(); refresh(); saveLabState(); }
+function addLever(id, key) { const s = scenarios.find(x => x.id === id); if (!s || !LEVERS[key]) return; s.levers[key] = LEVERS[key].init(baselineAssumptions(), curPlan()); touchName(s); renderScenarios(); refresh(); saveLabState(); }
 function removeLever(id, key) { const s = scenarios.find(x => x.id === id); if (!s) return; delete s.levers[key]; touchName(s); renderScenarios(); refresh(); saveLabState(); }
 function setLever(id, key, field, value) { const s = scenarios.find(x => x.id === id); if (!s || !s.levers[key]) return; s.levers[key][field] = value; const was = s.name; touchName(s); if (field === 'preset' || field === 'how' || s.name !== was) renderScenarios(); refresh(); saveLabState(); }
 
 function renderInputs() {
-    const s = state0, a = baselineAssumptions(), sy = E.sleeveYield(s, src.loanSim), g = E.btcPastGrowth(src.bootstrap);
+    const s = state0, a = baselineAssumptions(), sy = E.sleeveYield(s, src.loanSim), g = E.btcPastGrowth(src.bootstrap), plan0 = curPlan();
     const tag = (t, c) => `<span class="tag ${c}">${t}</span>`;
     const r = (what, val, where, t) => `<tr><td>${what}</td><td class="n sensitive">${val}</td><td>${t} ${where}</td></tr>`;
     const typedWhen = src.loanSim && src.loanSim.updated_at ? new Date(src.loanSim.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -526,7 +551,7 @@ function renderInputs() {
     h += r('House', fmtFull(s.house), mode === 'past' ? E.HOUSE_PAST_SOURCE : 'held at today’s value', tag(mode === 'past' ? 'Measured' : 'Assumption', mode === 'past' ? 'live' : 'assume'));
     h += r('Vehicles', fmtFull(s.vehicles), `lose ${pct(a.vehicleDep, 0)} a year`, tag('Assumption', 'assume'));
     h += r('Bank and fund', fmtFull(s.cash + s.fund), 'held as they are', tag('You typed', 'typed'));
-    h += r('Your target', fmtFull(plan0.fireNumber), `${fmtFull(plan0.expense)} a year ÷ ${plan0.swr}%, rising ${pct(plan0.inflation)} a year; ages ${plan0.curAge} to ${plan0.retAge} (your FIRE plan)`, tag('You typed', 'typed'));
+    h += r('Your target', fmtFull(plan0.fireNumber), `${fmtFull(plan0.expense)} a year ÷ ${plan0.swr}%, rising ${pct(plan0.inflation)} a year; ages ${plan0.curAge} to ${plan0.retAge} (your target, below)`, tag('You typed', 'typed'));
     h += r('Exchange rate', '1 EUR = ' + fx.toFixed(4) + ' USD', fxLive ? 'ECB rate, held at today’s level for the whole projection' : 'could not be loaded; an approximate rate is used', tag(fxLive ? 'Live' : 'Assumption', fxLive ? 'live' : 'assume'));
     $('inputs').innerHTML = h;
 }
@@ -536,10 +561,20 @@ function renderBaseInputs() {
     $('bInvestCcy').textContent = sym(); $('bLoanCcy').textContent = sym();
     const sy = E.sleeveYield(state0, src.loanSim);
     $('bYieldSrc').textContent = (base.yieldPct !== null || saved.yieldPct !== null) ? `your own figure (from your typed platform rates it would be ${pct(sy.rate, 2)})` : 'from the platform rates you typed';
+    const p = curPlan();
+    $('pSpend').value = p.expense > 0 ? Math.round(disp(p.expense)) : ''; $('pSwr').value = p.swr > 0 ? p.swr : '';
+    $('pAge').value = p.curAge > 0 ? p.curAge : ''; $('pRet').value = p.retAge > 0 ? p.retAge : ''; $('pInfl').value = (p.inflation * 100).toFixed(1);
+    $('pSpendCcy').textContent = sym() + ' a year';
+    $('pTargetTxt').textContent = p.fireNumber > 0 ? `target: ${fmtFull(p.fireNumber)} in today's money` : '';
 }
 function refresh() {
+    const ready = planReady(curPlan());
+    $('needPlan').style.display = ready ? 'none' : '';
+    ['secAnswer', 'secScenarios'].forEach(id => { $(id).style.display = ready ? '' : 'none'; });
+    renderStand();
+    if (!ready) return;
     const runs = runAll();
-    renderStand(); renderAnswer(runs); renderChart(runs); renderResults(runs); renderInputs();
+    renderAnswer(runs); renderChart(runs); renderResults(runs); renderInputs();
 }
 function refreshAll() { renderBaseInputs(); renderScenarios(); refresh(); }
 
@@ -560,7 +595,12 @@ $('addScn').addEventListener('click', addScenario);
     const y = Number($('bYield').value); base.yieldPct = isNaN(y) ? null : y;
     $('bMsg').textContent = 'Not saved yet.'; renderScenarios(); refresh();
 }));
-$('bReset').addEventListener('click', () => { base = { invest: null, loan: null, yieldPct: null }; $('bMsg').textContent = ''; refreshAll(); });
+['pSpend', 'pSwr', 'pAge', 'pRet', 'pInfl'].forEach(id => $(id).addEventListener('change', () => {
+    const n = x => { const v = Number($(x).value); return isNaN(v) ? 0 : v; };
+    basePlan = { expense: Math.max(0, fromDisp(n('pSpend'))), swr: Math.max(0, n('pSwr')), curAge: Math.round(n('pAge')), retAge: Math.round(n('pRet')), inflation: Math.max(0, n('pInfl')) / 100 };
+    $('bMsg').textContent = 'Not saved yet.'; renderBaseInputs(); renderScenarios(); refresh();
+}));
+$('bReset').addEventListener('click', () => { base = { invest: null, loan: null, yieldPct: null }; basePlan = null; $('bMsg').textContent = ''; refreshAll(); });
 $('bSave').addEventListener('click', async () => {
     const a = baselineAssumptions(), sy = E.sleeveYield(state0, src.loanSim);
     $('bMsg').textContent = 'Saving…';
@@ -571,6 +611,14 @@ $('bSave').addEventListener('click', async () => {
         if (a.newMoneyLoan > 0) contributions.push({ amount: Math.round(a.newMoneyLoan * 100) / 100, frequency: 'monthly', target: 'loan' });
         await rpc('loan_sim_save', { p_platforms: (src.loanSim && src.loanSim.platforms) || [], p_contributions: contributions, p_sales: (src.loanSim && src.loanSim.sales) || [] });
         if (src.loanSim) src.loanSim.contributions = contributions;
+        if (basePlan) {
+            const p = curPlan();
+            if (!planReady(p)) throw new Error('the target needs yearly spending, a withdrawal rate, and a stop-work age above your age');
+            // Only these five fields are sent; fire_plan_upsert leaves everything else as it is.
+            await rpc('fire_plan_upsert', { p_desired_annual_expense: Math.round(p.expense * 100) / 100, p_safe_withdrawal_rate_pct: p.swr,
+                p_inflation_pct: Math.round(p.inflation * 10000) / 100, p_current_age: p.curAge, p_retirement_age: p.retAge });
+            plan0 = p; plan0.saved = true; basePlan = null;
+        }
         saved.invest = a.newMoneyInvest; saved.loan = a.newMoneyLoan;
         saved.yieldPct = Math.abs(a.sleeveYield - sy.rate) < 0.00005 ? null : Math.round(a.sleeveYield * 10000) / 100;
         base = { invest: null, loan: null, yieldPct: null };
@@ -596,7 +644,6 @@ function showGate(msg) { $('app').style.display = 'none'; $('gate').style.displa
         src = { bootstrap, manualAssets, loanDetails, loanSim, eurUsd: fx, aave };
         state0 = E.buildState(src);
         plan0 = E.planFrom(firePlan);
-        if (!(plan0.fireNumber > 0)) { showGate('Set up your FIRE plan on the dashboard first (yearly spending and withdrawal rate).'); return; }
         const nm = E.newMoney(loanSim); saved.invest = nm.invest; saved.loan = nm.loan;
         setSeg('modeSeg', 'm', mode);
         $('app').style.display = '';
