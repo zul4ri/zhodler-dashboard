@@ -978,11 +978,13 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <div class="info-pop" id="i-btc">
             <b>Bitcoin module.</b> Holdings and spot price come from the BTC trackers.
             <span class="formula"><b>Your average buy price</b> is worked out from your recorded purchases and sales (each buy at the BTC price that day; a sale leaves the average unchanged). Entries marked "estimate" are periods where the exact purchase dates are not on record yet, priced at that period's average.</span>
+            <span class="formula"><b>Your return on the BTC you hold</b> = what it is worth now minus what you paid for the BTC you still have. It is a paper result: nothing is gained or lost until you sell. What your past sales gained or lost is given separately in the note under the figures. In the euro view the amount is converted at today's rate.</span>
             <span class="formula"><b>BTC price, year to date</b> is the market's move since 1 January, not your own result.</span>
         </div>
         <div style="margin-top:8px;">
             <div class="substat"><span class="k">BTC value</span><span class="sensitive" id="c-btc-value">--</span></div>
             <div class="substat" id="c-btc-avg-row" style="display:none"><span class="k">Your average buy price</span><span class="sensitive" id="c-btc-avg">--</span></div>
+            <div class="substat" id="c-btc-ret-row" style="display:none"><span class="k">Your return on the BTC you hold</span><span><span class="sensitive" id="c-btc-ret">--</span> <span id="c-btc-ret-sub" style="color:var(--text2);font-size:12px;"></span></span></div>
             <div class="substat"><span class="k" id="c-btc-since-lbl">BTC price since tracking began (Aug 2023) &mdash; not your return</span><span id="c-btc-since">--</span></div>
             <div class="substat"><span class="k">BTC price, year to date</span><span id="c-btc-ytd">--</span></div>
         </div>
@@ -2667,13 +2669,29 @@ function renderBtc() {
         sv('c-btc-since', (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%', cc(g));
         if (avgRow) avgRow.style.display = '';
         sv('c-btc-avg', (estPct > 0 ? '\u2248 ' : '') + fd(avg));
+        // Return on the BTC still held: value now minus the recorded cost of what is held.
+        const cost = Number(btcBasis.total_cost_usd) > 0 ? Number(btcBasis.total_cost_usd) : avg * h;
+        const ret = h * p - cost, retPct = cost > 0 ? ret / cost : 0;
+        const retRow = document.getElementById('c-btc-ret-row');
+        if (retRow) retRow.style.display = '';
+        sv('c-btc-ret', (estPct > 0 ? '\u2248 ' : '') + (ret > 0 ? '+' : '') + fm(ret), cc(ret));
+        gi('c-btc-ret-sub', (retPct >= 0 ? '+' : '') + (retPct * 100).toFixed(1) + '%');
+        // What the sales so far gained or lost, each against the average cost at the time.
+        let lq = 0, lc = 0, realised = 0, sales = 0;
+        (Array.isArray(btcBasis.lots) ? btcBasis.lots : []).forEach(l => {
+            const qty = Number(l.quantity) || 0, px = Number(l.price_usd) || 0;
+            if (l.kind === 'buy') { lq += qty; lc += qty * px; }
+            else if (lq > 0) { const t = Math.min(qty, lq), a0 = lc / lq; realised += t * (px - a0); lc -= t * a0; lq -= t; sales++; }
+        });
+        const salesTxt = sales ? ` Your ${sales} sale${sales === 1 ? '' : 's'} so far ${realised >= 0 ? 'gained' : 'lost'} <span class="sensitive">${fm(Math.abs(realised))}</span> against the average at the time.` : '';
         const upd = btcBasis.as_of ? new Date(btcBasis.as_of + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
         gi('c-btc-note', `From ${Number(btcBasis.lot_count) || 0} recorded buys and sales` + (upd ? `, last one ${upd}` : '') + '. ' +
-            (estPct > 0 ? `About ${estPct.toFixed(0)}% of the cost comes from periods where only the yearly totals are known, priced at that period's average BTC price &mdash; treat the figure as an estimate (roughly &plusmn;$5k).` : 'All entries are from on-chain records.'));
+            (estPct > 0 ? `About ${estPct.toFixed(0)}% of the cost comes from periods where only the yearly totals are known, priced at that period's average BTC price &mdash; treat the figures as estimates (average price roughly &plusmn;$5k).` : 'All entries are from on-chain records.') + salesTxt);
     } else {
         gi('c-btc-since-lbl', 'BTC price since tracking began (Aug 2023) &mdash; not your return');
         sv('c-btc-since', fp(cs), cc(cs));
         if (avgRow) avgRow.style.display = 'none';
+        const retRow = document.getElementById('c-btc-ret-row'); if (retRow) retRow.style.display = 'none';
         gi('c-btc-note', (usingSupabase() && btcBasisState === 'missing') ? 'Your average buy price needs a one-time database update (phase 51).' : '');
     }
 }
