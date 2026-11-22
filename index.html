@@ -1096,13 +1096,13 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
             <label class="mlabel">Data Source</label>
             <div class="mrow-row">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:clamp(11px,1.1vw,13px);color:var(--text);">
-                    <input type="radio" name="sourceMode" id="sourceSheets" value="sheets"> Google Sheets
+                    <input type="radio" name="sourceMode" id="sourceSheets" value="sheets"> Old Google Sheet
                 </label>
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:clamp(11px,1.1vw,13px);color:var(--text);">
-                    <input type="radio" name="sourceMode" id="sourceSupabase" value="supabase"> Supabase (beta)
+                    <input type="radio" name="sourceMode" id="sourceSupabase" value="supabase"> Live database
                 </label>
             </div>
-            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-top:6px;">Supabase currently powers Net Worth, Total Debt, and DeFi Positions. Everything else keeps showing $0 until later phases.</div>
+            <div style="font-size:clamp(9px,0.85vw,11px);color:var(--text2);margin-top:6px;">The live database is the normal choice on every device. The old Google Sheet may be out of date and lacks the newer cards; it is kept only as a fallback.</div>
         </div>
         <div class="mrow">
             <label class="mlabel" id="themePickLbl">Theme</label>
@@ -1638,7 +1638,7 @@ const LS = {
     theme:   'zh-theme-v2',  // bumped 2026-11-14: Lime became the default, everyone starts on it once
     locked:  'zh-locked',
     privacy: 'zh-privacy',
-    source:  'zh-source',      // 'sheets' (default) | 'supabase'
+    source:  'zh-source-v2',   // 'supabase' (default) | 'sheets'. Renamed so every browser starts on the database once
 };
 let _chartFontDefault = null;   // Chart.js's own default font family, captured on the first setTheme()
 
@@ -1922,8 +1922,12 @@ async function openTool(baseUrl, nextPath) {
     }
 }
 
+// The live database, unless this browser deliberately chose the old Google Sheet.
+function dataSource() {
+    try { return localStorage.getItem(LS.source) === 'sheets' ? 'sheets' : 'supabase'; } catch (e) { return 'supabase'; }
+}
 function usingSupabase() {
-    return (localStorage.getItem(LS.source) || 'sheets') === 'supabase' && !!dbData;
+    return (dataSource()) === 'supabase' && !!dbData;
 }
 function scopeForFilter(f) { return f === 'portfolio' ? 'total' : f; }
 
@@ -2339,7 +2343,7 @@ function renderNwHistory(force) {
 // DATA FETCH
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadData() {
-    const source = localStorage.getItem(LS.source) || 'sheets';
+    const source = dataSource();
     const isFirstLoad = !gridReady;
 
     if (isFirstLoad) {
@@ -2459,7 +2463,7 @@ function computeStaleness(data) {
 function updateStalenessBadge() {
     const el = document.getElementById('staleBadge');
     if (!el) return;
-    const source = localStorage.getItem(LS.source) || 'sheets';
+    const source = dataSource();
     if (source !== 'supabase') { el.className = 'stale-badge'; el.textContent = ''; return; }
     const info = computeStaleness(dbData);
     // A silently-stale FX rate moves every EUR asset and loan (audit W-05), so
@@ -3544,7 +3548,7 @@ function setTheme(t) {
 
 function openSettings() {
     document.getElementById('sheetInput').value = localStorage.getItem(LS.sheet) || DEFAULT_SHEET;
-    const source = localStorage.getItem(LS.source) || 'sheets';
+    const source = dataSource();
     document.getElementById('sourceSheets').checked   = (source === 'sheets');
     document.getElementById('sourceSupabase').checked = (source === 'supabase');
     const who = document.getElementById('zhSignedInAs');
@@ -3553,7 +3557,7 @@ function openSettings() {
 }
 function closeSettings() { document.getElementById('modal').classList.remove('open'); }
 function saveAndReload() {
-    // Data source (default sheets — rollback-safe).
+    // Data source (the database unless the old sheet is picked).
     const source = document.getElementById('sourceSupabase').checked ? 'supabase' : 'sheets';
     localStorage.setItem(LS.source, source);
     // Sheet ID is optional so switching to Supabase doesn't require it.
@@ -3584,9 +3588,9 @@ function escapeHtml(s) {
 }
 
 function openEditAssets() {
-    const source = localStorage.getItem(LS.source) || 'sheets';
+    const source = dataSource();
     if (source !== 'supabase') {
-        toast('Edit Assets requires Supabase mode — switch it on in Settings first.', true);
+        toast('Edit Assets needs the live database — choose it in Settings first.', true);
         return;
     }
     document.getElementById('eaModal').classList.add('open');
@@ -4666,9 +4670,9 @@ let _cfAnalyticsCategoryGrid = [];  // cache of cashflow_by_category() rows
 // ─────────────────────────────────────────────────────────────────────────────
 
 function openCashFlow() {
-    const source = localStorage.getItem(LS.source) || 'sheets';
+    const source = dataSource();
     if (source !== 'supabase') {
-        toast('Cash Flow requires Supabase mode — switch it on in Settings first.', true);
+        toast('Cash Flow needs the live database — choose it in Settings first.', true);
         return;
     }
     document.getElementById('cfModal').classList.add('open');
