@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0a">
+<title>Watched wallets</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000'/%3E%3Ccircle cx='32' cy='32' r='15' fill='none' stroke='%23ABFF1A' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23ABFF1A'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+    --bg:#0a0a0a; --card:#0a0a0a; --card2:#171717; --border:#262626; --text:#fafafa; --text2:#a3a3a3;
+    --accent:#ABFF1A; --red:#F71F8B; --warn:#9D7BFF; --warn-tint:rgba(157,123,255,.08);
+    accent-color:var(--accent); color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+html,body{background:var(--bg);}
+body{color:var(--text);font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100vh;}
+button{font-family:inherit;font-size:inherit;color:inherit;}
+a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+.mono{font-family:'Geist Mono',ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;
+    background:rgba(10,10,10,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.brand{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--accent);}
+.top .sp{flex:1;}
+.wrap{max-width:980px;margin:0 auto;padding:18px 16px 60px;display:grid;gap:14px;}
+.card{border:1px solid var(--border);border-radius:12px;padding:18px 20px;background:var(--card);min-width:0;}
+h2{font-size:16px;font-weight:600;letter-spacing:-.01em;}
+h3{font-size:14px;font-weight:600;margin-bottom:2px;}
+.sub{color:var(--text2);font-size:13px;}
+.muted{color:var(--text2);}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.btn{border:1px solid var(--border);background:var(--card2);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap;}
+.btn:hover{background:#262626;}
+.btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);}
+.btn.small{padding:3px 9px;font-size:12.5px;}
+.btn[disabled]{opacity:.5;cursor:default;}
+.name{font-size:20px;font-weight:700;letter-spacing:-.02em;}
+.tag{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:11.5px;color:var(--text2);white-space:nowrap;}
+.tag.live{border-color:#3FAE2A;color:#7DEB3B;} .tag.old{border-color:var(--warn);color:var(--warn);}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px;}
+.kpi{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--card2);min-width:0;}
+.kpi .k{color:var(--text2);font-size:12.5px;}
+.kpi .v{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:2px;}
+.kpi .d{color:var(--text2);font-size:12.5px;margin-top:2px;}
+.neg{color:var(--red);} .pos{color:var(--accent);} .warnc{color:var(--warn);}
+.warnbox{border:1px solid var(--warn);background:var(--warn-tint);border-radius:10px;padding:10px 13px;font-size:13.5px;margin-top:12px;}
+.chartbox{position:relative;height:280px;margin-top:12px;}
+.tw{overflow-x:auto;margin-top:10px;}
+table{border-collapse:collapse;width:100%;font-size:13.5px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+th{color:var(--text2);font-weight:500;font-size:12.5px;white-space:nowrap;}
+td.n,th.n{text-align:right;white-space:nowrap;}
+td small{color:var(--text2);display:block;font-size:12px;}
+td.nw{white-space:nowrap;} td.nw small{white-space:nowrap;}
+.wrap > *, #wallets > *{min-width:0;}
+tr.off td{color:var(--text2);}
+details{margin-top:12px;} summary{cursor:pointer;color:var(--text2);font-size:13.5px;} summary:hover{color:var(--text);}
+.note{color:var(--text2);font-size:12.5px;margin-top:10px;}
+.gate{max-width:520px;margin:80px auto;text-align:center;padding:0 20px;}
+.sensitive{transition:filter .15s;}
+body.privacy .sensitive{filter:blur(8px);}
+@media (max-width:640px){ .top{padding:10px 12px;} .wrap{padding:12px 10px 50px;} .card{padding:14px;} .chartbox{height:230px;} .kpi .v{font-size:21px;} th,td{padding:7px 6px;} }
+</style>
+</head>
+<body>
+<div class="top">
+    <span class="brand">Watched wallets</span>
+    <a href="index.html" class="sub">&larr; Dashboard</a>
+    <span class="sp"></span>
+    <button class="btn" id="privBtn" type="button" title="Blur the amounts">&#128065;</button>
+</div>
+
+<div id="gate" class="gate" style="display:none">
+    <h2 style="font-size:20px;margin-bottom:8px;" id="gateTitle">Sign in on the dashboard first</h2>
+    <p class="muted" id="gateMsg">This page uses the same sign-in as the dashboard.</p>
+    <p style="margin-top:16px;"><a class="btn primary" href="index.html">Open the dashboard</a></p>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+    <section class="card" style="border-color:var(--warn);background:var(--warn-tint);padding:11px 16px;">
+        <span class="sub" style="color:var(--text);">These wallets belong to other people. Nothing on this page is counted in your net worth, your FIRE figures or the Scenario Lab.</span>
+    </section>
+    <div id="wallets" style="display:grid;gap:14px;"></div>
+</div>
+
+<script>
+'use strict';
+// ── Connection (same public project + sign-in as the dashboard) ────────────────
+const SUPABASE_URL = 'https://lvyyewyaatuiwawxjtmv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eXlld3lhYXR1aXdhd3hqdG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTcwNjQsImV4cCI6MjA5OTUzMzA2NH0._HoBCWSOemshCeKSG-qbTv39fu23AnFGz3C_K__eg4A';
+const ZH_SESSION_KEY = 'zh-session';
+const $ = id => document.getElementById(id);
+
+function loadSession() {
+    try { const s = JSON.parse(localStorage.getItem(ZH_SESSION_KEY)); if (s && s.access_token && s.refresh_token && s.signed_in_until > Date.now()) return s; } catch (e) {}
+    return null;
+}
+let _refreshing = null;
+async function freshToken(stale) {
+    const ss = loadSession();
+    if (!ss) throw new Error('not-signed-in');
+    if (ss.expires_at - Date.now() > 60000 && ss.access_token !== stale) return ss.access_token;
+    if (_refreshing) return _refreshing;
+    _refreshing = (async () => {
+        try {
+            const cur = loadSession();
+            if (!cur) throw new Error('not-signed-in');
+            if (cur.expires_at - Date.now() > 60000 && cur.access_token !== stale) return cur.access_token;
+            const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+                method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: cur.refresh_token }) });
+            const d = await resp.json().catch(() => ({}));
+            if (!resp.ok || !d.access_token || !d.refresh_token) throw new Error(resp.status >= 400 && resp.status < 500 ? 'not-signed-in' : 'Could not renew your sign-in — try again.');
+            const next = { access_token: d.access_token, refresh_token: d.refresh_token,
+                expires_at: d.expires_at ? d.expires_at * 1000 : Date.now() + (d.expires_in || 3600) * 1000,
+                signed_in_until: cur.signed_in_until, email: cur.email || '' };
+            localStorage.setItem(ZH_SESSION_KEY, JSON.stringify(next));   // same shape the dashboard stores
+            return next.access_token;
+        } finally { _refreshing = null; }
+    })();
+    return _refreshing;
+}
+async function rpc(name, args) {
+    const call = t => fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' }, body: JSON.stringify(args || {}) });
+    let t = await freshToken(), r = await call(t);
+    if (r.status === 401) { t = await freshToken(t); r = await call(t); if (r.status === 401) throw new Error('not-signed-in'); }
+    if (!r.ok) { let m = ''; try { const j = await r.json(); m = j.message || ''; } catch (e) {} const err = new Error(`${name} failed${m ? ': ' + m : ' (HTTP ' + r.status + ')'}`); err.status = r.status; throw err; }
+    const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+}
+
+// ── Small helpers ─────────────────────────────────────────────────────────────
+const esc = s => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+const money = (v, cents) => { const n = num(v), a = Math.abs(n); return (n < 0 ? '−$' : '$') + a.toLocaleString('en-US', (cents || a < 100) ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 }); };
+const short = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+const day = ts => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const CHAIN_NAMES = { base: 'Base', arbitrum: 'Arbitrum', ethereum: 'Ethereum', optimism: 'Optimism', arb: 'Arbitrum', eth: 'Ethereum', op: 'Optimism', hyperliquid: 'Hyperliquid', hyper: 'HyperEVM' };
+const chainName = c => CHAIN_NAMES[c] || (c ? c.charAt(0).toUpperCase() + c.slice(1) : '');
+function ago(ts) {
+    const h = (Date.now() - new Date(ts).getTime()) / 3600000;
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + ' min ago';
+    if (h < 48) return Math.round(h) + 'h ago';
+    return Math.round(h / 24) + ' days ago';
+}
+
+// ── What the figures mean ─────────────────────────────────────────────────────
+// A movement counts as a deposit or withdrawal when its class is 'external'
+// (the collector's guess, or the owner's correction on top of it).
+function totalsOf(w) {
+    let dep = 0, wd = 0, first = null;
+    w.flows.forEach(f => {
+        if (f.class !== 'external') return;
+        if (f.dir === 'in') dep += num(f.usd); else wd += num(f.usd);
+        if (!first || f.ts < first) first = f.ts;
+    });
+    return { dep, wd, net: dep - wd, first, value: num(w.total_usd), earned: num(w.total_usd) - (dep - wd) };
+}
+function whoIs(f) {
+    if (f.own) return 'Your wallet';
+    if (f.cp_kind === 'mint') return 'A bridge (issued on arrival)';
+    if (f.cp_kind === 'wallet') return 'Another wallet';
+    return f.auto === 'internal' ? 'A platform it uses' : 'A bridge or exchange';
+}
+
+let wallets = [], charts = {};
+const RECENT = 6;            // deposits / withdrawals shown before the fold
+
+function coverageNote(w) {
+    const cov = w.coverage || {}, okc = [], bad = [];
+    Object.keys(cov).forEach(c => { if (String(cov[c]).startsWith('ok')) okc.push(chainName(c) + (cov[c] === 'ok' ? '' : ' (' + esc(cov[c].replace(/^ok, but /, '')) + ')')); else bad.push(chainName(c)); });
+    if (!okc.length && !bad.length) return 'Deposits and withdrawals have not been read yet.';
+    return `Deposits and withdrawals are read on ${okc.length ? okc.join(', ') : 'no chain yet'}.` +
+        (bad.length ? ` <span class="warnc">Not read: ${bad.join(', ')}.</span> Money that arrived or left there is missing from the figures above.` : '');
+}
+
+function walletHtml(w) {
+    const t = totalsOf(w), id = 'w' + w.id;
+    const fresh = w.positions_at && (Date.now() - new Date(w.positions_at).getTime()) < 3 * 3600000;
+    const badge = !w.positions_at ? '<span class="tag old">no reading yet</span>'
+        : `<span class="tag ${fresh ? 'live' : 'old'}">${fresh ? '● live' : 'last reading'} · ${ago(w.positions_at)}</span>`;
+    const hasFlows = w.flows.some(f => f.class === 'external');
+
+    let h = `<section class="card"><div class="row"><span class="name">${esc(w.label)}</span><span class="mono muted sensitive">${esc(short(w.address))}</span>${badge}</div>`;
+    if (w.positions_error) h += `<div class="warnbox">The latest reading was not used, so the value below is the last good one. Reason: ${esc(w.positions_error)}</div>`;
+    h += `<div class="kpis">` +
+        `<div class="kpi"><div class="k">Worth now</div><div class="v sensitive">${w.positions_at ? money(t.value) : '—'}</div><div class="d">${w.holdings.length} position${w.holdings.length === 1 ? '' : 's'}</div></div>` +
+        `<div class="kpi"><div class="k">Money put in, net</div><div class="v sensitive">${hasFlows ? money(t.net) : '—'}</div><div class="d sensitive">${hasFlows ? `${money(t.dep)} in − ${money(t.wd)} out` : 'no deposits found yet'}</div></div>` +
+        `<div class="kpi"><div class="k">Earned</div><div class="v sensitive ${t.earned >= 0 ? 'pos' : 'neg'}">${hasFlows && w.positions_at ? (t.earned >= 0 ? '+' : '') + money(t.earned) : '—'}</div><div class="d">${hasFlows && t.first ? 'worth now − money put in, since ' + day(t.first) : 'needs a value and at least one deposit'}</div></div>` +
+        `</div>`;
+    h += `<div class="note">${coverageNote(w)}</div></section>`;
+
+    h += `<section class="card"><h2>Money put in and value over time</h2>` +
+        `<div class="sub">The grey line is the money put in, net of withdrawals. The green line is what the wallet is worth, recorded since ${day(w.tracking_since)}.</div>` +
+        `<div class="chartbox"><canvas id="${id}-chart"></canvas></div></section>`;
+
+    h += `<section class="card"><h2>Positions</h2>`;
+    if (!w.holdings.length) h += `<div class="sub" style="margin-top:8px;">No reading yet. The collector runs every hour.</div>`;
+    else {
+        h += `<div class="tw"><table><thead><tr><th>Where</th><th>Asset</th><th>Chain</th><th class="n">Value</th></tr></thead><tbody>` +
+            w.holdings.map(p => `<tr><td>${esc(p.protocol === 'wallet' ? 'In the wallet' : p.protocol)}${p.item ? `<small>${esc(p.item)}${p.type === 'borrow' ? ' · borrowed' : p.type === 'reward' ? ' · reward' : ''}</small>` : ''}</td>` +
+                `<td>${esc(p.asset)}</td><td>${esc(chainName(p.chain))}</td><td class="n sensitive ${num(p.usd_value) < 0 ? 'neg' : ''}">${money(p.usd_value)}</td></tr>`).join('') +
+            `</tbody></table></div>`;
+    }
+    h += `</section>`;
+
+    const counted = w.flows.filter(f => f.class === 'external');
+    h += `<section class="card"><h2>Deposits and withdrawals</h2>` +
+        `<div class="sub">Money that came from outside the wallet or left it. Swaps and moves into or out of platforms are not listed here.</div>`;
+    if (!counted.length) h += `<div class="sub" style="margin-top:8px;">None found yet.</div>`;
+    else {
+        const head = `<div class="tw"><table><thead><tr><th>Date</th><th></th><th class="n">Amount</th><th class="n">Value then</th><th>From / to</th></tr></thead><tbody>`;
+        const line = f => `<tr><td class="nw">${day(f.ts)}</td><td class="${f.dir === 'in' ? 'pos' : 'neg'}">${f.dir === 'in' ? 'In' : 'Out'}</td>` +
+            `<td class="n sensitive">${num(f.amount).toLocaleString('en-US', { maximumFractionDigits: num(f.amount) < 10 ? 5 : 2 })} ${esc(f.token)}</td>` +
+            `<td class="n sensitive">${money(f.usd)}</td><td class="nw">${whoIs(f)}<small class="mono sensitive">${esc(short(f.cp))} · ${esc(chainName(f.chain))}</small></td></tr>`;
+        // newest first; the older ones fold away so the page stays short
+        h += head + counted.slice(0, RECENT).map(line).join('') + `</tbody></table></div>`;
+        if (counted.length > RECENT) h += `<details><summary>Show the ${counted.length - RECENT} earlier ones</summary>${head}${counted.slice(RECENT).map(line).join('')}</tbody></table></div></details>`;
+    }
+    // Every address the wallet had one-sided money movements with, and how it is treated.
+    const groups = {};
+    w.flows.forEach(f => {
+        const g = groups[f.cp] || (groups[f.cp] = { cp: f.cp, n: 0, inUsd: 0, outUsd: 0, f });
+        g.n++; if (f.dir === 'in') g.inUsd += num(f.usd); else g.outUsd += num(f.usd);
+    });
+    const list = Object.values(groups).sort((a, b) => (b.inUsd + b.outUsd) - (a.inUsd + a.outUsd));
+    if (list.length) {
+        h += `<details><summary>How each address is treated (${list.length}) — correct a wrong guess here</summary>` +
+            `<div class="note" style="margin-top:8px;">A wrong guess changes "money put in" and "earned". If an address listed as a platform is really an exchange or a bank off-ramp, count it; if a counted address is really one of the wallet's own platforms, stop counting it.</div>` +
+            `<div class="tw"><table><thead><tr><th>Address</th><th>Guess</th><th class="n">In</th><th class="n">Out</th><th>Now</th><th></th></tr></thead><tbody>` +
+            list.map(g => {
+                const f = g.f, on = f.class === 'external';
+                const btn = f.corrected
+                    ? `<button class="btn small" type="button" onclick="setCp(${w.id},'${esc(g.cp)}',null,this)">Undo my change</button>`
+                    : `<button class="btn small" type="button" onclick="setCp(${w.id},'${esc(g.cp)}','${on ? 'internal' : 'external'}',this)">${on ? 'Stop counting' : 'Count it'}</button>`;
+                return `<tr class="${on ? '' : 'off'}"><td><span class="mono sensitive">${esc(short(g.cp))}</span><small>${whoIs(f)} · ${g.n} movement${g.n === 1 ? '' : 's'}</small></td>` +
+                    `<td><small style="max-width:260px;">${esc(f.reason || '')}</small></td>` +
+                    `<td class="n sensitive">${g.inUsd ? money(g.inUsd) : ''}</td><td class="n sensitive">${g.outUsd ? money(g.outUsd) : ''}</td>` +
+                    `<td>${on ? 'Counted' : 'Not counted'}${f.corrected ? '<small class="warnc">your change</small>' : ''}</td><td>${f.own ? '' : btn}</td></tr>`;
+            }).join('') + `</tbody></table></div></details>`;
+    }
+    h += `<div class="note">Each movement is valued at that day's price. Only stablecoins, ETH and BTC count; other tokens and anything under $1 are ignored.</div></section>`;
+    return h;
+}
+
+function drawChart(w) {
+    const el = $('w' + w.id + '-chart'); if (!el) return;
+    const flows = w.flows.filter(f => f.class === 'external').slice().sort((a, b) => a.ts < b.ts ? -1 : 1);
+    let run = 0; const put = [];
+    flows.forEach(f => { run += f.dir === 'in' ? num(f.usd) : -num(f.usd); put.push({ x: new Date(f.ts).getTime(), y: Math.round(run * 100) / 100 }); });
+    if (put.length) put.push({ x: Date.now(), y: put[put.length - 1].y });
+    const val = (w.snapshots || []).map(s => ({ x: new Date(s[0]).getTime(), y: num(s[1]) }));
+    if (charts[w.id]) charts[w.id].destroy();
+    const hide = document.body.classList.contains('privacy');
+    charts[w.id] = new Chart(el, { type: 'line',
+        data: { datasets: [
+            { label: 'Money put in, net', data: put, stepped: true, borderColor: '#a3a3a3', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, pointHitRadius: 8 },
+            { label: 'Worth', data: val, borderColor: '#ABFF1A', backgroundColor: 'transparent', borderWidth: 2, pointRadius: val.length < 3 ? 3 : 0, pointHitRadius: 8, tension: 0.15 } ] },
+        options: { responsive: true, maintainAspectRatio: false, animation: false, parsing: false, interaction: { mode: 'nearest', intersect: false },
+            scales: {
+                x: { type: 'linear', grid: { color: '#1f1f1f' }, ticks: { color: '#a3a3a3', maxTicksLimit: 7, callback: v => new Date(v).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }) } },
+                y: { grid: { color: '#1f1f1f' }, ticks: { color: '#a3a3a3', callback: v => hide ? '•••' : '$' + Number(v).toLocaleString('en-US') } } },
+            plugins: { legend: { labels: { color: '#a3a3a3', boxWidth: 14, boxHeight: 2 } },
+                tooltip: { callbacks: { title: items => items.length ? day(items[0].parsed.x) : '', label: c => `${c.dataset.label}: ${hide ? '•••' : money(c.parsed.y)}` } } } } });
+}
+
+function render() {
+    $('wallets').innerHTML = wallets.length ? wallets.map(walletHtml).join('')
+        : `<section class="card"><h2>No wallet is being watched yet</h2><div class="sub" style="margin-top:6px;">One is added from the collector, not from this page.</div></section>`;
+    wallets.forEach(drawChart);
+}
+
+async function setCp(walletId, address, cls, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+        await rpc('watch_counterparty_set', { p_wallet_id: walletId, p_address: address, p_class: cls });
+        const open = [...document.querySelectorAll('details')].map(d => d.open);
+        wallets = await rpc('watch_get') || [];
+        render();
+        document.querySelectorAll('details').forEach((d, i) => { d.open = !!open[i]; });
+    } catch (e) { if (btn) { btn.disabled = false; btn.textContent = 'Could not save — try again'; } }
+}
+
+function showGate(title, msg) { $('app').style.display = 'none'; $('gate').style.display = ''; if (title) $('gateTitle').textContent = title; if (msg) $('gateMsg').textContent = msg; }
+$('privBtn').addEventListener('click', () => { document.body.classList.toggle('privacy'); wallets.forEach(drawChart); });
+
+(async function boot() {
+    try { if (localStorage.getItem('zh-privacy') === '1') document.body.classList.add('privacy'); } catch (e) {}
+    if (!loadSession()) { showGate(); return; }
+    try {
+        wallets = await rpc('watch_get') || [];
+        $('app').style.display = '';
+        render();
+    } catch (e) {
+        if (e.message === 'not-signed-in') showGate('Your sign-in has ended', 'Sign in on the dashboard, then come back.');
+        else showGate('Could not load the watched wallets', e.status === 404 ? 'The database update for this page has not been applied yet.' : e.message);
+    }
+})();
+</script>
+</body>
+</html>

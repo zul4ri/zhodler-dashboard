@@ -818,6 +818,10 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <a class="nav-item" href="atlas.html"><span class="dot"></span>Project Atlas &rarr;</a>
     </nav>
     <nav class="nav-group">
+        <h4>Watching</h4>
+        <a class="nav-item" href="watch.html"><span class="dot"></span>Watched wallets &rarr;</a>
+    </nav>
+    <nav class="nav-group">
         <h4>Tools &amp; Settings</h4>
         <a class="nav-item" href="#sec-tools"><span class="dot"></span>Tools &amp; Links</a>
     </nav>
@@ -1074,6 +1078,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <div class="wcard" style="cursor:pointer;" onclick="openTool('https://bot-dashboard-weld.vercel.app')"><div class="wtitle" style="margin-bottom:4px;">&#129302; Bots Dashboard</div><div class="wnote" style="margin:0;">Live trading bot performance</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openCashFlow()"><div class="wtitle" style="margin-bottom:4px;">&#128181; Cash Flow</div><div class="wnote" style="margin:0;">Transactions, budgets &amp; goals</div></div>
         <div class="wcard" style="cursor:pointer;" onclick="openEditAssets()"><div class="wtitle" style="margin-bottom:4px;">&#128273; Edit Assets</div><div class="wnote" style="margin:0;">Manual assets, portfolios, loans &amp; salary</div></div>
+        <div class="wcard" id="watchTile" style="cursor:pointer;display:none;" onclick="location.href='watch.html'"><div class="wtitle" style="margin-bottom:4px;">&#128065; Watched wallets</div><div class="wnote" id="watchTileNote" style="margin:0;"></div></div>
     </div>
 </section>
 
@@ -2147,6 +2152,22 @@ async function ensureBtcBasis() {
     }
 }
 
+// ── Watched wallets tile (schema phase 55: watch_summary()) ─────────────────
+// Other people's wallets. Shown as a link with their value; never part of any
+// figure on this page. Quiet when the database function is not there yet.
+let watchTileState = 'idle';
+async function ensureWatchTile() {
+    if (watchTileState !== 'idle') return;
+    watchTileState = 'loading';
+    try {
+        const r = await rpc('watch_summary'), el = document.getElementById('watchTile');
+        if (!Array.isArray(r) || !r.length || !el) { watchTileState = 'none'; return; }
+        document.getElementById('watchTileNote').innerHTML = r.map(w => `${escapeHtml(w.label)} <span class="sensitive">$${Math.round(Number(w.total_usd) || 0).toLocaleString('en-US')}</span>`).join(' &bull; ') + ' &bull; not counted in your net worth';
+        el.style.display = '';
+        watchTileState = 'ready';
+    } catch (e) { watchTileState = 'none'; }
+}
+
 function kpi(label,val,sub,cls){return`<div class="kpi"><div class="klbl">${label}</div><div class="kval ${cls||''} sensitive">${val}</div>${sub?`<div class="ksub">${sub}</div>`:''}</div>`;}
 function gi(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
 function sv(id,val,colorCls){
@@ -2637,7 +2658,7 @@ function dbAssetRows() {
 // ─────────────────────────────────────────────────────────────────────────────
 function renderAll() {
     updateCcyBtn();
-    if (usingSupabase()) { ensureFxHistory(); ensureRevalDays(); ensureBtcBasis(); }
+    if (usingSupabase()) { ensureFxHistory(); ensureRevalDays(); ensureBtcBasis(); ensureWatchTile(); }
     renderGlobal(); renderBtc(); renderSummary(); renderDebt();
     renderProjections(); renderVelocity(); renderMilestone();
     renderMonteCarlo(); renderAssets(); renderYearly();
