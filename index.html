@@ -468,6 +468,11 @@ body{font-size:14px;}
 .substat .k{color:var(--text2);}
 .wcell .k{display:block;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px;}
 .wnote{font-size:11.5px;color:var(--text2);margin-top:7px;}
+.btcq{border:1px solid var(--yellow);background:var(--warn-tint,rgba(255,204,0,.07));border-radius:8px;padding:9px 11px;margin-top:8px;font-size:12.5px;line-height:1.5;}
+.btcq-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:7px;}
+.btcq-row input{width:150px;max-width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 9px;font:inherit;font-size:13px;}
+.btcq-hint{color:var(--text2);font-size:12px;}
+.btcq a{color:var(--accent);}
 
 /* ⓘ info pattern — click to expand */
 .info-btn{width:17px;height:17px;border-radius:50%;border:1px solid var(--border);
@@ -983,6 +988,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
         <div class="info-pop" id="i-btc">
             <b>Bitcoin module.</b> Holdings and spot price come from the BTC trackers.
             <span class="formula"><b>Your average buy price</b> is worked out from your recorded purchases and sales (each buy at the BTC price that day; a sale leaves the average unchanged). Entries marked "estimate" are periods the blockchain cannot show, priced at that period's average. BTC that built up inside liquidity positions has no single purchase date; it is dated and priced on the day it reached your loan.</span>
+            <span class="formula"><b>New purchases and sales</b> made on Arbitrum as a direct swap against dollar coins are added automatically, at the amount paid or received. Anything else that changes your BTC there (a bridge, a transfer, a swap from another coin) is not guessed: it is asked below the figures. BTC bought elsewhere shows up as a difference between what you hold and what is recorded.</span>
             <span class="formula"><b>Your return on the BTC you hold</b> = what it is worth now minus what you paid for the BTC you still have. It is a paper result: nothing is gained or lost until you sell. What your past sales gained or lost is given separately in the note under the figures. In the euro view the amount is converted at today's rate.</span>
             <span class="formula"><b>BTC price, year to date</b> is the market's move since 1 January, not your own result.</span>
         </div>
@@ -993,6 +999,7 @@ body.theme-lime *:focus-visible{outline:2px solid var(--accent);outline-offset:2
             <div class="substat"><span class="k" id="c-btc-since-lbl">BTC price since tracking began (Aug 2023) &mdash; not your return</span><span id="c-btc-since">--</span></div>
             <div class="substat"><span class="k">BTC price, year to date</span><span id="c-btc-ytd">--</span></div>
         </div>
+        <div id="c-btc-warn"></div>
         <div class="wnote" id="c-btc-note" style="margin-top:6px;"></div>
     </div>
 </section>
@@ -2152,6 +2159,77 @@ async function ensureBtcBasis() {
     }
 }
 
+// ── BTC ledger: open questions and mismatch (schema phase 57) ───────────────
+// The database reads new swaps by itself. What it cannot tell for sure comes
+// here as a question; a difference between the live holding and the ledger is
+// said out loud, because it bends the return.
+const BTC_GAP = 0.002;                 // smaller differences are lending interest and rounding
+const btcDrafts = {};                  // amounts being typed survive a redraw
+const btcDay = ts => new Date(ts).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+const btcTime = ts => new Date(ts).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+const btcQty = v => Math.abs(Number(v) || 0).toFixed(5);
+function btcPriceHint(qty, usd) {
+    return usd > 0 && qty > 0 ? `= $${Math.round(usd / qty).toLocaleString('en-US')} per BTC` : '';
+}
+function renderBtcExtras(b) {
+    const el = document.getElementById('c-btc-warn'); if (!el) return;
+    const review = (b && Array.isArray(b.review)) ? b.review : [];
+    let h = review.map(r => {
+        const inward = Number(r.btc) > 0, tx = escapeHtml(r.tx);
+        return `<div class="btcq" data-tx="${tx}" data-qty="${Math.abs(Number(r.btc) || 0)}" data-kind="${inward ? 'buy' : 'sell'}">` +
+            `<b>Needs your answer:</b> <span class="sensitive">${btcQty(r.btc)} BTC</span> ${inward ? 'arrived on' : 'left your wallet on'} Arbitrum, ${btcTime(r.ts)}. ` +
+            `It is not in your average: ${escapeHtml(r.reason)}. ` +
+            (/^0x[0-9a-f]{64}$/i.test(r.tx) ? `<a href="https://arbiscan.io/tx/${tx}" target="_blank" rel="noopener noreferrer">See the transaction</a>` : '') +
+            `<div class="btcq-row"><input type="number" inputmode="decimal" min="0" step="0.01" class="btcq-usd" aria-label="US dollars ${inward ? 'paid' : 'received'}" placeholder="US dollars ${inward ? 'paid' : 'received'}" value="${escapeHtml(btcDrafts[r.tx] || '')}">` +
+            `<button type="button" class="ibtn" data-act="record">Record ${inward ? 'purchase' : 'sale'}</button>` +
+            `<button type="button" class="ibtn" data-act="ignore">Not a ${inward ? 'purchase' : 'sale'}</button>` +
+            `<span class="btcq-hint">${btcPriceHint(Math.abs(Number(r.btc) || 0), Number(btcDrafts[r.tx]))}</span></div></div>`;
+    }).join('');
+    // Only compare when the balance was read after the newest ledger row.
+    if (b && b.held_at && b.last_lot_at && new Date(b.held_at) >= new Date(b.last_lot_at)) {
+        const held = Number(b.held), rec = Number(b.quantity), gap = held - rec;
+        if (isFinite(gap) && Math.abs(gap) > BTC_GAP) {
+            h += `<div class="btcq"><b>Your list and your holding differ.</b> You hold <span class="sensitive">${held.toFixed(5)} BTC</span>; the buys and sales account for <span class="sensitive">${rec.toFixed(5)}</span>. ` +
+                (gap > 0 ? 'The extra BTC counts in the value but not in the cost, so the return above looks better than it is.'
+                         : 'A sale or transfer seems to be missing, so the return above looks worse than it is.') +
+                (review.length ? ' Answering above may settle it.' : '') + `</div>`;
+        }
+    }
+    else if (b && b.held_at && b.last_lot_at && new Date(b.held_at) < new Date(b.last_lot_at)) {
+        h += `<div class="wnote">Your newest trade (${btcTime(b.last_lot_at)}) is not in the balance reading yet (${btcTime(b.held_at)}), so the return is off until the next reading.</div>`;
+    }
+    el.innerHTML = h;
+    if (el.dataset.wired) return;
+    el.dataset.wired = '1';
+    el.addEventListener('input', e => {
+        const box = e.target.closest('.btcq'); if (!box || !box.dataset.tx) return;
+        btcDrafts[box.dataset.tx] = e.target.value;
+        box.querySelector('.btcq-hint').textContent = btcPriceHint(Number(box.dataset.qty), Number(e.target.value));
+    });
+    el.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-act]'); if (btn) answerBtcQuestion(btn.closest('.btcq'), btn.dataset.act);
+    });
+}
+async function answerBtcQuestion(box, act) {
+    const tx = box.dataset.tx, qty = Number(box.dataset.qty), kind = box.dataset.kind;
+    const hint = box.querySelector('.btcq-hint'), usd = Number(box.querySelector('.btcq-usd').value);
+    if (act === 'record') {
+        if (!(usd > 0)) { hint.textContent = 'Type the dollar amount first.'; return; }
+        if (!confirm(`Record ${qty.toFixed(5)} BTC as ${kind === 'buy' ? 'bought' : 'sold'} for $${usd.toLocaleString('en-US')} (${btcPriceHint(qty, usd).slice(2)})?\n\nThis changes your average buy price.`)) return;
+    } else if (!confirm('Leave this out of your average buy price?\n\nRight for moves between your own wallets, bridges and loan collateral.')) return;
+    box.querySelectorAll('button').forEach(x => x.disabled = true);
+    hint.textContent = 'Saving\u2026';
+    try {
+        await rpc('btc_review_resolve', {p_tx: tx, p_action: act === 'record' ? kind : 'ignore', p_usd: act === 'record' ? usd : null});
+        delete btcDrafts[tx];
+        btcBasisState = 'idle';
+        await ensureBtcBasis();
+    } catch (e) {
+        box.querySelectorAll('button').forEach(x => x.disabled = false);
+        hint.textContent = 'Could not save: ' + e.message;
+    }
+}
+
 // ── Watched wallets tile (schema phase 55: watch_summary()) ─────────────────
 // Other people's wallets. Shown as a link with their value; never part of any
 // figure on this page. Quiet when the database function is not there yet.
@@ -2710,16 +2788,22 @@ function renderBtc() {
             else if (lq > 0) { const t = Math.min(qty, lq), a0 = lc / lq; realised += t * (px - a0); lc -= t * a0; lq -= t; sales++; }
         });
         const salesTxt = sales ? ` Your ${sales} sale${sales === 1 ? '' : 's'} so far ${realised >= 0 ? 'gained' : 'lost'} <span class="sensitive">${fm(Math.abs(realised))}</span> against the average at the time.` : '';
-        const upd = btcBasis.as_of ? new Date(btcBasis.as_of + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+        const upd = btcBasis.as_of ? btcDay(btcBasis.as_of + 'T00:00:00') : '';
+        const au = btcBasis.auto || null;
+        const autoTxt = !au ? '' : au.error ? ' The last automatic check for new swaps failed; it will try again.'
+            : au.checked_to ? ` New swaps on Arbitrum are added automatically; checked up to ${btcTime(au.checked_to)}.`
+            : ' New swaps on Arbitrum are added automatically; the first check has not run yet.';
         gi('c-btc-note', `From ${Number(btcBasis.lot_count) || 0} recorded buys and sales` + (upd ? `, last one ${upd}` : '') + '. ' +
             (estPct > 0 ? `About ${estPct.toFixed(0)}% of the cost comes from periods the blockchain cannot show (yearly totals, priced at that period's average), so treat the figures as estimates.` : 'All entries are from on-chain records.') +
-            ' On-chain entries are priced on the day the BTC reached your loan or wallet.' + salesTxt);
+            ' Direct swaps are priced at the amount paid; other on-chain entries on the day the BTC reached your loan or wallet.' + salesTxt + autoTxt);
+        renderBtcExtras(btcBasis);
     } else {
         gi('c-btc-since-lbl', 'BTC price since tracking began (Aug 2023) &mdash; not your return');
         sv('c-btc-since', fp(cs), cc(cs));
         if (avgRow) avgRow.style.display = 'none';
         const retRow = document.getElementById('c-btc-ret-row'); if (retRow) retRow.style.display = 'none';
         gi('c-btc-note', (usingSupabase() && btcBasisState === 'missing') ? 'Your average buy price needs a one-time database update (phase 51).' : '');
+        renderBtcExtras(null);
     }
 }
 

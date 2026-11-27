@@ -44,6 +44,8 @@ h3{font-size:14px;font-weight:600;margin-bottom:2px;}
 .btn[disabled]{opacity:.5;cursor:default;}
 .name{font-size:20px;font-weight:700;letter-spacing:-.02em;}
 .tag{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:11.5px;color:var(--text2);white-space:nowrap;}
+.kpis.cur{margin-top:10px;}
+.cap{margin-top:14px;font-weight:600;font-size:13.5px;}
 .tag.live{border-color:#3FAE2A;color:#7DEB3B;} .tag.old{border-color:var(--warn);color:var(--warn);}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px;}
 .kpi{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--card2);min-width:0;}
@@ -171,6 +173,43 @@ function whoIs(f) {
     return f.auto === 'internal' ? 'A platform it uses' : 'A bridge or exchange';
 }
 
+// The yearly rate (compounded) at which the money put in and taken out grows to
+// today's value. Deposits and withdrawals do not count as gains or losses.
+const MIN_RATE_DAYS = 30;
+function yearlyRate(moves, finalValue, asOf) {
+    const gap = r => moves.reduce((s, m) => s + m.usd * Math.pow(1 + r, Math.max(0, asOf - m.t) / (365 * 864e5)), 0) - finalValue;
+    let lo = -0.99, hi = 10;
+    if (!moves.length || gap(lo) > 0 || gap(hi) < 0) return null;
+    for (let i = 0; i < 100; i++) { const mid = (lo + hi) / 2; if (gap(mid) > 0) hi = mid; else lo = mid; }
+    return (lo + hi) / 2;
+}
+function overallRate(w) {
+    if (!w.positions_at) return null;
+    const moves = w.flows.filter(f => f.class === 'external').map(f => ({ t: new Date(f.ts).getTime(), usd: (f.dir === 'in' ? 1 : -1) * num(f.usd) }));
+    if (!moves.length) return null;
+    const asOf = new Date(w.positions_at).getTime();
+    if ((asOf - Math.min(...moves.map(m => m.t))) / 864e5 < MIN_RATE_DAYS) return null;
+    return yearlyRate(moves, num(w.total_usd), asOf);
+}
+const allChainsRead = w => { const c = Object.values(w.coverage || {}); return c.length > 0 && c.every(v => String(v) === 'ok'); };
+const pct = v => (v >= 0 ? '+' : '\u2212') + Math.abs(v).toFixed(1) + '%';
+
+// Interest on what the wallet holds now, worked out by the collector from what it paid in.
+function currentHtml(w) {
+    const list = (w.earnings || []).filter(e => e.status !== 'ok' || num(e.paid_in) >= 1 || num(e.units_now) >= 1);
+    if (!list.length) return '';
+    return list.map(e => {
+        const what = `${esc(e.protocol)} &middot; ${esc(e.asset)} on ${esc(chainName(e.chain))}`;
+        if (e.status !== 'ok') return `<div class="note">Current position ${what}: interest not shown, because ${esc(e.reason)}.</div>`;
+        const g = num(e.gained_usd), apy = e.apy_pct === null || e.apy_pct === undefined ? null : num(e.apy_pct);
+        const put = num(e.paid_in).toLocaleString('en-US', { maximumFractionDigits: 2 });
+        return `<div class="cap">Current position: ${what}</div><div class="kpis cur">` +
+            `<div class="kpi"><div class="k">Interest earned</div><div class="v sensitive ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${money(g, true)}</div><div class="d sensitive">since ${day(e.since)}, on ${put} ${esc(e.asset)} put in</div></div>` +
+            `<div class="kpi"><div class="k">APY on this position</div><div class="v ${apy === null ? '' : apy >= 0 ? 'pos' : 'neg'}">${apy === null ? '\u2014' : apy.toFixed(1) + '%'}</div><div class="d">${apy === null ? 'shown after 7 days' : `from what it actually earned over ${Math.round(num(e.days))} days; rewards not yet received are not counted`}</div></div>` +
+            `</div>`;
+    }).join('');
+}
+
 let wallets = [], charts = {};
 const RECENT = 6;            // deposits / withdrawals shown before the fold
 
@@ -188,14 +227,17 @@ function walletHtml(w) {
     const badge = !w.positions_at ? '<span class="tag old">no reading yet</span>'
         : `<span class="tag ${fresh ? 'live' : 'old'}">${fresh ? '● live' : 'last reading'} · ${ago(w.positions_at)}</span>`;
     const hasFlows = w.flows.some(f => f.class === 'external');
+    const rate = overallRate(w), partial = allChainsRead(w) ? '' : ' <span class="warnc">Approximate: not every chain is read.</span>';
 
     let h = `<section class="card"><div class="row"><span class="name">${esc(w.label)}</span><span class="mono muted sensitive">${esc(short(w.address))}</span>${badge}</div>`;
     if (w.positions_error) h += `<div class="warnbox">The latest reading was not used, so the value below is the last good one. Reason: ${esc(w.positions_error)}</div>`;
     h += `<div class="kpis">` +
         `<div class="kpi"><div class="k">Worth now</div><div class="v sensitive">${w.positions_at ? money(t.value) : '—'}</div><div class="d">${w.holdings.length} position${w.holdings.length === 1 ? '' : 's'}</div></div>` +
         `<div class="kpi"><div class="k">Money put in, net</div><div class="v sensitive">${hasFlows ? money(t.net) : '—'}</div><div class="d sensitive">${hasFlows ? `${money(t.dep)} in − ${money(t.wd)} out` : 'no deposits found yet'}</div></div>` +
-        `<div class="kpi"><div class="k">Earned</div><div class="v sensitive ${t.earned >= 0 ? 'pos' : 'neg'}">${hasFlows && w.positions_at ? (t.earned >= 0 ? '+' : '') + money(t.earned) : '—'}</div><div class="d">${hasFlows && t.first ? 'worth now − money put in, since ' + day(t.first) : 'needs a value and at least one deposit'}</div></div>` +
+        `<div class="kpi"><div class="k">Total gain</div><div class="v sensitive ${t.earned >= 0 ? 'pos' : 'neg'}">${hasFlows && w.positions_at ? (t.earned >= 0 ? '+' : '') + money(t.earned) : '—'}</div><div class="d">${hasFlows && t.first ? 'interest, rewards and price changes since ' + day(t.first) : 'needs a value and at least one deposit'}</div></div>` +
+        `<div class="kpi"><div class="k">Yearly rate (APY)</div><div class="v sensitive ${rate === null ? '' : rate >= 0 ? 'pos' : 'neg'}">${rate === null ? '—' : pct(rate * 100)}</div><div class="d">${rate === null ? 'needs 30 days of deposits and a value' : 'the total gain as a yearly rate, allowing for when money went in and out.' + partial}</div></div>` +
         `</div>`;
+    h += currentHtml(w);
     h += `<div class="note">${coverageNote(w)}</div></section>`;
 
     h += `<section class="card"><h2>Money put in and value over time</h2>` +
